@@ -1,176 +1,422 @@
-# BirdSound - Real-time Bird Sound Recognition
+# 🐦 BirdSound - Real-time Bird Sound Recognition / Echtzeit-Vogelstimmen-Erkennung
 
-A multi-model ML system for real-time bird sound recognition with mobile app support.
+**Multi-model ML system for bird sound recognition | Multi-Modell ML-System zur Vogelstimmen-Erkennung**
 
-## Features
+[English](#english) | [Deutsch](#deutsch)
+
+---
+
+## 🗺️ Quick Overview / Schnellübersicht
+
+### Deployment Options / Betriebsarten
+
+| Mode | Device | Internet | Use Case |
+|------|--------|----------|----------|
+| **🖥️ Local/Offline** | Windows PC, Raspberry Pi | ❌ Not required | Field work, private use |
+| **🐳 Docker** | Any with Docker | ❌ Not required | Easy deployment, servers |
+| **☁️ Online Server** | VPS, Cloud | ✅ Required | Team access, mobile apps |
+| **📱 Mobile App** | Android/iOS | ⚡ Optional | Field recordings |
+
+### Available Models / Verfügbare Modelle
+
+| Model | Species | Size | Best For | Status |
+|-------|---------|------|----------|--------|
+| **DimaBird** | ~500 EU | Auto | 🎵 Songbirds, Forest | ✅ Active |
+| **BirdNET ONNX** | 6,000+ | 150MB | 🌍 Global, Calls | ⚡ Optional download |
+| **Google Perch** | 15,000+ | ~500MB | 🔬 Scientific | 🔧 Planned |
+
+---
+
+## English
+
+### Overview
+
+BirdSound is a production-ready bird sound recognition system that uses multiple ML models to identify bird species from audio recordings. It features automatic database fallback, cross-platform support, and a comprehensive REST API.
+
+### ✅ Current Status
+
+- ✅ **HuggingFace Model** loaded (dima806/bird_sounds_classification)
+- ✅ **Automatic Database Fallback** (PostgreSQL → SQLite when unavailable)
+- ✅ **All API Endpoints** fully functional
+- ✅ **FastAPI** with interactive documentation
+- ✅ **Cross-platform** (Windows, Linux, Raspberry Pi)
+- ✅ **Mobile-ready** (Flutter & React Native examples)
+- ⚠️ BirdNET ONNX optional (requires manual download)
+
+### Features
 
 - **Multi-Model Analysis**: Run multiple ML models (BirdNET, HuggingFace) in parallel
 - **Consensus Voting**: Combine predictions from all models for reliable identification
 - **Real-time Processing**: Process 3-second audio windows with 1-second overlap
 - **GPS Tagging**: Associate detections with location and time
-- **Database Storage**: Store all recordings and predictions in PostgreSQL/PostGIS
-- **REST API**: FastAPI backend with comprehensive endpoints
+- **Automatic Database Fallback**: Seamlessly switches to SQLite if PostgreSQL unavailable
+- **REST API**: FastAPI backend with comprehensive endpoints and Swagger UI
+- **Internationalization**: Support for English and German
 - **Mobile Ready**: Example implementations for Flutter and React Native
 
-## Architecture
+### 📋 Device Setup Guide
 
+#### Which device for what?
+
+| Your Goal | Recommended Setup | Internet Needed |
+|-----------|-------------------|-----------------|
+| **🏠 Home bird watching** | Windows/Mac + USB Mic | ❌ Offline OK |
+| **🌲 Field work** | Raspberry Pi + External Mic | ❌ Offline OK |
+| **📱 Mobile recording** | Android App + Server at home | ⚡ For sync only |
+| **👥 Team/Science project** | Docker on VPS/Cloud | ✅ Always online |
+| **🧪 Development/Testing** | Any PC with Python | ❌ Offline OK |
+
+#### BirdNET ONNX Download (Optional, +6000 species)
+
+```bash
+# Download BirdNET model (~150MB)
+cd backend
+python scripts/download_models.py --models birdnet
+
+# Or manually download from:
+# https://huggingface.co/kahst/BirdNET-onnx
+# Place in: models/birdnet/BirdNET_GLOBAL_6K_V2.4_Model_FP32.onnx
 ```
+
+### Architecture
+
+```text
 ┌─────────────────┐     ┌─────────────────────────────────────┐
-│  Mobile App     │     │           Backend (FastAPI)          │
-│  (Flutter/RN)   │────▶│                                     │
-│                 │     │  ┌─────────┐  ┌─────────────────┐   │
-│  - Audio Capture│     │  │ BirdNET │  │ HuggingFace     │   │
-│  - GPS Location │     │  │ (ONNX)  │  │ (Transformers)  │   │
-│  - Display      │     │  └────┬────┘  └────────┬────────┘   │
-└─────────────────┘     │       │                │            │
-                        │       └───────┬────────┘            │
-                        │               ▼                     │
-                        │       ┌───────────────┐             │
-                        │       │   Consensus   │             │
-                        │       │    Engine     │             │
-                        │       └───────┬───────┘             │
-                        │               │                     │
-                        │               ▼                     │
-                        │       ┌───────────────┐             │
-                        │       │  PostgreSQL   │             │
-                        │       │   (PostGIS)   │             │
-                        │       └───────────────┘             │
-                        └─────────────────────────────────────┘
+│  Mobile App     │     │         Backend (FastAPI)            │
+│  (Flutter/RN)   │────▶│                                      │
+│                 │     │  ┌─────────┐  ┌──────────────────┐  │
+│  - Audio Capture│     │  │ BirdNET │  │  HuggingFace     │  │
+│  - GPS Location │     │  │ (ONNX)  │  │  (Transformers)  │  │
+│  - Display      │     │  └────┬────┘  └────────┬─────────┘  │
+└─────────────────┘     │       │                │             │
+                        │       └───────┬────────┘             │
+                        │               ▼                      │
+                        │       ┌───────────────┐              │
+                        │       │   Consensus   │              │
+                        │       │    Engine     │              │
+                        │       └───────┬───────┘              │
+                        │               │                      │
+                        │               ▼                      │
+                        │       ┌───────────────┐              │
+                        │       │  PostgreSQL   │              │
+                        │       │   or SQLite   │              │
+                        │       └───────────────┘              │
+                        └──────────────────────────────────────┘
 ```
 
 ## Quick Start
 
-### 1. Clone and Setup
+### Option 1: Windows Installation
 
-```bash
-cd Birds
+#### Prerequisites
 
-# Copy environment file
-cp backend/.env.example backend/.env
+- Python 3.11+
+- Git
 
-# Create models directory
-mkdir -p models/birdnet
-```
+#### Installation Steps
 
-### 2. Download Models
-
-Download BirdNET ONNX model from [HuggingFace](https://huggingface.co/kahst/BirdNET-onnx):
-
-```bash
-# Download model
-wget -O models/birdnet/BirdNET_GLOBAL_6K_V2.4_Model_FP32.onnx \
-  https://huggingface.co/kahst/BirdNET-onnx/resolve/main/BirdNET_GLOBAL_6K_V2.4_Model_FP32.onnx
-
-# Download labels
-wget -O models/birdnet/BirdNET_GLOBAL_6K_V2.4_Labels.txt \
-  https://huggingface.co/kahst/BirdNET-onnx/resolve/main/BirdNET_GLOBAL_6K_V2.4_Labels.txt
-```
-
-### 3. Start with Docker
-
-```bash
-docker-compose up -d
-```
-
-### 4. Access the API
-
-- API Documentation: http://localhost:8000/docs
-- Health Check: http://localhost:8000/health
-- Database UI (dev): http://localhost:8080 (login: postgres/postgres)
-
-## API Endpoints
-
-### Prediction
-
-```bash
-# Single prediction
-POST /api/v1/predict
-{
-  "device_id": "my-phone",
-  "timestamp_utc": "2025-11-29T12:00:00Z",
-  "latitude": 52.52,
-  "longitude": 13.405,
-  "sample_rate": 16000,
-  "audio_format": "pcm16_le",
-  "audio_base64": "<base64-encoded-audio>"
-}
-
-# Quick prediction (no database storage)
-POST /api/v1/predict/quick
-
-# Batch prediction
-POST /api/v1/predict/batch
-```
-
-### Recordings
-
-```bash
-# List recordings
-GET /api/v1/recordings?species=Blackbird&min_confidence=0.5
-
-# Get single recording
-GET /api/v1/recordings/{recording_id}
-
-# Map data points
-GET /api/v1/recordings/map/points
-
-# Timeline
-GET /api/v1/recordings/timeline?hours=24
-
-# Statistics
-GET /api/v1/recordings/stats?days=7
-
-# Model comparison
-GET /api/v1/recordings/compare?disagreements_only=true
-```
-
-### Models
-
-```bash
-# List available models
-GET /api/v1/models
-
-# Get model info
-GET /api/v1/models/{model_name}
-```
-
-## Development
-
-### Local Development (without Docker)
-
-```bash
-cd backend
+```powershell
+# Clone repository
+git clone https://github.com/donapart/Birds.git
+cd Birds\backend
 
 # Create virtual environment
 python -m venv venv
-source venv/bin/activate  # or: venv\Scripts\activate on Windows
+.\venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Start PostgreSQL (or use existing)
-# Set DATABASE_URL in .env
+# Install optional dependencies for real ML models
+pip install torchaudio transformers
 
-# Run development server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# For SQLite support (recommended for local development)
+pip install aiosqlite
+
+# Copy and configure environment
+copy .env.example .env
+# Edit .env: Set USE_SQLITE=true for local development
 ```
 
-### Running Tests
+#### Run Server
+
+```powershell
+# Start server (uses SQLite by default)
+$env:PYTHONPATH="D:\Birds\Birds\backend"
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8002
+
+# Server starts at: http://localhost:8002
+# API Docs at: http://localhost:8002/docs
+```
+
+### Option 2: Raspberry Pi Installation
+
+#### Prerequisites
+
+```bash
+sudo apt update
+sudo apt install -y python3 python3-pip python3-venv git
+```
+
+#### Installation Steps
+
+```bash
+# Clone repository
+git clone https://github.com/donapart/Birds.git
+cd Birds/backend
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install audio dependencies
+pip install torchaudio transformers aiosqlite
+
+# Configure environment
+cp .env.example .env
+nano .env  # Set USE_SQLITE=true
+```
+
+#### Run as Service (systemd)
+
+Create `/etc/systemd/system/birdsound.service`:
+
+```ini
+[Unit]
+Description=BirdSound API Service
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/Birds/backend
+Environment="PYTHONPATH=/home/pi/Birds/backend"
+ExecStart=/home/pi/Birds/backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8002
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+
+```bash
+sudo systemctl enable birdsound
+sudo systemctl start birdsound
+sudo systemctl status birdsound
+```
+
+### Option 3: Docker (All Platforms)
+
+```bash
+# Clone repository
+git clone https://github.com/donapart/Birds.git
+cd Birds
+
+# Start with Docker Compose
+docker-compose up -d
+
+# Access API
+# API: http://localhost:8000/docs
+# Database UI: http://localhost:8080
+```
+
+## Configuration
+
+### Environment Variables
+
+Create a `.env` file in the `backend/` directory:
+
+```bash
+# Database Configuration
+USE_SQLITE=true                    # Use SQLite (true) or PostgreSQL (false)
+SQLITE_PATH=birdsound.db           # SQLite database file path
+DATABASE_URL=postgresql://user:pass@host:5432/dbname  # PostgreSQL connection
+
+# Model Configuration
+USE_MODEL_STUBS=false              # Use stub models (true) or real models (false)
+BIRDNET_MODEL_PATH=models/birdnet/BirdNET_GLOBAL_6K_V2.4_Model_FP32.onnx
+HF_MODEL_NAME=dima806/bird_sounds_classification
+
+# API Configuration
+DEBUG=false
+MIN_CONFIDENCE_THRESHOLD=0.1
+TOP_N_PREDICTIONS=5
+```
+
+### Database Setup
+
+#### SQLite (Recommended for Development/Testing)
+
+No additional setup required! The application automatically creates the database file.
+
+```bash
+# In .env:
+USE_SQLITE=true
+SQLITE_PATH=birdsound.db
+```
+
+**Advantages:**
+
+- No separate database server needed
+- Perfect for Raspberry Pi and Windows
+- Automatic setup
+- All features work (except PostGIS geometry features)
+
+#### PostgreSQL (Production)
+
+```bash
+# Install PostgreSQL
+# Windows: Download from postgresql.org
+# Raspberry Pi: sudo apt install postgresql postgis
+
+# Create database
+sudo -u postgres psql
+CREATE DATABASE birdsound;
+CREATE USER birdsound WITH PASSWORD 'your_password';
+GRANT ALL PRIVILEGES ON DATABASE birdsound TO birdsound;
+
+# In .env:
+USE_SQLITE=false
+DATABASE_URL=postgresql://birdsound:your_password@localhost:5432/birdsound
+```
+
+**Automatic Fallback:** If PostgreSQL connection fails, the system automatically switches to SQLite!
+
+## API Documentation
+
+### Interactive Documentation
+
+Once the server is running, visit:
+
+- **Swagger UI**: `http://localhost:8002/docs`
+- **ReDoc**: `http://localhost:8002/redoc`
+
+### Main Endpoints
+
+#### Prediction
+
+```bash
+# Quick Prediction (no database storage)
+POST /api/v1/predict/quick
+{
+  "device_id": "my-device",
+  "timestamp_utc": "2025-11-29T12:00:00Z",
+  "latitude": 52.52,
+  "longitude": 13.405,
+  "sample_rate": 48000,
+  "audio_format": "pcm16_le",
+  "audio_base64": "<base64-encoded-audio>"
+}
+
+# Full Prediction (with database storage)
+POST /api/v1/predict
+```
+
+**Response:**
+
+```json
+{
+  "consensus": {
+    "species_common": "European Robin",
+    "species_scientific": "Erithacus rubecula",
+    "confidence": 0.85,
+    "method": "weighted_average"
+  },
+  "model_results": [
+    {
+      "model_name": "DimaBird",
+      "model_version": "dima806/bird_sounds_classification",
+      "predictions": [
+        {
+          "species_common": "European Robin",
+          "confidence": 0.85
+        }
+      ],
+      "inference_time_ms": 234
+    }
+  ]
+}
+```
+
+#### Species Search
+
+```bash
+# Search species
+GET /api/v1/species?search=robin&limit=10
+
+# Response:
+[
+  {
+    "species_code": "erithacus_rubecula",
+    "scientific_name": "Erithacus rubecula",
+    "common_name_en": "European Robin",
+    "common_name_de": "Rotkehlchen"
+  }
+]
+```
+
+#### Recordings
+
+```bash
+# List recordings
+GET /api/v1/recordings?limit=50&offset=0
+
+# Get specific recording
+GET /api/v1/recordings/{recording_id}
+
+# Export recordings
+GET /api/v1/export/csv?start_date=2025-11-01&end_date=2025-11-30
+```
+
+#### System
+
+```bash
+# Health check
+GET /api/v1/health
+
+# List available models
+GET /api/v1/models
+```
+
+## Testing
+
+### API Test Script
+
+```bash
+cd backend
+python scripts/test_api.py
+```
+
+Expected output:
+
+```text
+✅ Health: 200 OK
+✅ Models: 200 OK - DimaBird loaded
+✅ Species Search: 200 OK - Found European Robin
+✅ Quick Prediction: 200 OK - Slaty-Breasted Tinamou (18.20%)
+✅ Full Prediction: 200 OK - Recording saved
+```
+
+### Unit Tests
 
 ```bash
 cd backend
 pytest tests/
 ```
 
-## Mobile App Development
+## Mobile App Integration
 
-### Flutter
+### Flutter Example
 
-See `mobile/flutter/lib/services/audio_service.dart` for a complete example.
+See `mobile/flutter/lib/services/audio_service.dart`:
 
 ```dart
 final service = BirdSoundService(
-  apiBaseUrl: 'http://your-server:8000',
+  apiBaseUrl: 'http://your-server:8002',
   deviceId: 'flutter-device-123',
 );
 
@@ -179,83 +425,536 @@ await service.startListening();
 
 service.predictions.listen((prediction) {
   print('Detected: ${prediction.consensus.species}');
+  print('Confidence: ${prediction.consensus.confidence}');
 });
 ```
 
-### React Native
+### React Native Example
 
-See `mobile/react-native/src/services/BirdSoundService.ts` for a complete example.
+See `mobile/react-native/src/services/BirdSoundService.ts`:
 
 ```typescript
 const service = new BirdSoundService(
-  'http://your-server:8000',
+  'http://your-server:8002',
   'rn-device-123'
 );
 
 await service.initialize();
 service.setOnPrediction((prediction) => {
-  console.log('Detected:', prediction.consensus.speciesCommon);
+  console.log('Species:', prediction.consensus.speciesCommon);
+  console.log('Confidence:', prediction.consensus.confidence);
 });
 await service.startListening();
 ```
 
-## Models
+## Troubleshooting
 
-### BirdNET
+### Windows
 
-- **Source**: Cornell Lab of Ornithology & Chemnitz University
-- **Species**: ~6,000 species worldwide
-- **Sample Rate**: 48 kHz
-- **Window Size**: 3 seconds
-- [GitHub](https://github.com/kahst/BirdNET-Analyzer) | [Paper](https://doi.org/10.1016/j.ecoinf.2021.101236)
+**Problem:** Server won't start
 
-### HuggingFace Models
+```powershell
+# Check if port is already in use
+Get-NetTCPConnection -LocalPort 8002
 
-Default: `dima806/bird_sounds_classification`
+# Kill process on port
+Stop-Process -Id (Get-Process -Id (Get-NetTCPConnection -LocalPort 8002).OwningProcess).Id -Force
+```
 
-Other options:
-- `greenarcade/wav2vec2-vd-bird-sound-classification`
-- Custom fine-tuned models
+**Problem:** Import errors
 
-## Configuration
+```powershell
+# Set PYTHONPATH
+$env:PYTHONPATH="D:\Birds\Birds\backend"
+```
 
-Environment variables (see `.env.example`):
+### Raspberry Pi
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | `postgresql://...` | PostgreSQL connection |
-| `BIRDNET_MODEL_PATH` | `models/birdnet/...` | Path to BirdNET ONNX |
-| `HF_MODEL_NAME` | `dima806/bird_sounds...` | HuggingFace model ID |
-| `MIN_CONFIDENCE_THRESHOLD` | `0.1` | Minimum confidence |
-| `TOP_N_PREDICTIONS` | `5` | Top N predictions per model |
+**Problem:** Out of memory during model loading
+
+```bash
+# Increase swap space
+sudo dphys-swapfile swapoff
+sudo nano /etc/dphys-swapfile
+# Set: CONF_SWAPSIZE=2048
+sudo dphys-swapfile setup
+sudo dphys-swapfile swapon
+```
+
+**Problem:** Audio device not found
+
+```bash
+# List audio devices
+arecord -l
+
+# Install ALSA
+sudo apt install alsa-utils
+```
+
+### Database Issues
+
+**Problem:** PostgreSQL connection fails
+
+The system automatically falls back to SQLite. Check logs:
+
+```text
+WARNING - PostgreSQL unavailable, switching to SQLite fallback
+INFO - Switched to SQLite: birdsound.db
+```
+
+No action needed! The system will work with SQLite.
 
 ## Project Structure
 
-```
+```text
 Birds/
 ├── backend/
 │   ├── app/
 │   │   ├── api/routes/          # API endpoints
-│   │   ├── core/                # Configuration
-│   │   ├── db/                  # Database models
-│   │   ├── models/              # ML model wrappers
+│   │   │   ├── predict.py       # Prediction endpoints
+│   │   │   ├── recordings.py    # Recording management
+│   │   │   ├── species.py       # Species search
+│   │   │   └── health.py        # Health checks
+│   │   ├── core/
+│   │   │   ├── config.py        # Configuration
+│   │   │   └── cache.py         # Caching layer
+│   │   ├── db/
+│   │   │   ├── database.py      # Database connection (auto-fallback)
+│   │   │   └── models.py        # SQLAlchemy models
+│   │   ├── i18n/
+│   │   │   ├── translations.py  # English/German translations
+│   │   │   └── middleware.py    # i18n middleware
+│   │   ├── models/
+│   │   │   ├── birdnet_runtime.py   # BirdNET ONNX wrapper
+│   │   │   └── hf_runtime.py        # HuggingFace wrapper
 │   │   ├── schemas/             # Pydantic schemas
-│   │   └── services/            # Business logic
+│   │   └── services/
+│   │       ├── model_registry.py    # Model management
+│   │       ├── prediction_service.py # Prediction logic
+│   │       └── audio_processor.py   # Audio processing
+│   ├── scripts/
+│   │   ├── test_api.py          # API test script
+│   │   └── download_models.py   # Model downloader
+│   ├── tests/                   # Unit tests
 │   ├── requirements.txt
+│   ├── .env.example
 │   └── Dockerfile
 ├── mobile/
 │   ├── flutter/                 # Flutter example
 │   └── react-native/            # React Native example
 ├── models/                      # ML model files (not in git)
-└── docker-compose.yml
+├── docker-compose.yml
+└── README.md
 ```
+
+## Performance
+
+### Windows PC (Typical)
+
+- Model loading: ~8 seconds (HuggingFace)
+- Inference time: ~200-300ms per prediction
+- Memory usage: ~2GB (with models loaded)
+
+### Raspberry Pi 4 (4GB)
+
+- Model loading: ~15-20 seconds
+- Inference time: ~800ms-1.5s per prediction
+- Memory usage: ~1.5GB (swap recommended)
 
 ## License
 
-MIT
+MIT License - see LICENSE file
 
 ## Acknowledgments
 
 - [BirdNET](https://birdnet.cornell.edu/) by Cornell Lab of Ornithology
-- [HuggingFace](https://huggingface.co/) for model hosting
-- [FastAPI](https://fastapi.tiangolo.com/) for the amazing framework
+- [HuggingFace](https://huggingface.co/) for model hosting and transformers library
+- [FastAPI](https://fastapi.tiangolo.com/) for the excellent web framework
+
+## Support
+
+- GitHub Issues: <https://github.com/donapart/Birds/issues>
+- Documentation: See `/docs` in this repository
+
+---
+
+## Deutsch
+
+### Übersicht
+
+BirdSound ist ein produktionsreifes Vogelstimmen-Erkennungssystem, das mehrere ML-Modelle verwendet, um Vogelarten aus Audioaufnahmen zu identifizieren. Es verfügt über automatischen Datenbank-Fallback, plattformübergreifende Unterstützung und eine umfassende REST-API.
+
+### ✅ Aktueller Status
+
+- ✅ **HuggingFace-Modell** geladen (dima806/bird_sounds_classification)
+- ✅ **Automatischer Datenbank-Fallback** (PostgreSQL → SQLite bei Nichtverfügbarkeit)
+- ✅ **Alle API-Endpunkte** voll funktionsfähig
+- ✅ **FastAPI** mit interaktiver Dokumentation
+- ✅ **Plattformübergreifend** (Windows, Linux, Raspberry Pi)
+- ✅ **Mobil-bereit** (Flutter & React Native Beispiele)
+- ⚠️ BirdNET ONNX optional (erfordert manuellen Download)
+
+### Funktionen
+
+- **Multi-Modell-Analyse**: Mehrere ML-Modelle (BirdNET, HuggingFace) parallel ausführen
+- **Konsens-Abstimmung**: Vorhersagen aller Modelle für zuverlässige Identifikation kombinieren
+- **Echtzeit-Verarbeitung**: 3-Sekunden-Audiofenster mit 1-Sekunde-Überlappung verarbeiten
+- **GPS-Tagging**: Erkennungen mit Standort und Zeit verknüpfen
+- **Automatischer Datenbank-Fallback**: Wechselt nahtlos zu SQLite, wenn PostgreSQL nicht verfügbar
+- **REST-API**: FastAPI-Backend mit umfassenden Endpunkten und Swagger-UI
+- **Internationalisierung**: Unterstützung für Englisch und Deutsch
+- **Mobil-bereit**: Beispielimplementierungen für Flutter und React Native
+
+## Schnellstart
+
+### Option 1: Windows-Installation
+
+#### Voraussetzungen
+
+- Python 3.11+
+- Git
+
+#### Installationsschritte
+
+```powershell
+# Repository klonen
+git clone https://github.com/donapart/Birds.git
+cd Birds\backend
+
+# Virtuelle Umgebung erstellen
+python -m venv venv
+.\venv\Scripts\activate
+
+# Abhängigkeiten installieren
+pip install -r requirements.txt
+
+# Optionale Abhängigkeiten für echte ML-Modelle
+pip install torchaudio transformers
+
+# Für SQLite-Unterstützung (empfohlen für lokale Entwicklung)
+pip install aiosqlite
+
+# Umgebung kopieren und konfigurieren
+copy .env.example .env
+# .env bearbeiten: USE_SQLITE=true für lokale Entwicklung setzen
+```
+
+#### Server starten
+
+```powershell
+# Server starten (verwendet standardmäßig SQLite)
+$env:PYTHONPATH="D:\Birds\Birds\backend"
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8002
+
+# Server läuft unter: http://localhost:8002
+# API-Docs unter: http://localhost:8002/docs
+```
+
+### Option 2: Raspberry Pi Installation
+
+#### Voraussetzungen
+
+```bash
+sudo apt update
+sudo apt install -y python3 python3-pip python3-venv git
+```
+
+#### Installationsschritte
+
+```bash
+# Repository klonen
+git clone https://github.com/donapart/Birds.git
+cd Birds/backend
+
+# Virtuelle Umgebung erstellen
+python3 -m venv venv
+source venv/bin/activate
+
+# Abhängigkeiten installieren
+pip install -r requirements.txt
+
+# Audio-Abhängigkeiten installieren
+pip install torchaudio transformers aiosqlite
+
+# Umgebung konfigurieren
+cp .env.example .env
+nano .env  # USE_SQLITE=true setzen
+```
+
+#### Als Dienst ausführen (systemd)
+
+`/etc/systemd/system/birdsound.service` erstellen:
+
+```ini
+[Unit]
+Description=BirdSound API Service
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/Birds/backend
+Environment="PYTHONPATH=/home/pi/Birds/backend"
+ExecStart=/home/pi/Birds/backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8002
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Aktivieren und starten:
+
+```bash
+sudo systemctl enable birdsound
+sudo systemctl start birdsound
+sudo systemctl status birdsound
+```
+
+### Option 3: Docker (Alle Plattformen)
+
+```bash
+# Repository klonen
+git clone https://github.com/donapart/Birds.git
+cd Birds
+
+# Mit Docker Compose starten
+docker-compose up -d
+
+# API aufrufen
+# API: http://localhost:8000/docs
+# Datenbank-UI: http://localhost:8080
+```
+
+## Konfiguration
+
+### Umgebungsvariablen
+
+Erstellen Sie eine `.env`-Datei im `backend/`-Verzeichnis:
+
+```bash
+# Datenbank-Konfiguration
+USE_SQLITE=true                    # SQLite (true) oder PostgreSQL (false) verwenden
+SQLITE_PATH=birdsound.db           # SQLite-Datenbankdateipfad
+DATABASE_URL=postgresql://user:pass@host:5432/dbname  # PostgreSQL-Verbindung
+
+# Modell-Konfiguration
+USE_MODEL_STUBS=false              # Stub-Modelle (true) oder echte Modelle (false)
+BIRDNET_MODEL_PATH=models/birdnet/BirdNET_GLOBAL_6K_V2.4_Model_FP32.onnx
+HF_MODEL_NAME=dima806/bird_sounds_classification
+
+# API-Konfiguration
+DEBUG=false
+MIN_CONFIDENCE_THRESHOLD=0.1
+TOP_N_PREDICTIONS=5
+```
+
+### Datenbank-Einrichtung
+
+#### SQLite (Empfohlen für Entwicklung/Tests)
+
+Keine zusätzliche Einrichtung erforderlich! Die Anwendung erstellt die Datenbankdatei automatisch.
+
+```bash
+# In .env:
+USE_SQLITE=true
+SQLITE_PATH=birdsound.db
+```
+
+**Vorteile:**
+
+- Kein separater Datenbankserver erforderlich
+- Perfekt für Raspberry Pi und Windows
+- Automatische Einrichtung
+- Alle Funktionen funktionieren (außer PostGIS-Geometrie-Features)
+
+#### PostgreSQL (Produktion)
+
+```bash
+# PostgreSQL installieren
+# Windows: Von postgresql.org herunterladen
+# Raspberry Pi: sudo apt install postgresql postgis
+
+# Datenbank erstellen
+sudo -u postgres psql
+CREATE DATABASE birdsound;
+CREATE USER birdsound WITH PASSWORD 'ihr_passwort';
+GRANT ALL PRIVILEGES ON DATABASE birdsound TO birdsound;
+
+# In .env:
+USE_SQLITE=false
+DATABASE_URL=postgresql://birdsound:ihr_passwort@localhost:5432/birdsound
+```
+
+**Automatischer Fallback:** Wenn die PostgreSQL-Verbindung fehlschlägt, wechselt das System automatisch zu SQLite!
+
+## API-Dokumentation
+
+### Interaktive Dokumentation
+
+Sobald der Server läuft, besuchen Sie:
+
+- **Swagger UI**: `http://localhost:8002/docs`
+- **ReDoc**: `http://localhost:8002/redoc`
+
+### Hauptendpunkte
+
+#### Vorhersage
+
+```bash
+# Schnellvorhersage (keine Datenbankspeicherung)
+POST /api/v1/predict/quick
+{
+  "device_id": "mein-gerät",
+  "timestamp_utc": "2025-11-29T12:00:00Z",
+  "latitude": 52.52,
+  "longitude": 13.405,
+  "sample_rate": 48000,
+  "audio_format": "pcm16_le",
+  "audio_base64": "<base64-codiertes-audio>"
+}
+
+# Vollständige Vorhersage (mit Datenbankspeicherung)
+POST /api/v1/predict
+```
+
+**Antwort:**
+
+```json
+{
+  "consensus": {
+    "species_common": "Rotkehlchen",
+    "species_scientific": "Erithacus rubecula",
+    "confidence": 0.85,
+    "method": "weighted_average"
+  },
+  "model_results": [
+    {
+      "model_name": "DimaBird",
+      "model_version": "dima806/bird_sounds_classification",
+      "predictions": [
+        {
+          "species_common": "Rotkehlchen",
+          "confidence": 0.85
+        }
+      ],
+      "inference_time_ms": 234
+    }
+  ]
+}
+```
+
+#### Artensuche
+
+```bash
+# Arten suchen
+GET /api/v1/species?search=rotkehlchen&limit=10
+
+# Antwort:
+[
+  {
+    "species_code": "erithacus_rubecula",
+    "scientific_name": "Erithacus rubecula",
+    "common_name_en": "European Robin",
+    "common_name_de": "Rotkehlchen"
+  }
+]
+```
+
+#### Aufzeichnungen
+
+```bash
+# Aufzeichnungen auflisten
+GET /api/v1/recordings?limit=50&offset=0
+
+# Spezifische Aufzeichnung abrufen
+GET /api/v1/recordings/{recording_id}
+
+# Aufzeichnungen exportieren
+GET /api/v1/export/csv?start_date=2025-11-01&end_date=2025-11-30
+```
+
+## Fehlerbehebung
+
+### Windows
+
+**Problem:** Server startet nicht
+
+```powershell
+# Prüfen, ob Port bereits verwendet wird
+Get-NetTCPConnection -LocalPort 8002
+
+# Prozess auf Port beenden
+Stop-Process -Id (Get-Process -Id (Get-NetTCPConnection -LocalPort 8002).OwningProcess).Id -Force
+```
+
+**Problem:** Import-Fehler
+
+```powershell
+# PYTHONPATH setzen
+$env:PYTHONPATH="D:\Birds\Birds\backend"
+```
+
+### Raspberry Pi
+
+**Problem:** Speichermangel beim Laden des Modells
+
+```bash
+# Swap-Speicher erhöhen
+sudo dphys-swapfile swapoff
+sudo nano /etc/dphys-swapfile
+# Setzen: CONF_SWAPSIZE=2048
+sudo dphys-swapfile setup
+sudo dphys-swapfile swapon
+```
+
+**Problem:** Audiogerät nicht gefunden
+
+```bash
+# Audiogeräte auflisten
+arecord -l
+
+# ALSA installieren
+sudo apt install alsa-utils
+```
+
+### Datenbank-Probleme
+
+**Problem:** PostgreSQL-Verbindung schlägt fehl
+
+Das System wechselt automatisch zu SQLite. Prüfen Sie die Logs:
+
+```text
+WARNING - PostgreSQL unavailable, switching to SQLite fallback
+INFO - Switched to SQLite: birdsound.db
+```
+
+Keine Aktion erforderlich! Das System funktioniert mit SQLite.
+
+## Leistung
+
+### Windows-PC (Typisch)
+
+- Modell-Laden: ~8 Sekunden (HuggingFace)
+- Inferenzzeit: ~200-300ms pro Vorhersage
+- Speichernutzung: ~2GB (mit geladenen Modellen)
+
+### Raspberry Pi 4 (4GB)
+
+- Modell-Laden: ~15-20 Sekunden
+- Inferenzzeit: ~800ms-1.5s pro Vorhersage
+- Speichernutzung: ~1.5GB (Swap empfohlen)
+
+## Lizenz
+
+MIT-Lizenz - siehe LICENSE-Datei
+
+## Danksagungen
+
+- [BirdNET](https://birdnet.cornell.edu/) vom Cornell Lab of Ornithology
+- [HuggingFace](https://huggingface.co/) für Model-Hosting und Transformers-Bibliothek
+- [FastAPI](https://fastapi.tiangolo.com/) für das exzellente Web-Framework
+
+## Support
+
+- GitHub Issues: <https://github.com/donapart/Birds/issues>
+- Dokumentation: Siehe `/docs` in diesem Repository

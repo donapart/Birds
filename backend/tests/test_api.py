@@ -67,28 +67,28 @@ class TestModelsEndpoint:
 class TestPredictEndpoint:
     """Tests for prediction endpoints."""
 
-    def test_predict_missing_fields(self, client: TestClient):
+    def test_predict_missing_fields(self, client: TestClient, auth_headers):
         """Test prediction with missing required fields."""
-        response = client.post("/api/v1/predict", json={})
+        response = client.post("/api/v1/predict", json={}, headers=auth_headers)
         assert response.status_code == 422  # Validation error
 
-    def test_predict_invalid_audio_format(self, client: TestClient, sample_prediction_request):
+    def test_predict_invalid_audio_format(self, client: TestClient, sample_prediction_request, auth_headers):
         """Test prediction with invalid audio format."""
         request = sample_prediction_request.copy()
         request["audio_format"] = "invalid_format"
-        response = client.post("/api/v1/predict", json=request)
+        response = client.post("/api/v1/predict", json=request, headers=auth_headers)
         assert response.status_code == 422
 
-    def test_predict_invalid_base64(self, client: TestClient, sample_prediction_request):
+    def test_predict_invalid_base64(self, client: TestClient, sample_prediction_request, auth_headers):
         """Test prediction with invalid base64 data."""
         request = sample_prediction_request.copy()
         request["audio_base64"] = "not_valid_base64!!!"
-        response = client.post("/api/v1/predict", json=request)
+        response = client.post("/api/v1/predict", json=request, headers=auth_headers)
         assert response.status_code == 422
 
-    def test_predict_valid_request(self, client: TestClient, sample_prediction_request):
+    def test_predict_valid_request(self, client: TestClient, sample_prediction_request, auth_headers):
         """Test prediction with valid request."""
-        response = client.post("/api/v1/predict", json=sample_prediction_request)
+        response = client.post("/api/v1/predict", json=sample_prediction_request, headers=auth_headers)
         # Should return 200 or 500 (if models not loaded)
         assert response.status_code in [200, 500]
 
@@ -98,10 +98,20 @@ class TestPredictEndpoint:
             assert "consensus" in data
             assert "model_predictions" in data
 
-    def test_predict_quick(self, client: TestClient, sample_prediction_request):
+    def test_predict_quick(self, client: TestClient, sample_prediction_request, auth_headers):
         """Test quick prediction endpoint."""
-        response = client.post("/api/v1/predict/quick", json=sample_prediction_request)
+        response = client.post("/api/v1/predict/quick", json=sample_prediction_request, headers=auth_headers)
         assert response.status_code in [200, 500]
+
+    def test_predict_without_api_key(self, client: TestClient, sample_prediction_request):
+        """Test that prediction requires API key."""
+        response = client.post("/api/v1/predict", json=sample_prediction_request)
+        assert response.status_code == 401
+
+    def test_predict_quick_without_api_key(self, client: TestClient, sample_prediction_request):
+        """Test that quick prediction requires API key."""
+        response = client.post("/api/v1/predict/quick", json=sample_prediction_request)
+        assert response.status_code == 401
 
 
 class TestRecordingsEndpoint:

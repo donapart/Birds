@@ -21,7 +21,8 @@ from sqlalchemy import (
     Boolean,
     Index,
 )
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import JSON
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from app.db.database import Base
@@ -71,7 +72,9 @@ class Recording(Base):
     consensus_method: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
 
     # Additional metadata
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    extra_metadata: Mapped[Optional[dict]] = mapped_column(
+        "metadata", JSON, nullable=True
+    )
 
     # Relationships
     predictions: Mapped[List["Prediction"]] = relationship(
@@ -124,7 +127,7 @@ class Prediction(Base):
     inference_time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     # Raw model output (for debugging/analysis)
-    raw_output: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    raw_output: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     # Relationship
     recording: Mapped["Recording"] = relationship("Recording", back_populates="predictions")
@@ -195,7 +198,7 @@ class ModelPerformance(Base):
     consensus_agreement_rate: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     # Top species predicted
-    top_species: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    top_species: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     __table_args__ = (
         Index("ix_model_perf_model_date", "model_name", "date"),

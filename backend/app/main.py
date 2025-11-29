@@ -17,21 +17,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from app.api.routes import predict, health, recordings, websocket, export, analysis, species, i18n
+from app.api.routes import predict, health, recordings, websocket, export, analysis, species, i18n, metrics
+from app.api.routes import xeno_canto
 from app.core.config import get_settings
 from app.db.database import init_db
 from app.services.model_registry import model_registry
 from app.core.cache import cache_service
 from app.i18n import LanguageMiddleware
+from app.core.logging_config import setup_logging
+from app.core.metrics import metrics as metrics_collector, track_model_loaded, MetricsMiddleware
+from app.core.rate_limiter import RateLimitMiddleware
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-
+# Get settings first
 settings = get_settings()
+
+# Configure structured logging
+setup_logging(level="INFO", json_format=not settings.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -53,12 +55,19 @@ async def lifespan(app: FastAPI):
     # Load ML models
     logger.info("Loading ML models...")
     await model_registry.load_models()
-    logger.info(f"Loaded models: {list(model_registry.models.keys())}")
+    loaded_models = list(model_registry.models.keys())
+    logger.info(f"Loaded models: {loaded_models}")
+    
+    # Track loaded models in metrics
+    for model_name in loaded_models:
+        track_model_loaded(model_name, loaded=True)
 
     yield
 
     # Cleanup
     logger.info("Shutting down BirdSound API...")
+    for model_name in model_registry.models.keys():
+        track_model_loaded(model_name, loaded=False)
     await model_registry.unload_models()
     await cache_service.disconnect()
 
@@ -82,6 +91,12 @@ app.add_middleware(
 # Language middleware for i18n
 app.add_middleware(LanguageMiddleware)
 
+# Metrics middleware for request tracking
+app.add_middleware(MetricsMiddleware)
+
+# Rate limiting middleware
+app.add_middleware(RateLimitMiddleware)
+
 # Include routers
 app.include_router(health.router, tags=["Health"])
 app.include_router(predict.router, prefix="/api/v1", tags=["Prediction"])
@@ -90,7 +105,9 @@ app.include_router(export.router, prefix="/api/v1", tags=["Export"])
 app.include_router(analysis.router, prefix="/api/v1", tags=["Analysis"])
 app.include_router(species.router, prefix="/api/v1", tags=["Species"])
 app.include_router(i18n.router, prefix="/api/v1", tags=["i18n"])
+app.include_router(metrics.router, tags=["Metrics"])
 app.include_router(websocket.router, tags=["WebSocket"])
+app.include_router(xeno_canto.router, prefix="/api/v1", tags=["Xeno-canto"])
 
 
 # Static files for frontend

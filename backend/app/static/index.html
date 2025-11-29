@@ -7,6 +7,8 @@
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -39,6 +41,7 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            cursor: pointer;
         }
 
         .header h1 span {
@@ -48,7 +51,27 @@
         .header-right {
             display: flex;
             align-items: center;
-            gap: 1.5rem;
+            gap: 1rem;
+        }
+
+        /* Header Buttons */
+        .header-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #aaa;
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.2s;
+        }
+
+        .header-btn:hover {
+            background: rgba(78, 205, 196, 0.2);
+            color: #fff;
         }
 
         /* Language Switcher */
@@ -107,7 +130,7 @@
 
         .main-container {
             display: grid;
-            grid-template-columns: 1fr 350px;
+            grid-template-columns: 1fr 400px;
             grid-template-rows: auto 1fr;
             gap: 1rem;
             padding: 1rem;
@@ -123,6 +146,7 @@
             display: flex;
             align-items: center;
             gap: 2rem;
+            flex-wrap: wrap;
         }
 
         .live-indicator {
@@ -150,16 +174,68 @@
 
         .current-detection {
             flex: 1;
+            min-width: 200px;
         }
 
         .current-detection h2 {
-            font-size: 2rem;
+            font-size: 1.8rem;
             margin-bottom: 0.25rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .current-detection h2:hover {
+            color: #4ecdc4;
         }
 
         .current-detection .confidence {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             color: #aaa;
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid transparent;
+            color: #aaa;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+        }
+
+        .filter-btn.active {
+            background: rgba(78, 205, 196, 0.2);
+            border-color: #4ecdc4;
+            color: #4ecdc4;
+        }
+
+        .filter-select {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #eee;
+            padding: 0.4rem 0.6rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .filter-select option {
+            background: #16213e;
+            color: #eee;
         }
 
         .model-badges {
@@ -178,6 +254,122 @@
         .model-badge.agree {
             background: rgba(81, 207, 102, 0.2);
             border: 1px solid #51cf66;
+        }
+
+        /* Audio Visualization */
+        .audio-visualizer {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 300px;
+        }
+
+        .visualizer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .visualizer-toggle {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .visualizer-toggle button {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #888;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .visualizer-toggle button:hover {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+        }
+
+        .visualizer-toggle button.active {
+            background: rgba(78, 205, 196, 0.3);
+            color: #4ecdc4;
+        }
+
+        .spectrogram-container {
+            position: relative;
+            height: 80px;
+            background: #0a0a15;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        #spectrogramCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .waveform-container {
+            position: relative;
+            height: 60px;
+            background: #0a0a15;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        #waveformCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .level-meter {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .level-bar {
+            flex: 1;
+            height: 8px;
+            background: #1a1a2e;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .level-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #51cf66 0%, #ffd93d 60%, #ff6b6b 100%);
+            width: 0%;
+            transition: width 0.1s ease-out;
+            border-radius: 4px;
+        }
+
+        .level-db {
+            font-size: 0.75rem;
+            color: #4ecdc4;
+            min-width: 45px;
+            text-align: right;
+            font-family: monospace;
+        }
+
+        /* Frequency labels */
+        .freq-labels {
+            position: absolute;
+            right: 4px;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-size: 0.6rem;
+            color: rgba(255,255,255,0.4);
+            padding: 2px 0;
+            pointer-events: none;
         }
 
         /* Map Section */
@@ -281,6 +473,675 @@
             color: #51cf66;
         }
 
+        /* Timeline Actions */
+        .timeline-actions {
+            display: flex;
+            gap: 0.25rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .timeline-item:hover .timeline-actions {
+            opacity: 1;
+        }
+
+        .timeline-action-btn {
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            padding: 0.2rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .timeline-action-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .timeline-action-btn.favorite.active {
+            color: #ffd93d;
+        }
+
+        .timeline-action-btn.report {
+            color: #ff6b6b;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: #16213e;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        /* Species Detail Modal */
+        .species-detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .species-detail-item {
+            padding: 0.75rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .species-detail-label {
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 0.25rem;
+        }
+
+        .species-detail-value {
+            font-size: 1rem;
+            color: #fff;
+        }
+
+        .species-detail-full {
+            grid-column: 1 / -1;
+        }
+
+        .species-stats {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(78, 205, 196, 0.1);
+            border-radius: 8px;
+        }
+
+        .species-stats-title {
+            font-size: 0.85rem;
+            color: #4ecdc4;
+            margin-bottom: 0.5rem;
+        }
+
+        .species-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+
+        .species-stat-item {
+            text-align: center;
+        }
+
+        .species-stat-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .species-stat-label {
+            font-size: 0.7rem;
+            color: #888;
+        }
+
+        /* Model Info Modal */
+        .model-info-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .model-info-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .model-info-stat {
+            text-align: center;
+        }
+
+        .model-info-stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #4ecdc4;
+        }
+
+        .model-info-stat-label {
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        .family-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .family-tag {
+            background: rgba(255,255,255,0.1);
+            padding: 0.4rem 0.8rem;
+            border-radius: 16px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .family-tag:hover {
+            background: rgba(78, 205, 196, 0.2);
+            color: #4ecdc4;
+        }
+
+        .family-tag .count {
+            color: #888;
+            margin-left: 0.25rem;
+        }
+
+        /* Model Comparison Styles */
+        .model-comparison {
+            padding: 1rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .model-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .model-card {
+            background: linear-gradient(135deg, rgba(78, 205, 196, 0.1) 0%, rgba(255, 107, 107, 0.05) 100%);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        .model-card.placeholder {
+            border-style: dashed;
+            padding: 2rem 1rem;
+        }
+
+        .model-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .model-card-header .model-icon {
+            font-size: 1.5rem;
+        }
+
+        .model-card-header .model-title {
+            font-weight: 600;
+            color: #4ecdc4;
+        }
+
+        .model-card-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            text-align: center;
+        }
+
+        .model-card-stats .model-stat .value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .model-card-stats .model-stat .label {
+            font-size: 0.65rem;
+            color: #888;
+        }
+
+        /* Model Species Performance Table */
+        .model-species-performance {
+            padding: 1rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .performance-table {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .performance-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1.5fr;
+            gap: 1rem;
+            padding: 0.5rem;
+            font-size: 0.75rem;
+            color: #888;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .performance-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1.5fr;
+            gap: 1rem;
+            padding: 0.5rem;
+            align-items: center;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .performance-row:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .performance-row .species-name {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .performance-row .species-icon {
+            font-size: 1rem;
+        }
+
+        .performance-row .best-model {
+            color: #4ecdc4;
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
+
+        .confidence-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .confidence-bar .bar {
+            height: 6px;
+            background: linear-gradient(90deg, #4ecdc4, #51cf66);
+            border-radius: 3px;
+            flex: 1;
+        }
+
+        .confidence-bar span {
+            font-size: 0.75rem;
+            color: #aaa;
+            min-width: 35px;
+        }
+
+        /* Available Models List */
+        .available-models {
+            padding: 1rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .model-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .model-item {
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .model-item.active {
+            border-color: rgba(78, 205, 196, 0.5);
+            background: rgba(78, 205, 196, 0.05);
+        }
+
+        .model-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .model-item-header .model-name {
+            font-weight: 600;
+        }
+
+        .model-item-header .model-status {
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        .model-item-details {
+            padding: 0.75rem 1rem;
+        }
+
+        .model-item-details code {
+            display: block;
+            font-size: 0.7rem;
+            color: #4ecdc4;
+            margin-bottom: 0.5rem;
+        }
+
+        .model-item-details p {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-bottom: 0.5rem;
+        }
+
+        .model-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .model-tags .tag {
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+
+        .model-tags .tag.good {
+            background: rgba(81, 207, 102, 0.2);
+            color: #51cf66;
+        }
+
+        .model-tags .tag.medium {
+            background: rgba(255, 217, 61, 0.2);
+            color: #ffd93d;
+        }
+
+        /* Consensus Options */
+        .model-selection {
+            padding: 1rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .consensus-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .consensus-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+
+        .consensus-option:hover {
+            background: rgba(78, 205, 196, 0.1);
+        }
+
+        .consensus-option.selected {
+            border-color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.15);
+        }
+
+        .consensus-option input {
+            accent-color: #4ecdc4;
+        }
+
+        /* Report Modal */
+        .report-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .report-detected {
+            padding: 1rem;
+            background: rgba(255, 107, 107, 0.1);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .report-detected-label {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 0.25rem;
+        }
+
+        .report-detected-species {
+            font-size: 1.2rem;
+            color: #ff6b6b;
+        }
+
+        .report-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .report-label {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .report-select, .report-input {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .report-select option {
+            background: #16213e;
+        }
+
+        .report-submit {
+            background: linear-gradient(135deg, #4ecdc4, #51cf66);
+            border: none;
+            color: #000;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .report-submit:hover {
+            opacity: 0.9;
+        }
+
+        /* Export Modal */
+        .export-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .export-option {
+            padding: 1.5rem;
+            background: rgba(0,0,0,0.2);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .export-option:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(78, 205, 196, 0.3);
+        }
+
+        .export-option-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .export-option-title {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .export-option-desc {
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        /* Marker Cluster Styling */
+        .marker-cluster {
+            background: transparent;
+        }
+
+        .cluster-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(78, 205, 196, 0.8);
+            border-radius: 50%;
+            color: #fff;
+            font-size: 0.7rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .cluster-icon span {
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .cluster-icon b {
+            font-size: 0.65rem;
+            margin-top: -2px;
+        }
+
+        .cluster-small {
+            width: 35px;
+            height: 35px;
+            background: rgba(78, 205, 196, 0.8);
+        }
+
+        .cluster-medium {
+            width: 45px;
+            height: 45px;
+            background: rgba(255, 217, 61, 0.8);
+        }
+
+        .cluster-large {
+            width: 55px;
+            height: 55px;
+            background: rgba(255, 107, 107, 0.8);
+        }
+
+        /* Activity Chart */
+        .activity-chart-container {
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .activity-chart-title {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .activity-chart-wrapper {
+            height: 80px;
+        }
+
+        /* Notes Input */
+        .notes-input-container {
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .notes-input-container.active {
+            display: block;
+        }
+
+        .notes-input {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            resize: none;
+        }
+
+        .notes-input::placeholder {
+            color: #666;
+        }
+
         /* Stats Section */
         .stats-section {
             background: #16213e;
@@ -315,6 +1176,412 @@
         .chart-container {
             height: 150px;
             margin-top: 1rem;
+        }
+
+        /* Top Species List */
+        .top-species-list {
+            margin-top: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 0.75rem;
+        }
+
+        .top-species-header {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .top-species-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 0.85rem;
+        }
+
+        .top-species-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .top-species-rank {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(78, 205, 196, 0.2);
+            color: #4ecdc4;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .top-species-rank.gold { background: rgba(255, 215, 0, 0.2); color: #ffd700; }
+        .top-species-rank.silver { background: rgba(192, 192, 192, 0.2); color: #c0c0c0; }
+        .top-species-rank.bronze { background: rgba(205, 127, 50, 0.2); color: #cd7f32; }
+
+        .top-species-name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .top-species-count {
+            color: #888;
+            font-size: 0.8rem;
+        }
+
+        .top-species-percent {
+            color: #4ecdc4;
+            font-weight: 500;
+            font-size: 0.8rem;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        /* Rare Species Warning */
+        .rare-species-warning {
+            margin-top: 0.75rem;
+            padding: 0.5rem;
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: #ff6b6b;
+        }
+
+        .rare-species-warning .title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Session Stats */
+        .session-stats {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .session-stats-title {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .session-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .session-stat {
+            font-size: 0.75rem;
+        }
+
+        .session-stat-value {
+            font-weight: 600;
+            color: #4ecdc4;
+        }
+
+        /* Confidence Histogram */
+        .confidence-histogram {
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .histogram-title {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 0.5rem;
+        }
+
+        .histogram-bars {
+            display: flex;
+            gap: 2px;
+            height: 40px;
+            align-items: flex-end;
+        }
+
+        .histogram-bar {
+            flex: 1;
+            background: linear-gradient(to top, #4ecdc4, #51cf66);
+            border-radius: 2px 2px 0 0;
+            min-height: 2px;
+            position: relative;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .histogram-bar:hover {
+            opacity: 0.8;
+        }
+
+        .histogram-bar::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .histogram-bar:hover::after {
+            opacity: 1;
+        }
+
+        .histogram-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+
+        /* Audio Playback Button */
+        .timeline-action-btn.play {
+            color: #4ecdc4;
+        }
+
+        .timeline-action-btn.play.playing {
+            animation: pulse-play 1s infinite;
+        }
+
+        @keyframes pulse-play {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Notes */
+        .timeline-action-btn.notes {
+            color: #ffd93d;
+        }
+
+        .timeline-action-btn.notes.has-note {
+            color: #ff9f43;
+        }
+
+        .timeline-note {
+            font-size: 0.75rem;
+            color: #aaa;
+            margin-top: 0.25rem;
+            padding-left: 0.5rem;
+            border-left: 2px solid #4ecdc4;
+            font-style: italic;
+        }
+
+        /* Notes Modal */
+        .note-input {
+            width: 100%;
+            min-height: 100px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            resize: vertical;
+        }
+
+        .note-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .note-tag {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #aaa;
+            padding: 0.4rem 0.8rem;
+            border-radius: 16px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .note-tag:hover, .note-tag.active {
+            background: rgba(78, 205, 196, 0.2);
+            color: #4ecdc4;
+        }
+
+        /* Calendar View */
+        .calendar-view {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .calendar-nav-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #aaa;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .calendar-nav-btn:hover {
+            background: rgba(78, 205, 196, 0.2);
+            color: #fff;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
+
+        .calendar-day-header {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #666;
+            padding: 0.25rem;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .calendar-day:hover {
+            background: rgba(78, 205, 196, 0.2);
+        }
+
+        .calendar-day.today {
+            border: 1px solid #4ecdc4;
+        }
+
+        .calendar-day.has-data {
+            background: rgba(81, 207, 102, 0.2);
+        }
+
+        .calendar-day.selected {
+            background: #4ecdc4;
+            color: #000;
+        }
+
+        .calendar-day-count {
+            font-size: 0.6rem;
+            color: #4ecdc4;
+            font-weight: 600;
+        }
+
+        .calendar-day.selected .calendar-day-count {
+            color: #000;
+        }
+
+        .calendar-day.other-month {
+            opacity: 0.3;
+        }
+
+        .calendar-summary {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .calendar-summary-date {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #4ecdc4;
+        }
+
+        .calendar-summary-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+        }
+
+        /* Weather Display */
+        .weather-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: rgba(0,0,0,0.2);
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+
+        .weather-badge .temp {
+            color: #ffd93d;
+        }
+
+        .weather-current {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .weather-icon {
+            font-size: 1.5rem;
+        }
+
+        .weather-temp {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #ffd93d;
+        }
+
+        .weather-desc {
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+
+        .weather-details {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.75rem;
+            color: #888;
         }
 
         /* Responsive */
@@ -359,8 +1626,28 @@
 </head>
 <body>
     <header class="header">
-        <h1><span>🐦</span> BirdSound</h1>
+        <h1 onclick="showModelInfo()"><span>🐦</span> BirdSound</h1>
         <div class="header-right">
+            <!-- Weather Display -->
+            <div class="weather-current" id="weatherDisplay" title="Aktuelles Wetter">
+                <span class="weather-icon" id="weatherIcon">🌤️</span>
+                <div>
+                    <div class="weather-temp" id="weatherTemp">--°C</div>
+                    <div class="weather-details">
+                        <span id="weatherHumidity">💧 --%</span>
+                        <span id="weatherWind">💨 -- km/h</span>
+                    </div>
+                </div>
+            </div>
+            <button class="header-btn" onclick="showCalendarModal()" title="Kalender">
+                🗓️ <span data-i18n="calendar">Kalender</span>
+            </button>
+            <button class="header-btn" onclick="showModelInfo()" title="Modell-Information">
+                🤖 <span data-i18n="model_info">Modell-Info</span>
+            </button>
+            <button class="header-btn" onclick="showExportModal()" title="Daten exportieren">
+                📤 <span data-i18n="export">Export</span>
+            </button>
             <div class="language-switcher">
                 <button id="langDe" onclick="setLanguage('de')">DE</button>
                 <span class="divider">|</span>
@@ -381,9 +1668,63 @@
                 <span>LIVE</span>
             </div>
             <div class="current-detection">
-                <h2 id="currentSpecies" data-i18n="waiting_detection">Warte auf Erkennung...</h2>
+                <h2 id="currentSpecies" onclick="showCurrentSpeciesDetail()" data-i18n="waiting_detection">Warte auf Erkennung...</h2>
                 <div class="confidence" id="currentConfidence"></div>
             </div>
+            
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <span style="font-size: 0.8rem; color: #888;">Filter:</span>
+                <button class="filter-btn" id="filterHighConf" onclick="toggleFilter('highConf')">
+                    ⭐ >80%
+                </button>
+                <select class="filter-select" id="filterFamily" onchange="applyFamilyFilter(this.value)">
+                    <option value="">Alle Familien</option>
+                    <option value="Paridae">🐤 Meisen</option>
+                    <option value="Turdidae">🐦‍⬛ Drosseln</option>
+                    <option value="Fringillidae">🐦 Finken</option>
+                    <option value="Corvidae">🪶 Rabenvögel</option>
+                    <option value="Picidae">🪵 Spechte</option>
+                    <option value="Strigidae">🦉 Eulen</option>
+                    <option value="Columbidae">🕊️ Tauben</option>
+                </select>
+                <select class="filter-select" id="filterTime" onchange="applyTimeFilter(this.value)">
+                    <option value="0">Alle Zeit</option>
+                    <option value="1">Letzte Stunde</option>
+                    <option value="24" selected>24 Stunden</option>
+                    <option value="168">Diese Woche</option>
+                </select>
+            </div>
+            
+            <!-- Audio Visualizer -->
+            <div class="audio-visualizer">
+                <div class="visualizer-header">
+                    <span>🎵 Audio</span>
+                    <div class="visualizer-toggle">
+                        <button id="btnSpectro" class="active" onclick="setVisualizerMode('spectrogram')">Spektro</button>
+                        <button id="btnWave" onclick="setVisualizerMode('waveform')">Welle</button>
+                    </div>
+                </div>
+                <div class="spectrogram-container" id="spectrogramContainer">
+                    <canvas id="spectrogramCanvas"></canvas>
+                    <div class="freq-labels">
+                        <span>8kHz</span>
+                        <span>4kHz</span>
+                        <span>0Hz</span>
+                    </div>
+                </div>
+                <div class="waveform-container" id="waveformContainer" style="display: none;">
+                    <canvas id="waveformCanvas"></canvas>
+                </div>
+                <div class="level-meter">
+                    <span style="font-size: 0.75rem; color: #888;">📊</span>
+                    <div class="level-bar">
+                        <div class="level-fill" id="levelFill"></div>
+                    </div>
+                    <span class="level-db" id="levelDb">-∞ dB</span>
+                </div>
+            </div>
+            
             <div class="model-badges" id="modelBadges">
                 <!-- Model badges will be inserted here -->
             </div>
@@ -426,6 +1767,69 @@
                 <div class="chart-container">
                     <canvas id="speciesChart"></canvas>
                 </div>
+                
+                <!-- Top Species List -->
+                <div class="top-species-list" id="topSpeciesList">
+                    <div class="top-species-header">
+                        <span data-i18n="top_species">Top Arten</span>
+                        <span id="topSpeciesTotal"></span>
+                    </div>
+                    <!-- Populated by JS -->
+                </div>
+                
+                <!-- Rare Species Warning -->
+                <div class="rare-species-warning" id="rareSpeciesWarning" style="display: none;">
+                    <div class="title">⚠️ <span data-i18n="rare_detection">Seltene Erkennung - bitte prüfen</span></div>
+                    <div id="rareSpeciesList"></div>
+                </div>
+                
+                <!-- Confidence Histogram -->
+                <div class="confidence-histogram">
+                    <div class="histogram-title" data-i18n="confidence_distribution">Konfidenz-Verteilung</div>
+                    <div class="histogram-bars" id="histogramBars">
+                        <!-- Populated by JS -->
+                    </div>
+                    <div class="histogram-labels">
+                        <span>0%</span>
+                        <span>50%</span>
+                        <span>100%</span>
+                    </div>
+                </div>
+                
+                <!-- Activity Chart by Time of Day -->
+                <div class="activity-chart-container">
+                    <div class="activity-chart-title">
+                        🌅 <span data-i18n="activity_by_time">Aktivität nach Tageszeit</span>
+                    </div>
+                    <div class="activity-chart-wrapper">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Session Stats -->
+                <div class="session-stats">
+                    <div class="session-stats-title">
+                        ⏱️ <span data-i18n="session_stats">Session-Statistik</span>
+                    </div>
+                    <div class="session-stats-grid">
+                        <div class="session-stat">
+                            <span data-i18n="session_start">Start:</span>
+                            <span class="session-stat-value" id="sessionStart">--:--</span>
+                        </div>
+                        <div class="session-stat">
+                            <span data-i18n="highest_conf">Max:</span>
+                            <span class="session-stat-value" id="sessionMaxConf">0%</span>
+                        </div>
+                        <div class="session-stat">
+                            <span data-i18n="last_silence">Stille:</span>
+                            <span class="session-stat-value" id="sessionSilence">0s</span>
+                        </div>
+                        <div class="session-stat">
+                            <span data-i18n="detections_min">Rate:</span>
+                            <span class="session-stat-value" id="sessionRate">0/min</span>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- Timeline -->
@@ -440,9 +1844,162 @@
             </section>
         </aside>
     </main>
+    
+    <!-- Species Detail Modal -->
+    <div class="modal-overlay" id="speciesModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="speciesModalTitle">🐦 Artdetails</h2>
+                <button class="modal-close" onclick="closeModal('speciesModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="speciesModalBody">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Model Info Modal -->
+    <div class="modal-overlay" id="modelInfoModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>🤖 <span data-i18n="model_info">Modell-Information</span></h2>
+                <button class="modal-close" onclick="closeModal('modelInfoModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="modelInfoBody">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Report Modal -->
+    <div class="modal-overlay" id="reportModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>🚩 <span data-i18n="report_error">Fehlerkennung melden</span></h2>
+                <button class="modal-close" onclick="closeModal('reportModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form class="report-form" onsubmit="submitReport(event)">
+                    <div class="report-detected">
+                        <div class="report-detected-label" data-i18n="detected_as">Erkannt als:</div>
+                        <div class="report-detected-species" id="reportDetectedSpecies">-</div>
+                    </div>
+                    <div class="report-input-group">
+                        <label class="report-label" data-i18n="correct_species">Korrekte Art:</label>
+                        <select class="report-select" id="reportCorrectSpecies" required>
+                            <option value="">-- Bitte auswählen --</option>
+                        </select>
+                    </div>
+                    <div class="report-input-group">
+                        <label class="report-label" data-i18n="notes">Anmerkungen (optional):</label>
+                        <input type="text" class="report-input" id="reportNotes" placeholder="z.B. Wetter, Umgebung...">
+                    </div>
+                    <input type="hidden" id="reportDetectionId">
+                    <button type="submit" class="report-submit" data-i18n="submit_report">Meldung absenden</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Export Modal -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📤 <span data-i18n="export_data">Daten exportieren</span></h2>
+                <button class="modal-close" onclick="closeModal('exportModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="export-options">
+                    <div class="export-option" onclick="exportData('json')">
+                        <div class="export-option-icon">📋</div>
+                        <div class="export-option-title">JSON</div>
+                        <div class="export-option-desc" data-i18n="export_json_desc">Vollständige Daten</div>
+                    </div>
+                    <div class="export-option" onclick="exportData('csv')">
+                        <div class="export-option-icon">📊</div>
+                        <div class="export-option-title">CSV</div>
+                        <div class="export-option-desc" data-i18n="export_csv_desc">Für Excel/Tabellen</div>
+                    </div>
+                    <div class="export-option" onclick="exportData('geojson')">
+                        <div class="export-option-icon">🗺️</div>
+                        <div class="export-option-title">GeoJSON</div>
+                        <div class="export-option-desc" data-i18n="export_geojson_desc">Für Kartendaten</div>
+                    </div>
+                    <div class="export-option" onclick="exportData('ebird')">
+                        <div class="export-option-icon">🦅</div>
+                        <div class="export-option-title">eBird</div>
+                        <div class="export-option-desc" data-i18n="export_ebird_desc">eBird-kompatibel</div>
+                    </div>
+                </div>
+                <div style="margin-top: 1.5rem; text-align: center;">
+                    <button class="header-btn" onclick="shareSummary()" style="margin: 0 auto;">
+                        📣 <span data-i18n="share_summary">Tageszusammenfassung teilen</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notes Modal -->
+    <div class="modal-overlay" id="notesModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📝 <span data-i18n="add_note">Notiz hinzufügen</span></h2>
+                <button class="modal-close" onclick="closeModal('notesModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="notesDetectionInfo" style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                    <!-- Detection info will be populated by JS -->
+                </div>
+                <textarea class="note-input" id="noteText" data-placeholder="note_placeholder" placeholder="Beobachtungsnotizen... (Verhalten, Habitat, Wetter, etc.)"></textarea>
+                <div class="note-tags">
+                    <span style="font-size: 0.8rem; color: #888;" data-i18n="quick_tags">Schnell-Tags:</span>
+                    <button class="note-tag" onclick="addNoteTag('singing')">🎵 <span data-i18n="singing">Singend</span></button>
+                    <button class="note-tag" onclick="addNoteTag('calling')">📣 <span data-i18n="calling">Rufend</span></button>
+                    <button class="note-tag" onclick="addNoteTag('flying')">🦅 <span data-i18n="flying">Fliegend</span></button>
+                    <button class="note-tag" onclick="addNoteTag('feeding')">🐛 <span data-i18n="feeding">Fressend</span></button>
+                    <button class="note-tag" onclick="addNoteTag('nesting')">🪺 <span data-i18n="nesting">Nistend</span></button>
+                    <button class="note-tag" onclick="addNoteTag('pair')">💑 <span data-i18n="pair">Paar</span></button>
+                    <button class="note-tag" onclick="addNoteTag('flock')">🐦🐦 <span data-i18n="flock">Schwarm</span></button>
+                </div>
+                <input type="hidden" id="noteDetectionId">
+                <button class="report-submit" onclick="saveNote()" data-i18n="save_note">Notiz speichern</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Calendar Modal -->
+    <div class="modal-overlay" id="calendarModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>🗓️ <span data-i18n="calendar">Kalender</span></h2>
+                <button class="modal-close" onclick="closeModal('calendarModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="calendar-header">
+                    <div class="calendar-nav">
+                        <button class="calendar-nav-btn" onclick="changeMonth(-1)">◀</button>
+                        <button class="calendar-nav-btn" onclick="goToToday()" data-i18n="today">Heute</button>
+                        <button class="calendar-nav-btn" onclick="changeMonth(1)">▶</button>
+                    </div>
+                    <div id="calendarMonthYear" style="font-weight: 600;"></div>
+                </div>
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="calendar-summary" id="calendarSummary">
+                    <div class="calendar-summary-date" id="calendarSelectedDate">-</div>
+                    <div class="calendar-summary-stats" id="calendarSelectedStats">
+                        Wähle einen Tag aus
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
     <script>
         // Configuration
@@ -454,11 +2011,57 @@
         let map = null;
         let markers = [];
         let detections = [];
+        let filteredDetections = [];
         let speciesCounts = {};
         let chart = null;
         let currentLang = 'de';
         let translations = {};
         let speciesNames = {};
+        let speciesData = {}; // Full species data from API
+        let favorites = new Set(JSON.parse(localStorage.getItem('birdFavorites') || '[]'));
+        let currentSpecies = null; // Current detected species
+        
+        // Filters
+        let filterHighConf = false;
+        let filterFamily = '';
+        let filterTimeHours = 24;
+        
+        // Session Stats
+        let sessionStart = new Date();
+        let lastDetectionTime = null;
+        let maxSilenceTime = 0;
+        let maxConfidence = 0;
+        
+        // Notes storage (localStorage)
+        let detectionNotes = JSON.parse(localStorage.getItem('birdDetectionNotes') || '{}');
+        
+        // Audio recordings buffer (for playback)
+        let audioRecordings = {};
+        let currentPlayingAudio = null;
+        
+        // Calendar state
+        let calendarDate = new Date();
+        let selectedCalendarDate = null;
+        
+        // Weather state
+        let currentWeather = null;
+        let weatherCache = {};
+        
+        // Model state
+        let activeModels = ['DimaBird']; // Currently active models
+        let consensusMethod = localStorage.getItem('birdConsensusMethod') || 'weighted_average';
+
+        // Audio Visualization State
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        let spectrogramCtx = null;
+        let waveformCtx = null;
+        let spectrogramData = [];
+        let visualizerMode = 'spectrogram';
+        let animationId = null;
+        const SPECTROGRAM_WIDTH = 256;
+        const FFT_SIZE = 2048;
 
         // Translations (inline fallback)
         const TRANSLATIONS = {
@@ -476,7 +2079,77 @@
                 agreement: 'Übereinstimmung',
                 timeline: '🕐 Timeline',
                 confidence: 'Konfidenz',
-                no_detection: 'Kein Vogel erkannt'
+                no_detection: 'Kein Vogel erkannt',
+                model_info: 'Modell-Info',
+                export: 'Export',
+                top_species: 'Top Arten',
+                rare_detection: 'Seltene Erkennung - bitte prüfen',
+                confidence_distribution: 'Konfidenz-Verteilung',
+                session_stats: 'Session-Statistik',
+                session_start: 'Start',
+                highest_conf: 'Max',
+                last_silence: 'Stille',
+                detections_min: 'Rate',
+                report_error: 'Fehlerkennung melden',
+                detected_as: 'Erkannt als',
+                correct_species: 'Korrekte Art',
+                notes: 'Anmerkungen (optional)',
+                submit_report: 'Meldung absenden',
+                export_data: 'Daten exportieren',
+                export_json_desc: 'Vollständige Daten',
+                export_csv_desc: 'Für Excel/Tabellen',
+                export_geojson_desc: 'Für Kartendaten',
+                export_ebird_desc: 'eBird-kompatibel',
+                share_summary: 'Tageszusammenfassung teilen',
+                scientific_name: 'Wissenschaftlicher Name',
+                german_name: 'Deutscher Name',
+                english_name: 'Englischer Name',
+                family: 'Familie',
+                frequency_range: 'Frequenzbereich',
+                activity_times: 'Aktivitätszeiten',
+                your_detections: 'Deine Erkennungen',
+                times_detected: 'x erkannt',
+                avg_confidence_species: 'Ø Konfidenz',
+                last_seen: 'Zuletzt',
+                known_species: 'bekannte Arten',
+                families: 'Familien',
+                report_sent: 'Meldung gesendet!',
+                export_success: 'Export erfolgreich!',
+                activity_by_time: 'Aktivität nach Tageszeit',
+                play_audio: 'Audio abspielen',
+                stop_audio: 'Audio stoppen',
+                add_note: 'Notiz hinzufügen',
+                edit_note: 'Notiz bearbeiten',
+                save_note: 'Notiz speichern',
+                note_placeholder: 'Beobachtungsnotizen... (Verhalten, Habitat, Wetter, etc.)',
+                quick_tags: 'Schnell-Tags',
+                calendar: 'Kalender',
+                today: 'Heute',
+                weather: 'Wetter',
+                temperature: 'Temperatur',
+                humidity: 'Luftfeuchtigkeit',
+                wind: 'Wind',
+                no_weather: 'Keine Wetterdaten',
+                singing: 'Singend',
+                calling: 'Rufend',
+                flying: 'Fliegend',
+                feeding: 'Fressend',
+                nesting: 'Nistend',
+                pair: 'Paar',
+                flock: 'Schwarm',
+                // Model comparison translations
+                model_comparison: 'Modell-Vergleich',
+                model_species_performance: 'Modell-Leistung nach Art',
+                best_model: 'Bestes Modell',
+                available_models: 'Verfügbare Modelle',
+                model_dimabird_desc: 'Spezialisiert auf europäische Singvögel. Gut bei klaren Gesängen im Wald.',
+                model_birdnet_desc: 'Cornell Lab Modell mit globalem Fokus. Stark bei Rufen und nachtaktiven Arten.',
+                consensus_method: 'Konsens-Methode',
+                weighted_average: 'Gewichteter Durchschnitt',
+                majority_vote: 'Mehrheitsvotum',
+                max_confidence: 'Höchste Konfidenz',
+                no_model_data: 'Noch keine Modelldaten',
+                start_recording_hint: 'Starte eine Aufnahme für Statistiken'
             },
             en: {
                 connecting: 'Connecting...',
@@ -492,7 +2165,77 @@
                 agreement: 'Agreement',
                 timeline: '🕐 Timeline',
                 confidence: 'Confidence',
-                no_detection: 'No bird detected'
+                no_detection: 'No bird detected',
+                model_info: 'Model Info',
+                export: 'Export',
+                top_species: 'Top Species',
+                rare_detection: 'Rare detection - please verify',
+                confidence_distribution: 'Confidence Distribution',
+                session_stats: 'Session Stats',
+                session_start: 'Start',
+                highest_conf: 'Max',
+                last_silence: 'Silence',
+                detections_min: 'Rate',
+                report_error: 'Report Misidentification',
+                detected_as: 'Detected as',
+                correct_species: 'Correct Species',
+                notes: 'Notes (optional)',
+                submit_report: 'Submit Report',
+                export_data: 'Export Data',
+                export_json_desc: 'Complete data',
+                export_csv_desc: 'For Excel/Sheets',
+                export_geojson_desc: 'For map data',
+                export_ebird_desc: 'eBird compatible',
+                share_summary: 'Share Daily Summary',
+                scientific_name: 'Scientific Name',
+                german_name: 'German Name',
+                english_name: 'English Name',
+                family: 'Family',
+                frequency_range: 'Frequency Range',
+                activity_times: 'Activity Times',
+                your_detections: 'Your Detections',
+                times_detected: 'x detected',
+                avg_confidence_species: 'Avg Confidence',
+                last_seen: 'Last seen',
+                known_species: 'known species',
+                families: 'Families',
+                report_sent: 'Report sent!',
+                export_success: 'Export successful!',
+                activity_by_time: 'Activity by Time of Day',
+                play_audio: 'Play audio',
+                stop_audio: 'Stop audio',
+                add_note: 'Add note',
+                edit_note: 'Edit note',
+                save_note: 'Save note',
+                note_placeholder: 'Observation notes... (behavior, habitat, weather, etc.)',
+                quick_tags: 'Quick tags',
+                calendar: 'Calendar',
+                today: 'Today',
+                weather: 'Weather',
+                temperature: 'Temperature',
+                humidity: 'Humidity',
+                wind: 'Wind',
+                no_weather: 'No weather data',
+                singing: 'Singing',
+                calling: 'Calling',
+                flying: 'Flying',
+                feeding: 'Feeding',
+                nesting: 'Nesting',
+                pair: 'Pair',
+                flock: 'Flock',
+                // Model comparison translations
+                model_comparison: 'Model Comparison',
+                model_species_performance: 'Model Performance by Species',
+                best_model: 'Best Model',
+                available_models: 'Available Models',
+                model_dimabird_desc: 'Specialized for European songbirds. Good with clear songs in forests.',
+                model_birdnet_desc: 'Cornell Lab model with global focus. Strong with calls and nocturnal species.',
+                consensus_method: 'Consensus Method',
+                weighted_average: 'Weighted Average',
+                majority_vote: 'Majority Vote',
+                max_confidence: 'Max Confidence',
+                no_model_data: 'No model data yet',
+                start_recording_hint: 'Start recording for statistics'
             }
         };
 
@@ -510,7 +2253,94 @@
             'Haussperling': '🐦',
             'Common Starling': '🐦',
             'Star': '🐦',
+            'Eurasian Magpie': '🦜',
+            'Elster': '🦜',
+            'Eurasian Jay': '🦜',
+            'Eichelhäher': '🦜',
+            'Common Cuckoo': '🐦',
+            'Kuckuck': '🐦',
+            'Tawny Owl': '🦉',
+            'Waldkauz': '🦉',
+            'Little Owl': '🦉',
+            'Steinkauz': '🦉',
+            'Eurasian Eagle-Owl': '🦉',
+            'Uhu': '🦉',
+            'Common Kingfisher': '🐦',
+            'Eisvogel': '🐦',
+            'European Green Woodpecker': '🦜',
+            'Grünspecht': '🦜',
+            'Great Spotted Woodpecker': '🦜',
+            'Buntspecht': '🦜',
+            'Common Wood Pigeon': '🕊️',
+            'Ringeltaube': '🕊️',
+            'Barn Swallow': '🐦',
+            'Rauchschwalbe': '🐦',
+            'Common Swift': '🐦',
+            'Mauersegler': '🐦',
+            'Common Nightingale': '🎵',
+            'Nachtigall': '🎵',
             'default': '🐦'
+        };
+        
+        // German species names mapping (fallback for scientific names)
+        const GERMAN_SPECIES_NAMES = {
+            'Turdus merula': 'Amsel',
+            'Erithacus rubecula': 'Rotkehlchen',
+            'Parus major': 'Kohlmeise',
+            'Cyanistes caeruleus': 'Blaumeise',
+            'Passer domesticus': 'Haussperling',
+            'Passer montanus': 'Feldsperling',
+            'Sturnus vulgaris': 'Star',
+            'Pica pica': 'Elster',
+            'Garrulus glandarius': 'Eichelhäher',
+            'Corvus corone': 'Rabenkrähe',
+            'Corvus corax': 'Kolkrabe',
+            'Cuculus canorus': 'Kuckuck',
+            'Strix aluco': 'Waldkauz',
+            'Athene noctua': 'Steinkauz',
+            'Bubo bubo': 'Uhu',
+            'Asio otus': 'Waldohreule',
+            'Alcedo atthis': 'Eisvogel',
+            'Picus viridis': 'Grünspecht',
+            'Dendrocopos major': 'Buntspecht',
+            'Dryocopus martius': 'Schwarzspecht',
+            'Columba palumbus': 'Ringeltaube',
+            'Streptopelia decaocto': 'Türkentaube',
+            'Hirundo rustica': 'Rauchschwalbe',
+            'Delichon urbicum': 'Mehlschwalbe',
+            'Apus apus': 'Mauersegler',
+            'Luscinia megarhynchos': 'Nachtigall',
+            'Fringilla coelebs': 'Buchfink',
+            'Carduelis carduelis': 'Stieglitz',
+            'Chloris chloris': 'Grünfink',
+            'Pyrrhula pyrrhula': 'Gimpel',
+            'Turdus philomelos': 'Singdrossel',
+            'Turdus pilaris': 'Wacholderdrossel',
+            'Phylloscopus collybita': 'Zilpzalp',
+            'Phylloscopus trochilus': 'Fitis',
+            'Sylvia atricapilla': 'Mönchsgrasmücke',
+            'Sylvia borin': 'Gartengrasmücke',
+            'Regulus regulus': 'Wintergoldhähnchen',
+            'Troglodytes troglodytes': 'Zaunkönig',
+            'Motacilla alba': 'Bachstelze',
+            'Sitta europaea': 'Kleiber',
+            'Certhia familiaris': 'Waldbaumläufer',
+            'Aegithalos caudatus': 'Schwanzmeise',
+            'Periparus ater': 'Tannenmeise',
+            'Poecile palustris': 'Sumpfmeise',
+            'Lophophanes cristatus': 'Haubenmeise',
+            'Alauda arvensis': 'Feldlerche',
+            'Phoenicurus ochruros': 'Hausrotschwanz',
+            'Phoenicurus phoenicurus': 'Gartenrotschwanz',
+            'Saxicola rubicola': 'Schwarzkehlchen',
+            'Buteo buteo': 'Mäusebussard',
+            'Accipiter nisus': 'Sperber',
+            'Falco tinnunculus': 'Turmfalke',
+            'Ardea cinerea': 'Graureiher',
+            'Anas platyrhynchos': 'Stockente',
+            'Cygnus olor': 'Höckerschwan',
+            'Fulica atra': 'Blässhuhn',
+            'Gallinula chloropus': 'Teichhuhn'
         };
 
         // Get translation
@@ -525,12 +2355,39 @@
             return text;
         }
 
-        // Get species name in current language
+        // Get species name in current language with fallbacks
         function getSpeciesName(scientificName) {
+            // 1. Check API-loaded species names
             if (speciesNames[scientificName]) {
                 return speciesNames[scientificName].name;
             }
+            
+            // 2. For German, use local mapping
+            if (currentLang === 'de' && GERMAN_SPECIES_NAMES[scientificName]) {
+                return GERMAN_SPECIES_NAMES[scientificName];
+            }
+            
+            // 3. Try to extract common name from BirdNET format "Scientific_Common"
+            if (scientificName && scientificName.includes('_')) {
+                return scientificName.split('_').pop();
+            }
+            
+            // 4. Return as-is
             return scientificName;
+        }
+        
+        // Get both German and scientific name for display
+        function getSpeciesDisplayInfo(scientificName) {
+            const germanName = GERMAN_SPECIES_NAMES[scientificName] || null;
+            const commonName = getSpeciesName(scientificName);
+            
+            return {
+                primary: currentLang === 'de' ? (germanName || commonName) : commonName,
+                secondary: germanName && currentLang === 'de' ? scientificName : germanName,
+                scientific: scientificName,
+                german: germanName,
+                common: commonName
+            };
         }
 
         // Set language
@@ -611,13 +2468,32 @@
             return cookies.lang || navigator.language.split('-')[0] || 'de';
         }
 
-        // Initialize map
+        // Initialize map with marker clustering
         function initMap() {
             map = L.map('map').setView([52.52, 13.405], 10);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
+
+            // Initialize marker cluster group
+            window.markerCluster = L.markerClusterGroup({
+                maxClusterRadius: 50,
+                spiderfyOnMaxZoom: true,
+                showCoverageOnHover: false,
+                iconCreateFunction: function(cluster) {
+                    const count = cluster.getChildCount();
+                    let size = 'small';
+                    if (count > 10) size = 'medium';
+                    if (count > 50) size = 'large';
+                    return L.divIcon({
+                        html: `<div class="cluster-icon cluster-${size}"><span>🐦</span><b>${count}</b></div>`,
+                        className: 'marker-cluster',
+                        iconSize: [40, 40]
+                    });
+                }
+            });
+            map.addLayer(window.markerCluster);
 
             // Custom marker icon
             window.birdIcon = L.divIcon({
@@ -628,7 +2504,7 @@
             });
         }
 
-        // Initialize chart
+        // Initialize charts (species + activity)
         function initChart() {
             const ctx = document.getElementById('speciesChart').getContext('2d');
             chart = new Chart(ctx, {
@@ -657,6 +2533,42 @@
                     }
                 }
             });
+            
+            // Initialize activity chart if container exists
+            const activityCtx = document.getElementById('activityChart');
+            if (activityCtx) {
+                window.activityChart = new Chart(activityCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['0-4', '4-8', '8-12', '12-16', '16-20', '20-24'],
+                        datasets: [{
+                            label: 'Erkennungen',
+                            data: [0, 0, 0, 0, 0, 0],
+                            backgroundColor: 'rgba(78, 205, 196, 0.6)',
+                            borderColor: '#4ecdc4',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { color: '#888' },
+                                grid: { color: 'rgba(255,255,255,0.1)' }
+                            },
+                            x: {
+                                ticks: { color: '#888' },
+                                grid: { display: false }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
         }
 
         // Connect WebSocket
@@ -700,6 +2612,21 @@
 
         // Handle new prediction
         function handlePrediction(data, deviceId) {
+            // Update silence tracking
+            const now = new Date();
+            if (lastDetectionTime) {
+                const silenceMs = now - lastDetectionTime;
+                if (silenceMs > maxSilenceTime) {
+                    maxSilenceTime = silenceMs;
+                }
+            }
+            lastDetectionTime = now;
+            
+            // Update max confidence
+            if (data.confidence > maxConfidence) {
+                maxConfidence = data.confidence;
+            }
+
             // Activate pulse
             const pulse = document.getElementById('pulseIndicator');
             pulse.classList.add('active');
@@ -707,6 +2634,7 @@
 
             // Get localized species name
             const displayName = getSpeciesName(data.species) || data.species;
+            currentSpecies = data.species;
 
             // Update current detection
             document.getElementById('currentSpecies').textContent = displayName;
@@ -724,22 +2652,27 @@
             }).join('');
 
             // Add to detections
-            detections.unshift({
+            const detection = {
                 ...data,
                 displayName,
                 timestamp: new Date(),
-                deviceId
-            });
+                deviceId,
+                id: Date.now() + Math.random().toString(36).substr(2, 9),
+                favorite: false,
+                notes: '',
+                weather: currentWeather ? { ...currentWeather } : null
+            };
+            detections.unshift(detection);
 
             // Limit detections
-            if (detections.length > 100) {
+            if (detections.length > 500) {
                 detections.pop();
             }
 
             // Update species counts
             speciesCounts[displayName] = (speciesCounts[displayName] || 0) + 1;
 
-            // Add marker to map
+            // Add marker to map (with clustering)
             if (data.latitude && data.longitude) {
                 const marker = L.marker([data.latitude, data.longitude], {
                     icon: L.divIcon({
@@ -748,7 +2681,7 @@
                         iconSize: [30, 30],
                         iconAnchor: [15, 15]
                     })
-                }).addTo(map);
+                });
 
                 marker.bindPopup(`
                     <strong>${displayName}</strong><br>
@@ -756,67 +2689,1141 @@
                     ${new Date().toLocaleTimeString()}
                 `);
 
+                // Add to cluster group if available, otherwise to map
+                if (window.markerCluster) {
+                    window.markerCluster.addLayer(marker);
+                } else {
+                    marker.addTo(map);
+                }
+                
                 markers.push(marker);
 
-                // Limit markers on map
-                if (markers.length > 50) {
-                    map.removeLayer(markers.shift());
+                // Limit markers
+                if (markers.length > 200) {
+                    const oldMarker = markers.shift();
+                    if (window.markerCluster) {
+                        window.markerCluster.removeLayer(oldMarker);
+                    } else {
+                        map.removeLayer(oldMarker);
+                    }
                 }
 
                 // Pan to new marker
                 map.panTo([data.latitude, data.longitude]);
             }
 
+            applyFilters();
             updateUI();
         }
 
         // Update UI elements
         function updateUI() {
+            const displayDetections = filteredDetections.length > 0 ? filteredDetections : detections;
+            
             // Update stats
-            document.getElementById('statTotal').textContent = detections.length;
+            document.getElementById('statTotal').textContent = displayDetections.length;
             document.getElementById('statSpecies').textContent = Object.keys(speciesCounts).length;
 
-            const avgConf = detections.length > 0
-                ? detections.reduce((sum, d) => sum + d.confidence, 0) / detections.length
+            const avgConf = displayDetections.length > 0
+                ? displayDetections.reduce((sum, d) => sum + d.confidence, 0) / displayDetections.length
                 : 0;
             document.getElementById('statAvgConf').textContent = `${(avgConf * 100).toFixed(0)}%`;
 
             // Calculate agreement rate
-            const agreements = detections.filter(d => {
+            const agreements = displayDetections.filter(d => {
                 const parts = d.agreement?.split('/') || ['0', '1'];
                 return parts[0] === parts[1];
             }).length;
-            const agreementRate = detections.length > 0 ? (agreements / detections.length) : 0;
+            const agreementRate = displayDetections.length > 0 ? (agreements / displayDetections.length) : 0;
             document.getElementById('statAgreement').textContent = `${(agreementRate * 100).toFixed(0)}%`;
 
             // Update map count
             document.getElementById('mapCount').textContent = t('points', { n: markers.length });
 
-            // Update timeline
+            // Update timeline with actions
             const timelineList = document.getElementById('timelineList');
-            timelineList.innerHTML = detections.slice(0, 20).map((d, i) => {
+            timelineList.innerHTML = displayDetections.slice(0, 30).map((d, i) => {
                 const displayName = d.displayName || getSpeciesName(d.species) || d.species;
+                const isFav = favorites.has(d.id);
+                const hasNote = detectionNotes[d.id];
+                const hasAudio = audioRecordings[d.id];
+                const weatherBadge = d.weather ? `<span class="weather-badge">${getWeatherIcon(d.weather.code)} <span class="temp">${d.weather.temp}°C</span></span>` : '';
+                const confColor = d.confidence >= 0.8 ? '#51cf66' : d.confidence >= 0.5 ? '#ffd93d' : '#ff6b6b';
                 return `
-                <div class="timeline-item ${i === 0 ? 'new' : ''}">
+                <div class="timeline-item ${i === 0 ? 'new' : ''}" onclick="showSpeciesDetail('${d.species}')">
                     <div class="timeline-icon">${BIRD_ICONS[displayName] || BIRD_ICONS[d.species] || BIRD_ICONS.default}</div>
                     <div class="timeline-content">
-                        <div class="timeline-species">${displayName}</div>
+                        <div class="timeline-species">${displayName} ${weatherBadge}</div>
                         <div class="timeline-meta">${d.timestamp.toLocaleTimeString()}</div>
+                        ${hasNote ? `<div class="timeline-note">📝 ${hasNote.substring(0, 50)}${hasNote.length > 50 ? '...' : ''}</div>` : ''}
                     </div>
-                    <div class="timeline-confidence">${(d.confidence * 100).toFixed(0)}%</div>
+                    <div class="timeline-confidence" style="color: ${confColor}">${(d.confidence * 100).toFixed(0)}%</div>
+                    <div class="timeline-actions">
+                        <button class="timeline-action-btn play ${hasAudio ? '' : 'disabled'}" onclick="event.stopPropagation(); playDetectionAudio('${d.id}')" title="${t('play_audio')}">
+                            🔊
+                        </button>
+                        <button class="timeline-action-btn notes ${hasNote ? 'has-note' : ''}" onclick="event.stopPropagation(); showNotesModal('${d.id}')" title="${t('add_note')}">
+                            📝
+                        </button>
+                        <button class="timeline-action-btn favorite ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); toggleFavorite('${d.id}')" title="Favorit">
+                            ${isFav ? '⭐' : '☆'}
+                        </button>
+                        <button class="timeline-action-btn report" onclick="event.stopPropagation(); showReportModal('${d.id}', '${displayName}')" title="Fehler melden">
+                            🚩
+                        </button>
+                    </div>
                 </div>
             `}).join('');
 
-            document.getElementById('timelineCount').textContent = detections.length;
+            document.getElementById('timelineCount').textContent = displayDetections.length;
 
-            // Update chart
+            // Update chart with percentage tooltips
             const sortedSpecies = Object.entries(speciesCounts)
                 .sort((a, b) => b[1] - a[1])
                 .slice(0, 6);
+            
+            const total = Object.values(speciesCounts).reduce((sum, c) => sum + c, 0);
 
             chart.data.labels = sortedSpecies.map(s => s[0]);
             chart.data.datasets[0].data = sortedSpecies.map(s => s[1]);
+            chart.options.plugins.tooltip = {
+                callbacks: {
+                    label: function(context) {
+                        const value = context.raw;
+                        const percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                        return `${context.label}: ${value} (${percent}%)`;
+                    }
+                }
+            };
             chart.update();
+            
+            // Update Top Species List
+            updateTopSpeciesList(sortedSpecies, total);
+            
+            // Update Confidence Histogram
+            updateConfidenceHistogram(displayDetections);
+            
+            // Update Session Stats
+            updateSessionStats();
+            
+            // Check for Rare Species
+            checkRareSpecies();
+            
+            // Update Activity Chart
+            updateActivityChart(displayDetections);
+        }
+        
+        // Update Top Species List
+        function updateTopSpeciesList(sortedSpecies, total) {
+            const container = document.getElementById('topSpeciesList');
+            const header = container.querySelector('.top-species-header');
+            
+            let html = `<div class="top-species-header">
+                <span data-i18n="top_species">${t('top_species')}</span>
+                <span>${total} total</span>
+            </div>`;
+            
+            sortedSpecies.forEach((s, i) => {
+                const percent = total > 0 ? ((s[1] / total) * 100).toFixed(1) : 0;
+                const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+                html += `
+                <div class="top-species-item" onclick="showSpeciesDetail('${s[0]}')">
+                    <div class="top-species-rank ${rankClass}">${i + 1}</div>
+                    <div class="top-species-name">${s[0]}</div>
+                    <div class="top-species-count">${s[1]}x</div>
+                    <div class="top-species-percent">${percent}%</div>
+                </div>`;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // Update Confidence Histogram
+        function updateConfidenceHistogram(displayDetections) {
+            const buckets = [0, 0, 0, 0, 0]; // 0-20, 20-40, 40-60, 60-80, 80-100
+            
+            displayDetections.forEach(d => {
+                const bucket = Math.min(4, Math.floor(d.confidence * 5));
+                buckets[bucket]++;
+            });
+            
+            const maxBucket = Math.max(...buckets, 1);
+            const container = document.getElementById('histogramBars');
+            
+            container.innerHTML = buckets.map((count, i) => {
+                const height = (count / maxBucket) * 100;
+                const label = `${i * 20}-${(i + 1) * 20}%: ${count}`;
+                return `<div class="histogram-bar" style="height: ${height}%" data-tooltip="${label}"></div>`;
+            }).join('');
+        }
+        
+        // Update Session Stats
+        function updateSessionStats() {
+            document.getElementById('sessionStart').textContent = sessionStart.toLocaleTimeString().slice(0, 5);
+            document.getElementById('sessionMaxConf').textContent = `${(maxConfidence * 100).toFixed(0)}%`;
+            
+            // Silence time
+            const silenceSec = Math.floor(maxSilenceTime / 1000);
+            document.getElementById('sessionSilence').textContent = silenceSec > 60 
+                ? `${Math.floor(silenceSec / 60)}m` 
+                : `${silenceSec}s`;
+            
+            // Detection rate
+            const sessionMinutes = (Date.now() - sessionStart.getTime()) / 60000;
+            const rate = sessionMinutes > 0 ? (detections.length / sessionMinutes).toFixed(1) : 0;
+            document.getElementById('sessionRate').textContent = `${rate}/min`;
+        }
+        
+        // Check for Rare Species
+        function checkRareSpecies() {
+            const rareSpecies = Object.entries(speciesCounts)
+                .filter(([_, count]) => count <= 2)
+                .map(([name, count]) => ({ name, count }));
+            
+            const warning = document.getElementById('rareSpeciesWarning');
+            const list = document.getElementById('rareSpeciesList');
+            
+            if (rareSpecies.length > 0) {
+                warning.style.display = 'block';
+                list.textContent = rareSpecies.map(s => `${s.name} (${s.count}x)`).join(', ');
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+        
+        // Update Activity Chart (detections by time of day)
+        function updateActivityChart(displayDetections) {
+            if (!window.activityChart) return;
+            
+            // 6 buckets: 0-4, 4-8, 8-12, 12-16, 16-20, 20-24
+            const buckets = [0, 0, 0, 0, 0, 0];
+            
+            displayDetections.forEach(d => {
+                const hour = d.timestamp.getHours();
+                const bucket = Math.floor(hour / 4);
+                buckets[bucket]++;
+            });
+            
+            window.activityChart.data.datasets[0].data = buckets;
+            window.activityChart.update();
+        }
+        
+        // ============= FILTER FUNCTIONS =============
+        
+        function toggleFilter(filter) {
+            if (filter === 'highConf') {
+                filterHighConf = !filterHighConf;
+                document.getElementById('filterHighConf').classList.toggle('active', filterHighConf);
+            }
+            applyFilters();
+            updateUI();
+        }
+        
+        function applyFamilyFilter(family) {
+            filterFamily = family;
+            applyFilters();
+            updateUI();
+        }
+        
+        function applyTimeFilter(hours) {
+            filterTimeHours = parseInt(hours);
+            applyFilters();
+            updateUI();
+        }
+        
+        function applyFilters() {
+            filteredDetections = detections.filter(d => {
+                // High confidence filter
+                if (filterHighConf && d.confidence < 0.8) return false;
+                
+                // Family filter (would need species data)
+                if (filterFamily && speciesData[d.species]?.family !== filterFamily) {
+                    // Fallback: check if display name matches family
+                    // This is a simplified check
+                }
+                
+                // Time filter
+                if (filterTimeHours > 0) {
+                    const cutoff = Date.now() - (filterTimeHours * 60 * 60 * 1000);
+                    if (d.timestamp.getTime() < cutoff) return false;
+                }
+                
+                return true;
+            });
+        }
+        
+        // ============= MODAL FUNCTIONS =============
+        
+        function showModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+        
+        // Close modal on overlay click
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                e.target.classList.remove('active');
+            }
+        });
+        
+        // Show current species detail
+        function showCurrentSpeciesDetail() {
+            if (currentSpecies) {
+                showSpeciesDetail(currentSpecies);
+            }
+        }
+        
+        // Show species detail modal
+        async function showSpeciesDetail(speciesKey) {
+            const modal = document.getElementById('speciesModal');
+            const body = document.getElementById('speciesModalBody');
+            const title = document.getElementById('speciesModalTitle');
+            
+            // Find species data
+            let species = speciesData[speciesKey];
+            
+            // Try to fetch from API if not cached
+            if (!species) {
+                try {
+                    const response = await fetch(`${API_BASE}/api/v1/species?search=${encodeURIComponent(speciesKey)}&limit=1`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.species && data.species.length > 0) {
+                            species = data.species[0];
+                            speciesData[speciesKey] = species;
+                        }
+                    }
+                } catch (e) {
+                    console.log('Could not fetch species details');
+                }
+            }
+            
+            // Calculate stats for this species
+            const speciesDetections = detections.filter(d => 
+                d.species === speciesKey || d.displayName === speciesKey
+            );
+            const avgConf = speciesDetections.length > 0
+                ? speciesDetections.reduce((sum, d) => sum + d.confidence, 0) / speciesDetections.length
+                : 0;
+            const lastSeen = speciesDetections.length > 0 ? speciesDetections[0].timestamp : null;
+            
+            const displayName = species?.common_name_de || species?.common_name_en || speciesKey;
+            title.innerHTML = `🐦 ${displayName}`;
+            
+            body.innerHTML = `
+                <div class="species-detail-grid">
+                    <div class="species-detail-item">
+                        <div class="species-detail-label">${t('scientific_name')}</div>
+                        <div class="species-detail-value">${species?.scientific_name || '-'}</div>
+                    </div>
+                    <div class="species-detail-item">
+                        <div class="species-detail-label">${t('family')}</div>
+                        <div class="species-detail-value">${species?.family || '-'}</div>
+                    </div>
+                    <div class="species-detail-item">
+                        <div class="species-detail-label">${t('german_name')}</div>
+                        <div class="species-detail-value">${species?.common_name_de || '-'}</div>
+                    </div>
+                    <div class="species-detail-item">
+                        <div class="species-detail-label">${t('english_name')}</div>
+                        <div class="species-detail-value">${species?.common_name_en || '-'}</div>
+                    </div>
+                    <div class="species-detail-item species-detail-full">
+                        <div class="species-detail-label">${t('frequency_range')}</div>
+                        <div class="species-detail-value">2 - 8 kHz (typisch für Singvögel)</div>
+                    </div>
+                </div>
+                
+                <div class="species-stats">
+                    <div class="species-stats-title">${t('your_detections')}</div>
+                    <div class="species-stats-grid">
+                        <div class="species-stat-item">
+                            <div class="species-stat-value">${speciesDetections.length}</div>
+                            <div class="species-stat-label">${t('times_detected')}</div>
+                        </div>
+                        <div class="species-stat-item">
+                            <div class="species-stat-value">${(avgConf * 100).toFixed(0)}%</div>
+                            <div class="species-stat-label">${t('avg_confidence_species')}</div>
+                        </div>
+                        <div class="species-stat-item">
+                            <div class="species-stat-value">${lastSeen ? lastSeen.toLocaleTimeString().slice(0, 5) : '-'}</div>
+                            <div class="species-stat-label">${t('last_seen')}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${species?.wikipedia_url ? `
+                <div style="margin-top: 1rem; text-align: center;">
+                    <a href="${species.wikipedia_url}" target="_blank" class="header-btn" style="display: inline-flex;">
+                        📖 Wikipedia
+                    </a>
+                </div>` : ''}
+            `;
+            
+            showModal('speciesModal');
+        }
+        
+        // Show Model Info Modal
+        async function showModelInfo() {
+            const body = document.getElementById('modelInfoBody');
+            
+            // Fetch species list
+            let speciesList = [];
+            let families = {};
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/species?limit=500`);
+                if (response.ok) {
+                    const data = await response.json();
+                    speciesList = data.species || [];
+                    
+                    // Group by family
+                    speciesList.forEach(s => {
+                        if (s.family) {
+                            families[s.family] = (families[s.family] || 0) + 1;
+                        }
+                    });
+                }
+            } catch (e) {
+                console.log('Could not fetch species list');
+            }
+            
+            const familyCount = Object.keys(families).length;
+            
+            // Analyze model performance from detections
+            const modelStats = analyzeModelPerformance();
+            
+            body.innerHTML = `
+                <div class="model-info-grid">
+                    <div class="model-info-stats">
+                        <div class="model-info-stat">
+                            <div class="model-info-stat-value">${speciesList.length}</div>
+                            <div class="model-info-stat-label">${t('known_species')}</div>
+                        </div>
+                        <div class="model-info-stat">
+                            <div class="model-info-stat-value">${familyCount}</div>
+                            <div class="model-info-stat-label">${t('families')}</div>
+                        </div>
+                        <div class="model-info-stat">
+                            <div class="model-info-stat-value">🇪🇺</div>
+                            <div class="model-info-stat-label">Europa</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Model Comparison Section -->
+                    <div class="model-comparison">
+                        <h4 style="margin-bottom: 0.75rem; color: #4ecdc4; font-size: 1rem;">🔬 ${t('model_comparison')}</h4>
+                        <div class="model-cards">
+                            ${renderModelCards(modelStats)}
+                        </div>
+                    </div>
+                    
+                    <!-- Model Performance by Species -->
+                    ${modelStats.speciesStats.length > 0 ? `
+                    <div class="model-species-performance">
+                        <h4 style="margin-bottom: 0.75rem; color: #888; font-size: 0.9rem;">📊 ${t('model_species_performance')}</h4>
+                        <div class="performance-table">
+                            <div class="performance-header">
+                                <span>${t('species')}</span>
+                                <span>${t('best_model')}</span>
+                                <span>Ø ${t('confidence')}</span>
+                            </div>
+                            ${modelStats.speciesStats.slice(0, 10).map(s => `
+                                <div class="performance-row">
+                                    <span class="species-name">
+                                        <span class="species-icon">${BIRD_ICONS[s.species] || '🐦'}</span>
+                                        ${s.species}
+                                    </span>
+                                    <span class="best-model">${s.bestModel}</span>
+                                    <span class="confidence-bar">
+                                        <div class="bar" style="width: ${s.avgConfidence * 100}%"></div>
+                                        <span>${(s.avgConfidence * 100).toFixed(0)}%</span>
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>` : ''}
+                    
+                    <div>
+                        <h4 style="margin-bottom: 0.5rem; color: #888; font-size: 0.9rem;">${t('families')}</h4>
+                        <div class="family-list">
+                            ${Object.entries(families)
+                                .sort((a, b) => b[1] - a[1])
+                                .map(([family, count]) => `
+                                    <span class="family-tag" onclick="applyFamilyFilter('${family}'); closeModal('modelInfoModal');">
+                                        ${family} <span class="count">(${count})</span>
+                                    </span>
+                                `).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- Available Models Info -->
+                    <div class="available-models">
+                        <h4 style="margin-bottom: 0.75rem; font-size: 0.9rem;">🤖 ${t('available_models')}</h4>
+                        <div class="model-list">
+                            <div class="model-item ${activeModels.includes('DimaBird') ? 'active' : ''}">
+                                <div class="model-item-header">
+                                    <span class="model-name">🎵 DimaBird</span>
+                                    <span class="model-status">${activeModels.includes('DimaBird') ? '✅ Aktiv' : '⏸️ Inaktiv'}</span>
+                                </div>
+                                <div class="model-item-details">
+                                    <code>dima806/bird_sounds_classification</code>
+                                    <p>${t('model_dimabird_desc')}</p>
+                                    <div class="model-tags">
+                                        <span class="tag good">🎤 Gesang</span>
+                                        <span class="tag good">🌳 Waldvögel</span>
+                                        <span class="tag medium">🌊 Wasservögel</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="model-item ${activeModels.includes('BirdNET') ? 'active' : ''}">
+                                <div class="model-item-header">
+                                    <span class="model-name">🔬 BirdNET</span>
+                                    <span class="model-status">${activeModels.includes('BirdNET') ? '✅ Aktiv' : '⏸️ Inaktiv'}</span>
+                                </div>
+                                <div class="model-item-details">
+                                    <code>Cornell Lab BirdNET-Analyzer</code>
+                                    <p>${t('model_birdnet_desc')}</p>
+                                    <div class="model-tags">
+                                        <span class="tag good">🌍 Global</span>
+                                        <span class="tag good">📣 Rufe</span>
+                                        <span class="tag good">🦉 Nachtaktiv</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Model Selection -->
+                    <div class="model-selection">
+                        <h4 style="margin-bottom: 0.5rem; font-size: 0.9rem;">⚙️ ${t('consensus_method')}</h4>
+                        <div class="consensus-options">
+                            <label class="consensus-option ${consensusMethod === 'weighted_average' ? 'selected' : ''}">
+                                <input type="radio" name="consensus" value="weighted_average" ${consensusMethod === 'weighted_average' ? 'checked' : ''} onchange="setConsensusMethod('weighted_average')">
+                                <span>📊 ${t('weighted_average')}</span>
+                            </label>
+                            <label class="consensus-option ${consensusMethod === 'majority_vote' ? 'selected' : ''}">
+                                <input type="radio" name="consensus" value="majority_vote" ${consensusMethod === 'majority_vote' ? 'checked' : ''} onchange="setConsensusMethod('majority_vote')">
+                                <span>🗳️ ${t('majority_vote')}</span>
+                            </label>
+                            <label class="consensus-option ${consensusMethod === 'max_confidence' ? 'selected' : ''}">
+                                <input type="radio" name="consensus" value="max_confidence" ${consensusMethod === 'max_confidence' ? 'checked' : ''} onchange="setConsensusMethod('max_confidence')">
+                                <span>🏆 ${t('max_confidence')}</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            showModal('modelInfoModal');
+        }
+        
+        // Analyze model performance from detection history
+        function analyzeModelPerformance() {
+            const modelData = {};
+            const speciesModelData = {};
+            
+            detections.forEach(d => {
+                if (d.models && Array.isArray(d.models)) {
+                    d.models.forEach(m => {
+                        // Track overall model stats
+                        if (!modelData[m.name]) {
+                            modelData[m.name] = {
+                                name: m.name,
+                                totalPredictions: 0,
+                                totalConfidence: 0,
+                                agreements: 0,
+                                speciesCounts: {}
+                            };
+                        }
+                        modelData[m.name].totalPredictions++;
+                        modelData[m.name].totalConfidence += m.confidence;
+                        if (m.species === d.species) modelData[m.name].agreements++;
+                        
+                        // Track species-specific stats
+                        const species = d.displayName || d.species;
+                        if (!speciesModelData[species]) {
+                            speciesModelData[species] = {};
+                        }
+                        if (!speciesModelData[species][m.name]) {
+                            speciesModelData[species][m.name] = { count: 0, totalConf: 0 };
+                        }
+                        speciesModelData[species][m.name].count++;
+                        speciesModelData[species][m.name].totalConf += m.confidence;
+                    });
+                }
+            });
+            
+            // Calculate model averages
+            const modelStats = Object.values(modelData).map(m => ({
+                name: m.name,
+                avgConfidence: m.totalPredictions > 0 ? m.totalConfidence / m.totalPredictions : 0,
+                agreementRate: m.totalPredictions > 0 ? m.agreements / m.totalPredictions : 0,
+                totalPredictions: m.totalPredictions
+            }));
+            
+            // Calculate best model per species
+            const speciesStats = Object.entries(speciesModelData).map(([species, models]) => {
+                let bestModel = '-';
+                let bestConfidence = 0;
+                let totalConf = 0;
+                let totalCount = 0;
+                
+                Object.entries(models).forEach(([modelName, data]) => {
+                    const avgConf = data.count > 0 ? data.totalConf / data.count : 0;
+                    totalConf += data.totalConf;
+                    totalCount += data.count;
+                    if (avgConf > bestConfidence) {
+                        bestConfidence = avgConf;
+                        bestModel = modelName;
+                    }
+                });
+                
+                return {
+                    species,
+                    bestModel,
+                    avgConfidence: totalCount > 0 ? totalConf / totalCount : 0,
+                    detectionCount: totalCount
+                };
+            }).sort((a, b) => b.detectionCount - a.detectionCount);
+            
+            return { modelStats, speciesStats };
+        }
+        
+        // Render model comparison cards
+        function renderModelCards(stats) {
+            if (!stats.modelStats || stats.modelStats.length === 0) {
+                return `
+                    <div class="model-card placeholder">
+                        <p style="color: #888; text-align: center;">
+                            ${t('no_model_data')}<br>
+                            <small>${t('start_recording_hint')}</small>
+                        </p>
+                    </div>
+                `;
+            }
+            
+            return stats.modelStats.map(m => `
+                <div class="model-card">
+                    <div class="model-card-header">
+                        <span class="model-icon">${m.name === 'BirdNET' ? '🔬' : '🎵'}</span>
+                        <span class="model-title">${m.name}</span>
+                    </div>
+                    <div class="model-card-stats">
+                        <div class="model-stat">
+                            <span class="value">${(m.avgConfidence * 100).toFixed(0)}%</span>
+                            <span class="label">Ø ${t('confidence')}</span>
+                        </div>
+                        <div class="model-stat">
+                            <span class="value">${(m.agreementRate * 100).toFixed(0)}%</span>
+                            <span class="label">${t('agreement')}</span>
+                        </div>
+                        <div class="model-stat">
+                            <span class="value">${m.totalPredictions}</span>
+                            <span class="label">${t('detections')}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Set consensus method
+        function setConsensusMethod(method) {
+            consensusMethod = method;
+            localStorage.setItem('birdConsensusMethod', method);
+            showModelInfo(); // Refresh modal
+        }
+        
+        // Show Report Modal
+        function showReportModal(detectionId, detectedSpecies) {
+            document.getElementById('reportDetectedSpecies').textContent = detectedSpecies;
+            document.getElementById('reportDetectionId').value = detectionId;
+            
+            // Populate species dropdown
+            const select = document.getElementById('reportCorrectSpecies');
+            select.innerHTML = '<option value="">-- Bitte auswählen --</option>';
+            
+            // Add known species
+            Object.keys(speciesCounts).forEach(species => {
+                if (species !== detectedSpecies) {
+                    select.innerHTML += `<option value="${species}">${species}</option>`;
+                }
+            });
+            select.innerHTML += '<option value="other">Andere Art...</option>';
+            select.innerHTML += '<option value="no_bird">Kein Vogel</option>';
+            
+            showModal('reportModal');
+        }
+        
+        // Submit Report
+        function submitReport(event) {
+            event.preventDefault();
+            
+            const detectionId = document.getElementById('reportDetectionId').value;
+            const correctSpecies = document.getElementById('reportCorrectSpecies').value;
+            const notes = document.getElementById('reportNotes').value;
+            
+            // Store report locally (could be sent to API)
+            const reports = JSON.parse(localStorage.getItem('birdReports') || '[]');
+            reports.push({
+                detectionId,
+                correctSpecies,
+                notes,
+                timestamp: new Date().toISOString()
+            });
+            localStorage.setItem('birdReports', JSON.stringify(reports));
+            
+            closeModal('reportModal');
+            alert(t('report_sent'));
+        }
+        
+        // Show Export Modal
+        function showExportModal() {
+            showModal('exportModal');
+        }
+        
+        // Export Data
+        function exportData(format) {
+            let content, filename, type;
+            
+            const exportDetections = detections.map(d => ({
+                species: d.species,
+                displayName: d.displayName,
+                confidence: d.confidence,
+                timestamp: d.timestamp.toISOString(),
+                latitude: d.latitude,
+                longitude: d.longitude,
+                notes: detectionNotes[d.id] || '',
+                weather: d.weather ? {
+                    temp: d.weather.temp,
+                    humidity: d.weather.humidity,
+                    wind: d.weather.wind,
+                    description: getWeatherDescription(d.weather.code)
+                } : null
+            }));
+            
+            switch (format) {
+                case 'json':
+                    content = JSON.stringify(exportDetections, null, 2);
+                    filename = `birdsound_export_${Date.now()}.json`;
+                    type = 'application/json';
+                    break;
+                    
+                case 'csv': {
+                    const headers = ['species', 'displayName', 'confidence', 'timestamp', 'latitude', 'longitude', 'notes', 'temperature', 'humidity', 'wind'];
+                    content = headers.join(',') + '\n' + 
+                        exportDetections.map(d => [
+                            d.species,
+                            d.displayName,
+                            d.confidence,
+                            d.timestamp,
+                            d.latitude || '',
+                            d.longitude || '',
+                            `"${(d.notes || '').replace(/"/g, '""')}"`,
+                            d.weather?.temp || '',
+                            d.weather?.humidity || '',
+                            d.weather?.wind || ''
+                        ].join(',')).join('\n');
+                    filename = `birdsound_export_${Date.now()}.csv`;
+                    type = 'text/csv';
+                    break;
+                }
+                    type = 'text/csv';
+                    break;
+                    
+                case 'geojson':
+                    content = JSON.stringify({
+                        type: 'FeatureCollection',
+                        features: exportDetections.filter(d => d.latitude && d.longitude).map(d => ({
+                            type: 'Feature',
+                            geometry: {
+                                type: 'Point',
+                                coordinates: [d.longitude, d.latitude]
+                            },
+                            properties: {
+                                species: d.species,
+                                displayName: d.displayName,
+                                confidence: d.confidence,
+                                timestamp: d.timestamp
+                            }
+                        }))
+                    }, null, 2);
+                    filename = `birdsound_export_${Date.now()}.geojson`;
+                    type = 'application/geo+json';
+                    break;
+                    
+                case 'ebird':
+                    // eBird checklist format
+                    const ebirdLines = ['Common Name,Genus,Species,Species Count,Location,Latitude,Longitude,Date,Time'];
+                    exportDetections.forEach(d => {
+                        const date = new Date(d.timestamp);
+                        ebirdLines.push([
+                            d.displayName,
+                            '',
+                            d.species,
+                            '1',
+                            'BirdSound Recording',
+                            d.latitude || '',
+                            d.longitude || '',
+                            date.toISOString().split('T')[0],
+                            date.toTimeString().slice(0, 5)
+                        ].join(','));
+                    });
+                    content = ebirdLines.join('\n');
+                    filename = `birdsound_ebird_${Date.now()}.csv`;
+                    type = 'text/csv';
+                    break;
+            }
+            
+            // Download file
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            closeModal('exportModal');
+        }
+        
+        // Share Summary
+        function shareSummary() {
+            const speciesCount = Object.keys(speciesCounts).length;
+            const totalDetections = detections.length;
+            const topSpecies = Object.entries(speciesCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(s => s[0])
+                .join(', ');
+            
+            const summary = `🐦 BirdSound Zusammenfassung\n\n` +
+                `📊 ${totalDetections} Erkennungen\n` +
+                `🦅 ${speciesCount} verschiedene Arten\n` +
+                `🏆 Top 3: ${topSpecies}\n\n` +
+                `#BirdSound #Vogelbeobachtung`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'BirdSound Zusammenfassung',
+                    text: summary
+                });
+            } else {
+                navigator.clipboard.writeText(summary);
+                alert('Zusammenfassung in Zwischenablage kopiert!');
+            }
+            
+            closeModal('exportModal');
+        }
+        
+        // Toggle Favorite
+        function toggleFavorite(detectionId) {
+            if (favorites.has(detectionId)) {
+                favorites.delete(detectionId);
+            } else {
+                favorites.add(detectionId);
+            }
+            localStorage.setItem('birdFavorites', JSON.stringify([...favorites]));
+            updateUI();
+        }
+        
+        // ============= NOTES FUNCTIONS =============
+        
+        function showNotesModal(detectionId) {
+            const detection = detections.find(d => d.id === detectionId);
+            if (!detection) return;
+            
+            const displayName = detection.displayName || getSpeciesName(detection.species) || detection.species;
+            document.getElementById('notesDetectionInfo').innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>${BIRD_ICONS[displayName] || '🐦'} <strong>${displayName}</strong></span>
+                    <span style="color: #888;">${detection.timestamp.toLocaleString()}</span>
+                </div>
+            `;
+            
+            document.getElementById('noteDetectionId').value = detectionId;
+            document.getElementById('noteText').value = detectionNotes[detectionId] || '';
+            
+            showModal('notesModal');
+        }
+        
+        function addNoteTag(tag) {
+            const noteText = document.getElementById('noteText');
+            const tagText = `#${t(tag)} `;
+            noteText.value += tagText;
+            noteText.focus();
+        }
+        
+        function saveNote() {
+            const detectionId = document.getElementById('noteDetectionId').value;
+            const noteText = document.getElementById('noteText').value.trim();
+            
+            if (noteText) {
+                detectionNotes[detectionId] = noteText;
+            } else {
+                delete detectionNotes[detectionId];
+            }
+            
+            localStorage.setItem('birdDetectionNotes', JSON.stringify(detectionNotes));
+            closeModal('notesModal');
+            updateUI();
+        }
+        
+        // ============= AUDIO PLAYBACK FUNCTIONS =============
+        
+        function playDetectionAudio(detectionId) {
+            const audio = audioRecordings[detectionId];
+            if (!audio) {
+                console.log('No audio recording for this detection');
+                return;
+            }
+            
+            // Stop currently playing audio
+            if (currentPlayingAudio) {
+                currentPlayingAudio.pause();
+                currentPlayingAudio = null;
+            }
+            
+            // Play new audio
+            try {
+                currentPlayingAudio = new Audio(audio);
+                currentPlayingAudio.play();
+                currentPlayingAudio.onended = () => {
+                    currentPlayingAudio = null;
+                    updateUI();
+                };
+            } catch (e) {
+                console.log('Could not play audio:', e);
+            }
+            
+            updateUI();
+        }
+        
+        // Store audio snippet when detection happens
+        function storeAudioSnippet(detectionId) {
+            // This would need backend support to store and retrieve audio snippets
+            // For now, we'll just mark that we could store it
+            console.log('Audio snippet storage not yet implemented for:', detectionId);
+        }
+        
+        // ============= CALENDAR FUNCTIONS =============
+        
+        function showCalendarModal() {
+            renderCalendar();
+            showModal('calendarModal');
+        }
+        
+        function changeMonth(delta) {
+            calendarDate.setMonth(calendarDate.getMonth() + delta);
+            renderCalendar();
+        }
+        
+        function goToToday() {
+            calendarDate = new Date();
+            selectedCalendarDate = new Date();
+            renderCalendar();
+        }
+        
+        function selectCalendarDate(dateStr) {
+            selectedCalendarDate = new Date(dateStr);
+            renderCalendar();
+        }
+        
+        function renderCalendar() {
+            const year = calendarDate.getFullYear();
+            const month = calendarDate.getMonth();
+            
+            // Update header
+            const monthNames = currentLang === 'de' 
+                ? ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+                : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            document.getElementById('calendarMonthYear').textContent = `${monthNames[month]} ${year}`;
+            
+            // Get detection counts by date
+            const dateCounts = {};
+            detections.forEach(d => {
+                const dateKey = d.timestamp.toISOString().split('T')[0];
+                dateCounts[dateKey] = (dateCounts[dateKey] || 0) + 1;
+            });
+            
+            // Generate calendar grid
+            const grid = document.getElementById('calendarGrid');
+            const dayNames = currentLang === 'de' 
+                ? ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+                : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            
+            let html = dayNames.map(d => `<div class="calendar-day-header">${d}</div>`).join('');
+            
+            // First day of month (Monday = 0, Sunday = 6)
+            const firstDay = new Date(year, month, 1);
+            let startDay = firstDay.getDay() - 1;
+            if (startDay < 0) startDay = 6;
+            
+            // Days in month
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            // Previous month days
+            const prevMonthDays = new Date(year, month, 0).getDate();
+            for (let i = startDay - 1; i >= 0; i--) {
+                const day = prevMonthDays - i;
+                html += `<div class="calendar-day other-month">${day}</div>`;
+            }
+            
+            // Current month days
+            const today = new Date();
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const dateStr = date.toISOString().split('T')[0];
+                const count = dateCounts[dateStr] || 0;
+                const isToday = date.toDateString() === today.toDateString();
+                const isSelected = selectedCalendarDate && date.toDateString() === selectedCalendarDate.toDateString();
+                
+                html += `
+                    <div class="calendar-day ${isToday ? 'today' : ''} ${count > 0 ? 'has-data' : ''} ${isSelected ? 'selected' : ''}"
+                         onclick="selectCalendarDate('${dateStr}')">
+                        ${day}
+                        ${count > 0 ? `<div class="calendar-day-count">${count}</div>` : ''}
+                    </div>`;
+            }
+            
+            // Next month days
+            const totalCells = startDay + daysInMonth;
+            const remainingCells = (7 - (totalCells % 7)) % 7;
+            for (let i = 1; i <= remainingCells; i++) {
+                html += `<div class="calendar-day other-month">${i}</div>`;
+            }
+            
+            grid.innerHTML = html;
+            
+            // Update summary
+            updateCalendarSummary();
+        }
+        
+        function updateCalendarSummary() {
+            const dateEl = document.getElementById('calendarSelectedDate');
+            const statsEl = document.getElementById('calendarSelectedStats');
+            
+            if (!selectedCalendarDate) {
+                dateEl.textContent = '-';
+                statsEl.textContent = currentLang === 'de' ? 'Wähle einen Tag aus' : 'Select a day';
+                return;
+            }
+            
+            const dateStr = selectedCalendarDate.toLocaleDateString(currentLang === 'de' ? 'de-DE' : 'en-US', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+            });
+            dateEl.textContent = dateStr;
+            
+            // Get detections for this day
+            const dayDetections = detections.filter(d => 
+                d.timestamp.toDateString() === selectedCalendarDate.toDateString()
+            );
+            
+            const speciesSet = new Set(dayDetections.map(d => d.displayName || d.species));
+            const avgConf = dayDetections.length > 0 
+                ? dayDetections.reduce((sum, d) => sum + d.confidence, 0) / dayDetections.length 
+                : 0;
+            
+            statsEl.innerHTML = `
+                <span>🎯 ${dayDetections.length} ${t('detections')}</span>
+                <span>🦅 ${speciesSet.size} ${t('species')}</span>
+                <span>📊 ${(avgConf * 100).toFixed(0)}% Ø</span>
+            `;
+        }
+        
+        // ============= WEATHER FUNCTIONS =============
+        
+        async function fetchWeather() {
+            try {
+                // Get current position
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+                });
+                
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                
+                // Check cache (5 minutes)
+                const cacheKey = `${lat.toFixed(2)}_${lon.toFixed(2)}`;
+                if (weatherCache[cacheKey] && Date.now() - weatherCache[cacheKey].timestamp < 5 * 60 * 1000) {
+                    currentWeather = weatherCache[cacheKey].data;
+                    updateWeatherDisplay();
+                    return;
+                }
+                
+                // Fetch from Open-Meteo (free, no API key)
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m`;
+                const response = await fetch(url);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentWeather = {
+                        temp: Math.round(data.current.temperature_2m),
+                        humidity: data.current.relative_humidity_2m,
+                        wind: Math.round(data.current.wind_speed_10m),
+                        code: data.current.weather_code
+                    };
+                    
+                    // Cache result
+                    weatherCache[cacheKey] = {
+                        data: currentWeather,
+                        timestamp: Date.now()
+                    };
+                    
+                    updateWeatherDisplay();
+                }
+            } catch (e) {
+                console.log('Could not fetch weather:', e);
+                document.getElementById('weatherDisplay').style.display = 'none';
+            }
+        }
+        
+        function getWeatherIcon(code) {
+            // WMO Weather interpretation codes
+            if (code === 0) return '☀️';
+            if (code <= 3) return '🌤️';
+            if (code <= 49) return '🌫️';
+            if (code <= 59) return '🌧️';
+            if (code <= 69) return '🌨️';
+            if (code <= 79) return '❄️';
+            if (code <= 99) return '⛈️';
+            return '🌡️';
+        }
+        
+        function getWeatherDescription(code) {
+            const descriptions = {
+                0: { de: 'Klar', en: 'Clear' },
+                1: { de: 'Überwiegend klar', en: 'Mainly clear' },
+                2: { de: 'Teilweise bewölkt', en: 'Partly cloudy' },
+                3: { de: 'Bewölkt', en: 'Overcast' },
+                45: { de: 'Nebel', en: 'Fog' },
+                51: { de: 'Leichter Nieselregen', en: 'Light drizzle' },
+                61: { de: 'Leichter Regen', en: 'Light rain' },
+                71: { de: 'Leichter Schnee', en: 'Light snow' },
+                95: { de: 'Gewitter', en: 'Thunderstorm' }
+            };
+            const desc = descriptions[code] || descriptions[Math.floor(code / 10) * 10] || { de: 'Unbekannt', en: 'Unknown' };
+            return desc[currentLang] || desc.de;
+        }
+        
+        function updateWeatherDisplay() {
+            if (!currentWeather) return;
+            
+            document.getElementById('weatherIcon').textContent = getWeatherIcon(currentWeather.code);
+            document.getElementById('weatherTemp').textContent = `${currentWeather.temp}°C`;
+            document.getElementById('weatherHumidity').textContent = `💧 ${currentWeather.humidity}%`;
+            document.getElementById('weatherWind').textContent = `💨 ${currentWeather.wind} km/h`;
+            document.getElementById('weatherDisplay').style.display = 'flex';
+        }
+        
+        // Attach weather to detection
+        function attachWeatherToDetection(detection) {
+            if (currentWeather) {
+                detection.weather = { ...currentWeather };
+            }
         }
 
         // Load historical data
@@ -879,6 +3886,256 @@
             }
         }
 
+        // ============= AUDIO VISUALIZATION =============
+
+        // Initialize audio visualization
+        async function initAudioVisualizer() {
+            try {
+                // Get canvas contexts
+                const spectroCanvas = document.getElementById('spectrogramCanvas');
+                const waveCanvas = document.getElementById('waveformCanvas');
+                
+                spectrogramCtx = spectroCanvas.getContext('2d');
+                waveformCtx = waveCanvas.getContext('2d');
+                
+                // Set canvas sizes
+                resizeCanvases();
+                window.addEventListener('resize', resizeCanvases);
+                
+                // Initialize spectrogram data array
+                spectrogramData = [];
+                
+                // Request microphone access
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: { 
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    } 
+                });
+                
+                // Create audio context
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = FFT_SIZE;
+                analyser.smoothingTimeConstant = 0.8;
+                
+                // Connect microphone
+                microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+                
+                console.log('Audio visualizer initialized');
+                
+                // Start visualization loop
+                visualize();
+                
+            } catch (error) {
+                console.error('Failed to initialize audio visualizer:', error);
+                document.querySelector('.audio-visualizer').innerHTML = `
+                    <div style="text-align: center; padding: 1rem; color: #888;">
+                        🎤 Mikrofon nicht verfügbar<br>
+                        <small>Bitte Zugriff erlauben</small>
+                    </div>
+                `;
+            }
+        }
+
+        // Resize canvases to container size
+        function resizeCanvases() {
+            const spectroCanvas = document.getElementById('spectrogramCanvas');
+            const waveCanvas = document.getElementById('waveformCanvas');
+            
+            if (spectroCanvas) {
+                const container = spectroCanvas.parentElement;
+                spectroCanvas.width = container.clientWidth;
+                spectroCanvas.height = container.clientHeight;
+            }
+            
+            if (waveCanvas) {
+                const container = waveCanvas.parentElement;
+                waveCanvas.width = container.clientWidth;
+                waveCanvas.height = container.clientHeight;
+            }
+        }
+
+        // Main visualization loop
+        function visualize() {
+            if (!analyser) return;
+            
+            animationId = requestAnimationFrame(visualize);
+            
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            const timeArray = new Uint8Array(bufferLength);
+            
+            analyser.getByteFrequencyData(dataArray);
+            analyser.getByteTimeDomainData(timeArray);
+            
+            // Update level meter
+            updateLevelMeter(dataArray);
+            
+            // Draw based on mode
+            if (visualizerMode === 'spectrogram') {
+                drawSpectrogram(dataArray);
+            } else {
+                drawWaveform(timeArray);
+            }
+        }
+
+        // Draw spectrogram (scrolling frequency display)
+        function drawSpectrogram(dataArray) {
+            const canvas = document.getElementById('spectrogramCanvas');
+            if (!canvas || !spectrogramCtx) return;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Take only frequencies up to ~8kHz (relevant for bird songs)
+            const nyquist = audioContext.sampleRate / 2;
+            const maxFreq = 8000;
+            const binsToUse = Math.floor((maxFreq / nyquist) * dataArray.length);
+            
+            // Create column of frequency data
+            const column = [];
+            for (let i = 0; i < binsToUse; i++) {
+                column.push(dataArray[i]);
+            }
+            
+            // Add to scrolling data
+            spectrogramData.push(column);
+            if (spectrogramData.length > width) {
+                spectrogramData.shift();
+            }
+            
+            // Clear and draw
+            spectrogramCtx.fillStyle = '#0a0a15';
+            spectrogramCtx.fillRect(0, 0, width, height);
+            
+            // Draw spectrogram
+            const colWidth = 2;
+            for (let x = 0; x < spectrogramData.length; x++) {
+                const col = spectrogramData[x];
+                const binHeight = height / col.length;
+                
+                for (let y = 0; y < col.length; y++) {
+                    const value = col[y];
+                    const color = getSpectrogramColor(value);
+                    spectrogramCtx.fillStyle = color;
+                    
+                    // Draw from bottom (low freq) to top (high freq)
+                    const yPos = height - (y + 1) * binHeight;
+                    spectrogramCtx.fillRect(x * colWidth, yPos, colWidth, binHeight + 1);
+                }
+            }
+        }
+
+        // Get color for spectrogram based on intensity
+        function getSpectrogramColor(value) {
+            // Color scale: dark blue -> cyan -> yellow -> red
+            const normalized = value / 255;
+            
+            if (normalized < 0.2) {
+                // Dark blue to blue
+                const t = normalized / 0.2;
+                return `rgb(${Math.floor(10 + t * 20)}, ${Math.floor(10 + t * 30)}, ${Math.floor(30 + t * 100)})`;
+            } else if (normalized < 0.5) {
+                // Blue to cyan
+                const t = (normalized - 0.2) / 0.3;
+                return `rgb(${Math.floor(30 + t * 20)}, ${Math.floor(40 + t * 160)}, ${Math.floor(130 + t * 70)})`;
+            } else if (normalized < 0.75) {
+                // Cyan to yellow
+                const t = (normalized - 0.5) / 0.25;
+                return `rgb(${Math.floor(50 + t * 205)}, ${Math.floor(200 - t * 50)}, ${Math.floor(200 - t * 150)})`;
+            } else {
+                // Yellow to red
+                const t = (normalized - 0.75) / 0.25;
+                return `rgb(255, ${Math.floor(150 - t * 150)}, ${Math.floor(50 - t * 50)})`;
+            }
+        }
+
+        // Draw waveform
+        function drawWaveform(timeArray) {
+            const canvas = document.getElementById('waveformCanvas');
+            if (!canvas || !waveformCtx) return;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            waveformCtx.fillStyle = '#0a0a15';
+            waveformCtx.fillRect(0, 0, width, height);
+            
+            waveformCtx.lineWidth = 2;
+            waveformCtx.strokeStyle = '#4ecdc4';
+            waveformCtx.beginPath();
+            
+            const sliceWidth = width / timeArray.length;
+            let x = 0;
+            
+            for (let i = 0; i < timeArray.length; i++) {
+                const v = timeArray[i] / 128.0;
+                const y = v * height / 2;
+                
+                if (i === 0) {
+                    waveformCtx.moveTo(x, y);
+                } else {
+                    waveformCtx.lineTo(x, y);
+                }
+                
+                x += sliceWidth;
+            }
+            
+            waveformCtx.stroke();
+            
+            // Draw center line
+            waveformCtx.strokeStyle = 'rgba(255,255,255,0.1)';
+            waveformCtx.lineWidth = 1;
+            waveformCtx.beginPath();
+            waveformCtx.moveTo(0, height / 2);
+            waveformCtx.lineTo(width, height / 2);
+            waveformCtx.stroke();
+        }
+
+        // Update level meter
+        function updateLevelMeter(dataArray) {
+            // Calculate RMS level
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                sum += dataArray[i];
+            }
+            const average = sum / dataArray.length;
+            
+            // Convert to percentage (0-100)
+            const level = Math.min(100, (average / 255) * 150);
+            
+            // Convert to dB
+            const db = average > 0 ? 20 * Math.log10(average / 255) : -Infinity;
+            
+            // Update UI
+            document.getElementById('levelFill').style.width = `${level}%`;
+            document.getElementById('levelDb').textContent = 
+                db === -Infinity ? '-∞ dB' : `${db.toFixed(0)} dB`;
+        }
+
+        // Switch visualizer mode
+        function setVisualizerMode(mode) {
+            visualizerMode = mode;
+            
+            // Update buttons
+            document.getElementById('btnSpectro').classList.toggle('active', mode === 'spectrogram');
+            document.getElementById('btnWave').classList.toggle('active', mode === 'waveform');
+            
+            // Show/hide containers
+            document.getElementById('spectrogramContainer').style.display = 
+                mode === 'spectrogram' ? 'block' : 'none';
+            document.getElementById('waveformContainer').style.display = 
+                mode === 'waveform' ? 'block' : 'none';
+            
+            // Clear spectrogram data when switching
+            if (mode === 'spectrogram') {
+                spectrogramData = [];
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
             // Set initial language
@@ -887,8 +4144,14 @@
 
             initMap();
             initChart();
+            initAudioVisualizer();
             connectWebSocket();
             loadHistoricalData();
+            
+            // Fetch weather data
+            fetchWeather();
+            // Refresh weather every 5 minutes
+            setInterval(fetchWeather, 5 * 60 * 1000);
         });
     </script>
 </body>

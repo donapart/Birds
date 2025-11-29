@@ -15,8 +15,17 @@ class Settings(BaseSettings):
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
 
+    # ML Model loading
+    # When True, the application will load lightweight stub models instead
+    # of the full heavy ML stacks (ONNX Runtime, Transformers, Torch, etc.).
+    # This is intended for tests and local development where correctness of
+    # the surrounding pipeline matters more than model accuracy.
+    USE_MODEL_STUBS: bool = False
+
     # Database
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/birdsound"
+    USE_SQLITE: bool = False  # Fallback to SQLite if PostgreSQL unavailable
+    SQLITE_PATH: str = "birdsound.db"
 
     # Audio Processing
     AUDIO_SAMPLE_RATE: int = 48000  # BirdNET expects 48kHz
@@ -27,6 +36,13 @@ class Settings(BaseSettings):
     BIRDNET_MODEL_PATH: Optional[str] = "models/birdnet/BirdNET_GLOBAL_6K_V2.4_Model_FP32.onnx"
     BIRDNET_LABELS_PATH: Optional[str] = "models/birdnet/BirdNET_GLOBAL_6K_V2.4_Labels.txt"
     HF_MODEL_NAME: str = "dima806/bird_sounds_classification"
+    
+    # Google Perch Model (15,000 species)
+    ENABLE_PERCH_MODEL: bool = False  # Set True to enable Perch
+    PERCH_MODEL_PATH: Optional[str] = "models/perch"  # Path to TensorFlow SavedModel
+    
+    # Xeno-canto Integration
+    ENABLE_XENO_CANTO: bool = True  # Enable reference recordings lookup
 
     # Prediction Settings
     MIN_CONFIDENCE_THRESHOLD: float = 0.1
@@ -55,6 +71,13 @@ class Settings(BaseSettings):
 
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
+
+    # API Security
+    API_KEYS: List[str] = ["changeme-in-production"]  # Comma-separated keys
+
+    # Rate Limiting
+    RATE_LIMIT_PER_MINUTE: int = 60
+    RATE_LIMIT_PER_HOUR: int = 1000
 
     class Config:
         env_file = ".env"

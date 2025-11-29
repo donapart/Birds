@@ -106,12 +106,12 @@ async def get_species_names(
     Get species names in the selected language.
     Uses common_name_de for German and common_name_en for English.
     """
-    from app.data.species_europe import EUROPEAN_BIRD_SPECIES
+    from app.data.species_europe import EUROPEAN_SPECIES
 
     name_field = "common_name_de" if lang == "de" else "common_name_en"
 
     species_names = {}
-    for species in EUROPEAN_BIRD_SPECIES:
+    for species in EUROPEAN_SPECIES:
         if species_ids is None or species["scientific_name"] in species_ids:
             species_names[species["scientific_name"]] = {
                 "name": species.get(name_field, species.get("common_name_en", "")),

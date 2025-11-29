@@ -30,17 +30,92 @@ class ModelRegistry:
 
     async def load_models(self) -> None:
         """Load all configured models."""
-        models_to_load = [
-            BirdNETModel(
-                top_n=settings.TOP_N_PREDICTIONS,
-                min_confidence=settings.MIN_CONFIDENCE_THRESHOLD
-            ),
-            HuggingFaceModel(
-                model_name_or_path=settings.HF_MODEL_NAME,
-                top_n=settings.TOP_N_PREDICTIONS,
-                min_confidence=settings.MIN_CONFIDENCE_THRESHOLD
-            ),
-        ]
+        # Choose between full models and lightweight stubs based on settings.
+        # Currently BirdNETModel and HuggingFaceModel in app.models.* are
+        # implemented as lightweight stubs that do not require heavy ML
+        # dependencies. In a production setup you can swap these with real
+        # implementations and use USE_MODEL_STUBS to toggle behaviour.
+
+        if settings.USE_MODEL_STUBS:
+            models_to_load = [
+                BirdNETModel(
+                    top_n=settings.TOP_N_PREDICTIONS,
+                    min_confidence=settings.MIN_CONFIDENCE_THRESHOLD,
+                ),
+                HuggingFaceModel(
+                    model_name_or_path=settings.HF_MODEL_NAME,
+                    top_n=settings.TOP_N_PREDICTIONS,
+                    min_confidence=settings.MIN_CONFIDENCE_THRESHOLD,
+                ),
+            ]
+        else:
+            # Production runtime models with ONNX Runtime and Transformers
+            logger.info("Loading production runtime models (USE_MODEL_STUBS=False)")
+            from app.models.hf_runtime import DimaBirdRuntimeModel
+            
+            models_to_load = []
+            
+            # 1. DimaBird (HuggingFace) - always available
+            models_to_load.append(
+                DimaBirdRuntimeModel(
+                    sample_rate=settings.AUDIO_SAMPLE_RATE
+                )
+            )
+            
+            # 2. BirdNET - try official package first, then ONNX fallback
+            birdnet_loaded = False
+            
+            # Try official BirdNET package (pip install birdnet)
+            try:
+                from app.models.birdnet_official import BirdNETOfficialModel
+                birdnet_model = BirdNETOfficialModel(
+                    sample_rate=settings.AUDIO_SAMPLE_RATE,
+                    top_n=settings.TOP_N_PREDICTIONS,
+                    min_confidence=settings.MIN_CONFIDENCE_THRESHOLD,
+                    use_location_filter=True
+                )
+                models_to_load.append(birdnet_model)
+                birdnet_loaded = True
+                logger.info("Using BirdNET official package (pip install birdnet)")
+            except ImportError:
+                logger.info("BirdNET official package not installed, trying ONNX...")
+            
+            # Fallback to ONNX model if official package not available
+            if not birdnet_loaded:
+                try:
+                    from app.models.birdnet_runtime import BirdNETRuntimeModel
+                    from pathlib import Path
+                    
+                    model_path = Path(settings.BIRDNET_MODEL_PATH)
+                    labels_path = Path(settings.BIRDNET_LABELS_PATH)
+                    
+                    if model_path.exists() and labels_path.exists():
+                        birdnet_model = BirdNETRuntimeModel(
+                            model_path=str(model_path),
+                            labels_path=str(labels_path)
+                        )
+                        models_to_load.append(birdnet_model)
+                        logger.info("Using BirdNET ONNX model")
+                    else:
+                        logger.warning(
+                            f"BirdNET ONNX model not found at {model_path}. "
+                            "Install official package: pip install birdnet"
+                        )
+                except Exception as e:
+                    logger.warning(f"BirdNET ONNX not available: {e}")
+            
+            # 3. Optional: Google Perch model if enabled
+            if getattr(settings, 'ENABLE_PERCH_MODEL', False):
+                try:
+                    from app.models.perch_runtime import PerchRuntimeModel
+                    perch_model = PerchRuntimeModel(
+                        model_path=getattr(settings, 'PERCH_MODEL_PATH', None),
+                        sample_rate=32000  # Perch uses 32kHz
+                    )
+                    models_to_load.append(perch_model)
+                    logger.info("Perch model added to load queue")
+                except ImportError as e:
+                    logger.warning(f"Perch model not available: {e}")
 
         # Load models concurrently
         tasks = [model.load() for model in models_to_load]

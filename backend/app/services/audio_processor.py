@@ -283,7 +283,7 @@ class AudioProcessor:
         """
         rms = np.sqrt(np.mean(audio ** 2))
         db = 20 * np.log10(rms + 1e-10)
-        return db < threshold_db
+        return bool(db < threshold_db)
 
 
 # Global instance

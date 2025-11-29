@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- USB Audio Interface Filter für Stereo-Mikrofone -->
+    <usb-device vendor-id="1234" product-id="5678" />
+    <!-- Generische USB Audio Geräte -->
+    <usb-device class="1" subclass="1" />
+    <usb-device class="1" subclass="2" />
+</resources>

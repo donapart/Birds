@@ -15,6 +15,7 @@ from app.schemas.prediction import (
 from app.services.prediction_service import PredictionService
 from app.services.model_registry import model_registry
 from app.db.database import get_db
+from app.api.dependencies import get_api_key
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -24,7 +25,8 @@ router = APIRouter()
 async def predict_bird_sound(
     request: AudioChunkRequest,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    api_key: str = Depends(get_api_key)
 ):
     """
     Analyze an audio chunk for bird sounds.
@@ -52,8 +54,8 @@ async def predict_bird_sound(
         logger.error(f"Invalid request: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Prediction failed: {e}")
-        raise HTTPException(status_code=500, detail="Prediction processing failed")
+        logger.error(f"Prediction failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Prediction processing failed: {str(e)}")
 
 
 @router.post("/predict/batch", response_model=BatchPredictionResponse)
@@ -94,6 +96,7 @@ async def predict_batch(
 @router.post("/predict/quick", response_model=PredictionResponse)
 async def predict_quick(
     request: AudioChunkRequest,
+    api_key: str = Depends(get_api_key)
 ):
     """
     Quick prediction without database storage.

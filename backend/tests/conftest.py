@@ -12,9 +12,15 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient, ASGITransport
 
-# Set test environment
-os.environ["DATABASE_URL"] = "postgresql://postgres:postgres@localhost:5432/birdsound_test"
+# Set test environment - use SQLite for tests
+os.environ["USE_SQLITE"] = "true"
+os.environ["SQLITE_PATH"] = ":memory:"
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["DEBUG"] = "true"
+os.environ["API_KEYS"] = '[\"test-api-key\"]'
+
+# Test API key for authenticated endpoints
+TEST_API_KEY = "test-api-key"
 
 
 @pytest.fixture(scope="session")
@@ -36,6 +42,12 @@ def app():
 def client(app) -> TestClient:
     """Create synchronous test client."""
     return TestClient(app)
+
+
+@pytest.fixture
+def auth_headers() -> dict:
+    """Return headers with valid API key for authenticated requests."""
+    return {"X-API-Key": TEST_API_KEY}
 
 
 @pytest.fixture
