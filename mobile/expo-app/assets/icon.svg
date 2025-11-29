@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <!-- Bird body gradient -->
+    <linearGradient id="birdBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4ECDC4"/>
+      <stop offset="100%" style="stop-color:#2D9D8D"/>
+    </linearGradient>
+    <!-- Bird accent -->
+    <linearGradient id="birdAccent" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#6EE7DF"/>
+      <stop offset="100%" style="stop-color:#4ECDC4"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="512" cy="512" r="480" fill="url(#bgGrad)"/>
+  
+  <!-- Outer ring -->
+  <circle cx="512" cy="512" r="450" fill="none" stroke="#4ECDC4" stroke-width="3" opacity="0.2"/>
+  
+  <!-- Sound waves (left side, emanating from bird) -->
+  <g stroke="#4ECDC4" fill="none" stroke-linecap="round" opacity="0.4">
+    <path d="M280 512 Q240 450 280 388" stroke-width="12"/>
+    <path d="M220 512 Q160 420 220 328" stroke-width="10"/>
+    <path d="M160 512 Q80 390 160 268" stroke-width="8"/>
+  </g>
+  
+  <!-- Main Bird Shape - Simplified, iconic style -->
+  <!-- Body -->
+  <ellipse cx="550" cy="500" rx="200" ry="150" fill="url(#birdBody)"/>
+  
+  <!-- Belly highlight -->
+  <ellipse cx="530" cy="540" rx="140" ry="100" fill="url(#birdAccent)" opacity="0.3"/>
+  
+  <!-- Head -->
+  <circle cx="380" cy="420" r="120" fill="url(#birdBody)"/>
+  
+  <!-- Head highlight -->
+  <circle cx="360" cy="400" r="80" fill="#6EE7DF" opacity="0.2"/>
+  
+  <!-- Eye - large and expressive -->
+  <circle cx="340" cy="400" r="40" fill="#1a1a2e"/>
+  <circle cx="330" cy="390" r="15" fill="#fff"/>
+  <circle cx="350" cy="410" r="8" fill="#fff" opacity="0.5"/>
+  
+  <!-- Beak - open, singing -->
+  <path d="M260 440 L160 420 L180 400 L260 420 Z" fill="#FF9F43"/>
+  <path d="M260 440 L160 460 L180 480 L260 450 Z" fill="#E88A30"/>
+  <!-- Beak detail -->
+  <path d="M200 420 L260 430" stroke="#D4782A" stroke-width="2"/>
+  
+  <!-- Wing -->
+  <ellipse cx="600" cy="480" rx="120" ry="80" fill="#2D9D8D" transform="rotate(-10 600 480)"/>
+  <path d="M520 440 Q650 380 720 420" stroke="#238B7A" stroke-width="4" fill="none"/>
+  <path d="M540 470 Q660 420 710 460" stroke="#238B7A" stroke-width="3" fill="none"/>
+  
+  <!-- Tail feathers - elegant curves -->
+  <path d="M740 500 Q850 420 880 320" stroke="url(#birdBody)" stroke-width="35" fill="none" stroke-linecap="round"/>
+  <path d="M740 530 Q870 470 910 380" stroke="#2D9D8D" stroke-width="28" fill="none" stroke-linecap="round"/>
+  <path d="M740 560 Q860 520 900 440" stroke="#4ECDC4" stroke-width="20" fill="none" stroke-linecap="round"/>
+  
+  <!-- Crest/Head feathers -->
+  <path d="M440 320 Q500 240 480 180" stroke="#2D9D8D" stroke-width="16" fill="none" stroke-linecap="round"/>
+  <path d="M420 340 Q470 270 460 210" stroke="#4ECDC4" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M400 355 Q440 300 440 250" stroke="#6EE7DF" stroke-width="8" fill="none" stroke-linecap="round"/>
+  
+  <!-- Musical notes floating -->
+  <g fill="#4ECDC4" opacity="0.8">
+    <!-- Note 1 -->
+    <ellipse cx="200" cy="280" rx="24" ry="20"/>
+    <rect x="222" y="180" width="8" height="100"/>
+    <path d="M230 180 Q270 195 258 240" stroke="#4ECDC4" stroke-width="8" fill="none" stroke-linecap="round"/>
+    
+    <!-- Note 2 -->
+    <ellipse cx="130" cy="350" rx="18" ry="15"/>
+    <rect x="146" y="270" width="6" height="80"/>
+  </g>
+  
+  <!-- Feet (simple) -->
+  <g stroke="#FF9F43" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M480 640 L460 720 M460 720 L430 750 M460 720 L460 755 M460 720 L490 750"/>
+    <path d="M580 640 L600 720 M600 720 L570 750 M600 720 L600 755 M600 720 L630 750"/>
+  </g>
+  
+  <!-- Sparkle effects -->
+  <g fill="#fff" opacity="0.6">
+    <circle cx="280" cy="300" r="6"/>
+    <circle cx="150" cy="400" r="4"/>
+    <circle cx="220" cy="240" r="5"/>
+  </g>
+</svg>

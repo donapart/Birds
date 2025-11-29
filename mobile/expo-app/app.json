@@ -2,7 +2,7 @@
   "expo": {
     "name": "BirdSound",
     "slug": "birdsound",
-    "version": "1.0.2",
+    "version": "1.1.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1E1E2E"
+      "backgroundColor": "#1a1a2e"
     },
     "ios": {
       "supportsTablet": true,
@@ -22,18 +22,20 @@
     },
     "android": {
       "package": "com.birdsound.app",
-      "versionCode": 3,
+      "versionCode": 9,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1E1E2E"
+        "backgroundColor": "#1a1a2e"
       },
       "permissions": [
         "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "INTERNET",
         "WRITE_EXTERNAL_STORAGE",
-        "READ_EXTERNAL_STORAGE"
+        "READ_EXTERNAL_STORAGE",
+        "CAMERA"
       ]
     },
     "web": {

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐦 BirdSound - Echtzeit-Vogelstimmen-Erkennung</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #eee;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            padding: 3rem 0;
+        }
+        
+        .logo {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            color: #4ECDC4;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #888;
+            margin-bottom: 2rem;
+        }
+        
+        .downloads {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+        
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #4ECDC4 0%, #44a08d 100%);
+            color: #1a1a2e;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
+        }
+        
+        .download-btn.secondary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .download-btn.secondary:hover {
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: #4ECDC4;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-card h3 {
+            color: #4ECDC4;
+            margin-bottom: 0.5rem;
+        }
+        
+        .feature-card p {
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: rgba(78, 205, 196, 0.1);
+            border-radius: 16px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #4ECDC4;
+        }
+        
+        .stat-label {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .screenshot {
+            width: 100%;
+            max-width: 800px;
+            margin: 2rem auto;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            color: #666;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 3rem;
+        }
+        
+        footer a {
+            color: #4ECDC4;
+            text-decoration: none;
+        }
+        
+        footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .version-badge {
+            display: inline-block;
+            background: rgba(78, 205, 196, 0.2);
+            color: #4ECDC4;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">🐦</div>
+            <h1>BirdSound <span class="version-badge">v1.1.2</span></h1>
+            <p class="subtitle">Echtzeit-Vogelstimmen-Erkennung mit KI</p>
+            
+            <div class="downloads">
+                <a href="https://github.com/donapart/Birds/releases/download/v1.1.2/BirdSound_v1.1.2_Setup.apk" class="download-btn">
+                    📱 Android APK
+                </a>
+                <a href="https://github.com/donapart/Birds/releases/download/v1.0.0/BirdSound_v1.0.0_Setup_win.exe" class="download-btn secondary">
+                    🖥️ Windows Installer
+                </a>
+            </div>
+        </header>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number">6.522+</div>
+                <div class="stat-label">Vogelarten weltweit</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">2</div>
+                <div class="stat-label">ML-Modelle</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">&lt;300ms</div>
+                <div class="stat-label">Erkennungszeit</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">Offline-fähig</div>
+            </div>
+        </div>
+        
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <h3>Multi-Modell Analyse</h3>
+                <p>BirdNET V2.4 + HuggingFace Modelle für maximale Genauigkeit durch Konsens-Voting.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📍</div>
+                <h3>GPS-Tagging</h3>
+                <p>Automatische Standort-Verknüpfung. Export als KML/KMZ für Google Earth.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📴</div>
+                <h3>Offline-Modus</h3>
+                <p>Funktioniert komplett ohne Internet. Perfekt für Feldarbeit im Wald.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Live-Dashboard</h3>
+                <p>Echtzeit-Spektrogramm, Pegel-Anzeige und interaktive Karte mit Erkennungen.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🌍</div>
+                <h3>Mehrsprachig</h3>
+                <p>Deutsche und englische Vogelnamen. Wissenschaftliche Namen inklusive.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🔧</div>
+                <h3>REST API</h3>
+                <p>Vollständige FastAPI mit Swagger-Dokumentation für eigene Integrationen.</p>
+            </div>
+        </div>
+        
+        <footer>
+            <p>
+                <a href="https://github.com/donapart/Birds">GitHub</a> · 
+                <a href="https://github.com/donapart/Birds/issues">Issues</a> · 
+                <a href="https://github.com/donapart/Birds/blob/main/README.md">Dokumentation</a>
+            </p>
+            <p style="margin-top: 1rem;">
+                MIT License · Powered by <a href="https://birdnet.cornell.edu/">BirdNET</a> & <a href="https://huggingface.co/">HuggingFace</a>
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

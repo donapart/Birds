@@ -379,6 +379,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            height: 400px;
         }
 
         .section-header {
@@ -927,15 +928,18 @@
 
         .consensus-option {
             display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25rem;
+            padding: 0.75rem 1rem;
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s;
             font-size: 0.85rem;
+            flex: 1;
+            min-width: 150px;
         }
 
         .consensus-option:hover {
@@ -949,6 +953,18 @@
 
         .consensus-option input {
             accent-color: #4ecdc4;
+        }
+
+        .consensus-option span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .consensus-desc {
+            font-size: 0.7rem;
+            color: #888;
+            margin-left: 1.2rem;
         }
 
         /* Report Modal */
@@ -2048,8 +2064,21 @@
         let weatherCache = {};
         
         // Model state
-        let activeModels = ['DimaBird']; // Currently active models
+        let activeModels = ['BirdNET']; // Will be updated from server
         let consensusMethod = localStorage.getItem('birdConsensusMethod') || 'weighted_average';
+        
+        // Load active models from server
+        async function loadActiveModels() {
+            try {
+                const response = await fetch('/api/v1/models');
+                const data = await response.json();
+                activeModels = data.models.filter(m => m.is_loaded).map(m => m.name);
+                console.log('Active models:', activeModels);
+            } catch (e) {
+                console.log('Could not load models, using defaults');
+            }
+        }
+        loadActiveModels();
 
         // Audio Visualization State
         let audioContext = null;
@@ -2470,11 +2499,27 @@
 
         // Initialize map with marker clustering
         function initMap() {
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) {
+                console.error('Map container not found');
+                return;
+            }
+            
             map = L.map('map').setView([52.52, 13.405], 10);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
+            
+            // Force map to recalculate size after container is fully rendered
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 100);
+            
+            // Also invalidate on window resize
+            window.addEventListener('resize', () => {
+                if (map) map.invalidateSize();
+            });
 
             // Initialize marker cluster group
             window.markerCluster = L.markerClusterGroup({
@@ -3100,7 +3145,7 @@
                 <div class="model-info-grid">
                     <div class="model-info-stats">
                         <div class="model-info-stat">
-                            <div class="model-info-stat-value">${speciesList.length}</div>
+                            <div class="model-info-stat-value">${activeModels.includes('BirdNET') ? '6522' : speciesList.length}</div>
                             <div class="model-info-stat-label">${t('known_species')}</div>
                         </div>
                         <div class="model-info-stat">
@@ -3108,8 +3153,8 @@
                             <div class="model-info-stat-label">${t('families')}</div>
                         </div>
                         <div class="model-info-stat">
-                            <div class="model-info-stat-value">🇪🇺</div>
-                            <div class="model-info-stat-label">Europa</div>
+                            <div class="model-info-stat-value">${activeModels.includes('BirdNET') ? '🌍' : '🇪🇺'}</div>
+                            <div class="model-info-stat-label">${activeModels.includes('BirdNET') ? 'Global' : 'Europa'}</div>
                         </div>
                     </div>
                     
@@ -3185,12 +3230,27 @@
                                     <span class="model-status">${activeModels.includes('BirdNET') ? '✅ Aktiv' : '⏸️ Inaktiv'}</span>
                                 </div>
                                 <div class="model-item-details">
-                                    <code>Cornell Lab BirdNET-Analyzer</code>
+                                    <code>Cornell Lab BirdNET-Analyzer V2.4</code>
                                     <p>${t('model_birdnet_desc')}</p>
                                     <div class="model-tags">
-                                        <span class="tag good">🌍 Global</span>
+                                        <span class="tag good">🌍 6522 Arten</span>
                                         <span class="tag good">📣 Rufe</span>
                                         <span class="tag good">🦉 Nachtaktiv</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="model-item ${activeModels.includes('PERCH') ? 'active' : ''}">
+                                <div class="model-item-header">
+                                    <span class="model-name">🦅 PERCH</span>
+                                    <span class="model-status">${activeModels.includes('PERCH') ? '✅ Aktiv' : '⏸️ Inaktiv'}</span>
+                                </div>
+                                <div class="model-item-details">
+                                    <code>Google Bioacoustics PERCH</code>
+                                    <p>Google Research Modell für Vogelstimmen-Embeddings. Stark bei seltenen Arten.</p>
+                                    <div class="model-tags">
+                                        <span class="tag medium">🔬 Embeddings</span>
+                                        <span class="tag good">🌍 Global</span>
+                                        <span class="tag good">🦜 Seltene Arten</span>
                                     </div>
                                 </div>
                             </div>
@@ -3201,17 +3261,20 @@
                     <div class="model-selection">
                         <h4 style="margin-bottom: 0.5rem; font-size: 0.9rem;">⚙️ ${t('consensus_method')}</h4>
                         <div class="consensus-options">
-                            <label class="consensus-option ${consensusMethod === 'weighted_average' ? 'selected' : ''}">
+                            <label class="consensus-option ${consensusMethod === 'weighted_average' ? 'selected' : ''}" title="Kombiniert alle Modell-Ergebnisse, gewichtet nach ihrer jeweiligen Konfidenz. Höhere Konfidenz = mehr Gewicht.">
                                 <input type="radio" name="consensus" value="weighted_average" ${consensusMethod === 'weighted_average' ? 'checked' : ''} onchange="setConsensusMethod('weighted_average')">
                                 <span>📊 ${t('weighted_average')}</span>
+                                <small class="consensus-desc">Modelle nach Konfidenz gewichten</small>
                             </label>
-                            <label class="consensus-option ${consensusMethod === 'majority_vote' ? 'selected' : ''}">
+                            <label class="consensus-option ${consensusMethod === 'majority_vote' ? 'selected' : ''}" title="Wählt die Vogelart, die von den meisten Modellen erkannt wurde. Bei Gleichstand entscheidet die Konfidenz.">
                                 <input type="radio" name="consensus" value="majority_vote" ${consensusMethod === 'majority_vote' ? 'checked' : ''} onchange="setConsensusMethod('majority_vote')">
                                 <span>🗳️ ${t('majority_vote')}</span>
+                                <small class="consensus-desc">Meistgenannte Art gewinnt</small>
                             </label>
-                            <label class="consensus-option ${consensusMethod === 'max_confidence' ? 'selected' : ''}">
+                            <label class="consensus-option ${consensusMethod === 'max_confidence' ? 'selected' : ''}" title="Wählt einfach das Ergebnis mit der höchsten Einzelkonfidenz, unabhängig davon welches Modell es erkannt hat.">
                                 <input type="radio" name="consensus" value="max_confidence" ${consensusMethod === 'max_confidence' ? 'checked' : ''} onchange="setConsensusMethod('max_confidence')">
                                 <span>🏆 ${t('max_confidence')}</span>
+                                <small class="consensus-desc">Höchste Einzelkonfidenz wählen</small>
                             </label>
                         </div>
                     </div>
@@ -3931,13 +3994,101 @@
                 
             } catch (error) {
                 console.error('Failed to initialize audio visualizer:', error);
-                document.querySelector('.audio-visualizer').innerHTML = `
-                    <div style="text-align: center; padding: 1rem; color: #888;">
-                        🎤 Mikrofon nicht verfügbar<br>
-                        <small>Bitte Zugriff erlauben</small>
-                    </div>
-                `;
+                // Start demo visualization without microphone
+                startDemoVisualization();
             }
+        }
+        
+        // Demo visualization when microphone not available
+        function startDemoVisualization() {
+            console.log('Starting demo visualization (microphone not available)');
+            
+            const spectroCanvas = document.getElementById('spectrogramCanvas');
+            const waveCanvas = document.getElementById('waveformCanvas');
+            
+            if (!spectroCanvas || !waveCanvas) {
+                console.error('Canvases not found!');
+                return;
+            }
+            
+            spectrogramCtx = spectroCanvas.getContext('2d');
+            waveformCtx = waveCanvas.getContext('2d');
+            
+            // Warte bis Container Größe hat
+            setTimeout(() => {
+                resizeCanvases();
+                
+                // Check if canvas has size
+                console.log('Spectro canvas size:', spectroCanvas.width, 'x', spectroCanvas.height);
+                console.log('Wave canvas size:', waveCanvas.width, 'x', waveCanvas.height);
+                
+                // Falls Canvas keine Größe hat, setze Mindestgröße
+                if (spectroCanvas.width === 0 || spectroCanvas.height === 0) {
+                    spectroCanvas.width = 400;
+                    spectroCanvas.height = 150;
+                }
+                if (waveCanvas.width === 0 || waveCanvas.height === 0) {
+                    waveCanvas.width = 400;
+                    waveCanvas.height = 150;
+                }
+                
+                // Demo data
+                let demoPhase = 0;
+                
+                function demoVisualize() {
+                    requestAnimationFrame(demoVisualize);
+                    demoPhase += 0.05;
+                    
+                    // Generate demo spectrogram data
+                    const width = spectroCanvas.width;
+                    const height = spectroCanvas.height;
+                    
+                    // Shift existing image left
+                    const imageData = spectrogramCtx.getImageData(1, 0, width - 1, height);
+                    spectrogramCtx.putImageData(imageData, 0, 0);
+                    
+                    // Draw new column with simulated bird frequencies
+                    for (let y = 0; y < height; y++) {
+                        const freq = 1 - (y / height);
+                        // Simulate bird call frequencies (2-8 kHz range)
+                        const birdFreq = Math.sin(demoPhase * 3 + freq * 10) * 0.5 + 0.5;
+                        const noise = Math.random() * 0.1;
+                        const intensity = (freq > 0.25 && freq < 0.9) ? birdFreq * 0.6 + noise : noise * 0.3;
+                        
+                        const hue = 240 - intensity * 180;
+                        spectrogramCtx.fillStyle = `hsla(${hue}, 80%, ${20 + intensity * 40}%, 1)`;
+                        spectrogramCtx.fillRect(width - 1, y, 1, 1);
+                    }
+                    
+                    // Demo level meter
+                    const levelFill = document.getElementById('levelFill');
+                    const levelDb = document.getElementById('levelDb');
+                    if (levelFill && levelDb) {
+                        const level = 30 + Math.sin(demoPhase * 2) * 20 + Math.random() * 10;
+                        levelFill.style.width = `${level}%`;
+                        const db = -60 + level * 0.6;
+                        levelDb.textContent = `${db.toFixed(0)} dB`;
+                    }
+                    
+                    // Demo waveform
+                    if (visualizerMode === 'waveform' && waveformCtx) {
+                        waveformCtx.fillStyle = 'rgba(22, 33, 62, 0.3)';
+                        waveformCtx.fillRect(0, 0, waveCanvas.width, waveCanvas.height);
+                        waveformCtx.strokeStyle = '#4ECDC4';
+                        waveformCtx.lineWidth = 2;
+                        waveformCtx.beginPath();
+                        for (let x = 0; x < waveCanvas.width; x++) {
+                            const y = waveCanvas.height / 2 + Math.sin(x * 0.05 + demoPhase * 5) * 20 * Math.sin(demoPhase);
+                            if (x === 0) waveformCtx.moveTo(x, y);
+                            else waveformCtx.lineTo(x, y);
+                        }
+                        waveformCtx.stroke();
+                    }
+                }
+                
+                demoVisualize();
+                console.log('Demo visualization started successfully');
+            }, 300);
         }
 
         // Resize canvases to container size
@@ -4138,13 +4289,36 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
+            console.log('DOM loaded, initializing...');
+            
             // Set initial language
             const savedLang = getSavedLanguage();
             await setLanguage(savedLang === 'de' || savedLang === 'en' ? savedLang : 'de');
 
-            initMap();
-            initChart();
-            initAudioVisualizer();
+            // Verzögerte Initialisierung für WebView
+            setTimeout(() => {
+                console.log('Initializing map...');
+                initMap();
+                
+                // Nochmal nach kurzer Verzögerung Map-Size korrigieren
+                setTimeout(() => {
+                    if (window.map) {
+                        window.map.invalidateSize();
+                        console.log('Map size invalidated');
+                    }
+                }, 500);
+            }, 100);
+            
+            setTimeout(() => {
+                console.log('Initializing chart...');
+                initChart();
+            }, 200);
+            
+            setTimeout(() => {
+                console.log('Initializing audio visualizer...');
+                initAudioVisualizer();
+            }, 300);
+            
             connectWebSocket();
             loadHistoricalData();
             
@@ -4152,6 +4326,15 @@
             fetchWeather();
             // Refresh weather every 5 minutes
             setInterval(fetchWeather, 5 * 60 * 1000);
+            
+            // WebView Resize-Handler
+            window.addEventListener('resize', () => {
+                console.log('Window resized');
+                if (window.map) {
+                    window.map.invalidateSize();
+                }
+                resizeCanvases();
+            });
         });
     </script>
 </body>
