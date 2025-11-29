@@ -1,0 +1,153 @@
+# BirdSound Application Stack
+# Run with: docker-compose up -d
+
+version: '3.8'
+
+services:
+  # PostgreSQL with PostGIS
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: birdsound-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: birdsound
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis (Cache & Message Broker)
+  redis:
+    image: redis:7-alpine
+    container_name: birdsound-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: birdsound-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/birdsound
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - DEBUG=false
+      - BIRDNET_MODEL_PATH=/app/models/birdnet/BirdNET_GLOBAL_6K_V2.4_Model_FP32.onnx
+      - BIRDNET_LABELS_PATH=/app/models/birdnet/BirdNET_GLOBAL_6K_V2.4_Labels.txt
+      - HF_MODEL_NAME=dima806/bird_sounds_classification
+      - AUDIO_STORAGE_PATH=/app/audio_storage
+    volumes:
+      # Mount models directory (download models here)
+      - ./models:/app/models
+      # Mount audio storage (optional, for persisting recordings)
+      - ./audio_storage:/app/audio_storage
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Worker (Background Tasks)
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: birdsound-worker
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/birdsound
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - BIRDNET_MODEL_PATH=/app/models/birdnet/BirdNET_GLOBAL_6K_V2.4_Model_FP32.onnx
+      - BIRDNET_LABELS_PATH=/app/models/birdnet/BirdNET_GLOBAL_6K_V2.4_Labels.txt
+    volumes:
+      - ./models:/app/models
+      - ./audio_storage:/app/audio_storage
+    command: celery -A app.worker.celery_app worker --loglevel=info
+    profiles:
+      - full
+
+  # Celery Beat (Scheduled Tasks)
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: birdsound-beat
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/birdsound
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    command: celery -A app.worker.celery_app beat --loglevel=info
+    profiles:
+      - full
+
+  # Adminer (Database UI) - optional, for development
+  adminer:
+    image: adminer:latest
+    container_name: birdsound-adminer
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "8080:8080"
+    profiles:
+      - dev
+
+  # Flower (Celery Monitoring) - optional
+  flower:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: birdsound-flower
+    restart: unless-stopped
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/1
+    command: celery -A app.worker.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    profiles:
+      - full
+
+volumes:
+  postgres_data:
+  redis_data:
