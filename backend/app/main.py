@@ -17,11 +17,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from app.api.routes import predict, health, recordings, websocket, export, analysis, species
+from app.api.routes import predict, health, recordings, websocket, export, analysis, species, i18n
 from app.core.config import get_settings
 from app.db.database import init_db
 from app.services.model_registry import model_registry
 from app.core.cache import cache_service
+from app.i18n import LanguageMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -78,6 +79,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Language middleware for i18n
+app.add_middleware(LanguageMiddleware)
+
 # Include routers
 app.include_router(health.router, tags=["Health"])
 app.include_router(predict.router, prefix="/api/v1", tags=["Prediction"])
@@ -85,6 +89,7 @@ app.include_router(recordings.router, prefix="/api/v1", tags=["Recordings"])
 app.include_router(export.router, prefix="/api/v1", tags=["Export"])
 app.include_router(analysis.router, prefix="/api/v1", tags=["Analysis"])
 app.include_router(species.router, prefix="/api/v1", tags=["Species"])
+app.include_router(i18n.router, prefix="/api/v1", tags=["i18n"])
 app.include_router(websocket.router, tags=["WebSocket"])
 
 

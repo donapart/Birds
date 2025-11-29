@@ -45,6 +45,47 @@
             font-size: 1.8rem;
         }
 
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        /* Language Switcher */
+        .language-switcher {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.1);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+        }
+
+        .language-switcher button {
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .language-switcher button:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .language-switcher button.active {
+            color: #fff;
+            background: rgba(78, 205, 196, 0.3);
+        }
+
+        .language-switcher .divider {
+            color: #444;
+        }
+
         .connection-status {
             display: flex;
             align-items: center;
@@ -285,6 +326,16 @@
             .sidebar {
                 order: -1;
             }
+
+            .header {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .header-right {
+                width: 100%;
+                justify-content: space-between;
+            }
         }
 
         /* Scrollbar */
@@ -309,9 +360,16 @@
 <body>
     <header class="header">
         <h1><span>🐦</span> BirdSound</h1>
-        <div class="connection-status">
-            <div class="status-dot" id="statusDot"></div>
-            <span id="statusText">Verbinde...</span>
+        <div class="header-right">
+            <div class="language-switcher">
+                <button id="langDe" onclick="setLanguage('de')">DE</button>
+                <span class="divider">|</span>
+                <button id="langEn" onclick="setLanguage('en')">EN</button>
+            </div>
+            <div class="connection-status">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText" data-i18n="connecting">Verbinde...</span>
+            </div>
         </div>
     </header>
 
@@ -323,7 +381,7 @@
                 <span>LIVE</span>
             </div>
             <div class="current-detection">
-                <h2 id="currentSpecies">Warte auf Erkennung...</h2>
+                <h2 id="currentSpecies" data-i18n="waiting_detection">Warte auf Erkennung...</h2>
                 <div class="confidence" id="currentConfidence"></div>
             </div>
             <div class="model-badges" id="modelBadges">
@@ -334,8 +392,8 @@
         <!-- Map Section -->
         <section class="map-section">
             <div class="section-header">
-                <h3>📍 Erkennungskarte</h3>
-                <span id="mapCount">0 Punkte</span>
+                <h3 data-i18n="detection_map">📍 Erkennungskarte</h3>
+                <span id="mapCount" data-i18n-template="points">0 Punkte</span>
             </div>
             <div id="map"></div>
         </section>
@@ -345,24 +403,24 @@
             <!-- Stats -->
             <section class="stats-section">
                 <div class="section-header">
-                    <h3>📊 Statistiken</h3>
+                    <h3 data-i18n="statistics">📊 Statistiken</h3>
                 </div>
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-value" id="statTotal">0</div>
-                        <div class="stat-label">Erkennungen</div>
+                        <div class="stat-label" data-i18n="detections">Erkennungen</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-value" id="statSpecies">0</div>
-                        <div class="stat-label">Arten</div>
+                        <div class="stat-label" data-i18n="species">Arten</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-value" id="statAvgConf">0%</div>
-                        <div class="stat-label">Ø Konfidenz</div>
+                        <div class="stat-label" data-i18n="avg_confidence">Ø Konfidenz</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-value" id="statAgreement">0%</div>
-                        <div class="stat-label">Übereinstimmung</div>
+                        <div class="stat-label" data-i18n="agreement">Übereinstimmung</div>
                     </div>
                 </div>
                 <div class="chart-container">
@@ -373,7 +431,7 @@
             <!-- Timeline -->
             <section class="timeline-section">
                 <div class="section-header">
-                    <h3>🕐 Timeline</h3>
+                    <h3 data-i18n="timeline">🕐 Timeline</h3>
                     <span id="timelineCount">0</span>
                 </div>
                 <div class="timeline-list" id="timelineList">
@@ -398,17 +456,160 @@
         let detections = [];
         let speciesCounts = {};
         let chart = null;
+        let currentLang = 'de';
+        let translations = {};
+        let speciesNames = {};
+
+        // Translations (inline fallback)
+        const TRANSLATIONS = {
+            de: {
+                connecting: 'Verbinde...',
+                connected: 'Verbunden',
+                disconnected: 'Getrennt',
+                waiting_detection: 'Warte auf Erkennung...',
+                detection_map: '📍 Erkennungskarte',
+                points: '{n} Punkte',
+                statistics: '📊 Statistiken',
+                detections: 'Erkennungen',
+                species: 'Arten',
+                avg_confidence: 'Ø Konfidenz',
+                agreement: 'Übereinstimmung',
+                timeline: '🕐 Timeline',
+                confidence: 'Konfidenz',
+                no_detection: 'Kein Vogel erkannt'
+            },
+            en: {
+                connecting: 'Connecting...',
+                connected: 'Connected',
+                disconnected: 'Disconnected',
+                waiting_detection: 'Waiting for detection...',
+                detection_map: '📍 Detection Map',
+                points: '{n} points',
+                statistics: '📊 Statistics',
+                detections: 'Detections',
+                species: 'Species',
+                avg_confidence: 'Avg Confidence',
+                agreement: 'Agreement',
+                timeline: '🕐 Timeline',
+                confidence: 'Confidence',
+                no_detection: 'No bird detected'
+            }
+        };
 
         // Bird icons for common species
         const BIRD_ICONS = {
             'Eurasian Blackbird': '🐦‍⬛',
+            'Amsel': '🐦‍⬛',
             'European Robin': '🐦',
+            'Rotkehlchen': '🐦',
             'Great Tit': '🐤',
+            'Kohlmeise': '🐤',
             'Blue Tit': '🐦',
+            'Blaumeise': '🐦',
             'House Sparrow': '🐦',
+            'Haussperling': '🐦',
             'Common Starling': '🐦',
+            'Star': '🐦',
             'default': '🐦'
         };
+
+        // Get translation
+        function t(key, vars = {}) {
+            let text = translations[key] || TRANSLATIONS[currentLang]?.[key] || TRANSLATIONS.de[key] || key;
+
+            // Replace variables
+            Object.entries(vars).forEach(([k, v]) => {
+                text = text.replace(`{${k}}`, v);
+            });
+
+            return text;
+        }
+
+        // Get species name in current language
+        function getSpeciesName(scientificName) {
+            if (speciesNames[scientificName]) {
+                return speciesNames[scientificName].name;
+            }
+            return scientificName;
+        }
+
+        // Set language
+        async function setLanguage(lang) {
+            currentLang = lang;
+            document.documentElement.lang = lang;
+
+            // Update button states
+            document.getElementById('langDe').classList.toggle('active', lang === 'de');
+            document.getElementById('langEn').classList.toggle('active', lang === 'en');
+
+            // Save preference
+            document.cookie = `lang=${lang};path=/;max-age=${365*24*60*60}`;
+
+            // Load translations from API
+            try {
+                const [transResponse, speciesResponse] = await Promise.all([
+                    fetch(`${API_BASE}/api/v1/i18n/translations?lang=${lang}`),
+                    fetch(`${API_BASE}/api/v1/i18n/species-names?lang=${lang}`)
+                ]);
+
+                if (transResponse.ok) {
+                    const data = await transResponse.json();
+                    translations = flattenTranslations(data.translations);
+                }
+
+                if (speciesResponse.ok) {
+                    const data = await speciesResponse.json();
+                    speciesNames = data.species;
+                }
+            } catch (error) {
+                console.log('Using fallback translations');
+            }
+
+            // Update UI
+            updateTranslations();
+            updateUI();
+        }
+
+        // Flatten nested translation object
+        function flattenTranslations(obj, prefix = '') {
+            const result = {};
+            for (const [key, value] of Object.entries(obj)) {
+                const newKey = prefix ? `${prefix}.${key}` : key;
+                if (typeof value === 'object' && value !== null) {
+                    Object.assign(result, flattenTranslations(value, newKey));
+                } else {
+                    result[newKey] = value;
+                }
+            }
+            return result;
+        }
+
+        // Update all translatable elements
+        function updateTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                el.textContent = t(key);
+            });
+
+            // Update connection status
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            if (statusDot.classList.contains('connected')) {
+                statusText.textContent = t('connected');
+            } else {
+                statusText.textContent = t('disconnected');
+            }
+        }
+
+        // Get saved language preference
+        function getSavedLanguage() {
+            const cookies = document.cookie.split(';').reduce((acc, c) => {
+                const [key, value] = c.trim().split('=');
+                acc[key] = value;
+                return acc;
+            }, {});
+            return cookies.lang || navigator.language.split('-')[0] || 'de';
+        }
 
         // Initialize map
         function initMap() {
@@ -465,13 +666,13 @@
             ws.onopen = () => {
                 console.log('WebSocket connected');
                 document.getElementById('statusDot').classList.add('connected');
-                document.getElementById('statusText').textContent = 'Verbunden';
+                document.getElementById('statusText').textContent = t('connected');
             };
 
             ws.onclose = () => {
                 console.log('WebSocket disconnected');
                 document.getElementById('statusDot').classList.remove('connected');
-                document.getElementById('statusText').textContent = 'Getrennt';
+                document.getElementById('statusText').textContent = t('disconnected');
 
                 // Reconnect after 3 seconds
                 setTimeout(connectWebSocket, 3000);
@@ -504,23 +705,28 @@
             pulse.classList.add('active');
             setTimeout(() => pulse.classList.remove('active'), 1000);
 
+            // Get localized species name
+            const displayName = getSpeciesName(data.species) || data.species;
+
             // Update current detection
-            document.getElementById('currentSpecies').textContent = data.species;
+            document.getElementById('currentSpecies').textContent = displayName;
             document.getElementById('currentConfidence').textContent =
-                `${(data.confidence * 100).toFixed(1)}% Konfidenz`;
+                `${(data.confidence * 100).toFixed(1)}% ${t('confidence')}`;
 
             // Update model badges
             const badgesContainer = document.getElementById('modelBadges');
             badgesContainer.innerHTML = data.models.map(m => {
                 const agree = m.species === data.species;
+                const modelSpecies = getSpeciesName(m.species) || m.species;
                 return `<div class="model-badge ${agree ? 'agree' : ''}">
-                    ${m.name}: ${m.species || 'N/A'} (${(m.confidence * 100).toFixed(0)}%)
+                    ${m.name}: ${modelSpecies || 'N/A'} (${(m.confidence * 100).toFixed(0)}%)
                 </div>`;
             }).join('');
 
             // Add to detections
             detections.unshift({
                 ...data,
+                displayName,
                 timestamp: new Date(),
                 deviceId
             });
@@ -531,22 +737,22 @@
             }
 
             // Update species counts
-            speciesCounts[data.species] = (speciesCounts[data.species] || 0) + 1;
+            speciesCounts[displayName] = (speciesCounts[displayName] || 0) + 1;
 
             // Add marker to map
             if (data.latitude && data.longitude) {
                 const marker = L.marker([data.latitude, data.longitude], {
                     icon: L.divIcon({
                         className: 'bird-marker',
-                        html: BIRD_ICONS[data.species] || BIRD_ICONS.default,
+                        html: BIRD_ICONS[displayName] || BIRD_ICONS[data.species] || BIRD_ICONS.default,
                         iconSize: [30, 30],
                         iconAnchor: [15, 15]
                     })
                 }).addTo(map);
 
                 marker.bindPopup(`
-                    <strong>${data.species}</strong><br>
-                    Konfidenz: ${(data.confidence * 100).toFixed(1)}%<br>
+                    <strong>${displayName}</strong><br>
+                    ${t('confidence')}: ${(data.confidence * 100).toFixed(1)}%<br>
                     ${new Date().toLocaleTimeString()}
                 `);
 
@@ -584,20 +790,22 @@
             document.getElementById('statAgreement').textContent = `${(agreementRate * 100).toFixed(0)}%`;
 
             // Update map count
-            document.getElementById('mapCount').textContent = `${markers.length} Punkte`;
+            document.getElementById('mapCount').textContent = t('points', { n: markers.length });
 
             // Update timeline
             const timelineList = document.getElementById('timelineList');
-            timelineList.innerHTML = detections.slice(0, 20).map((d, i) => `
+            timelineList.innerHTML = detections.slice(0, 20).map((d, i) => {
+                const displayName = d.displayName || getSpeciesName(d.species) || d.species;
+                return `
                 <div class="timeline-item ${i === 0 ? 'new' : ''}">
-                    <div class="timeline-icon">${BIRD_ICONS[d.species] || BIRD_ICONS.default}</div>
+                    <div class="timeline-icon">${BIRD_ICONS[displayName] || BIRD_ICONS[d.species] || BIRD_ICONS.default}</div>
                     <div class="timeline-content">
-                        <div class="timeline-species">${d.species}</div>
+                        <div class="timeline-species">${displayName}</div>
                         <div class="timeline-meta">${d.timestamp.toLocaleTimeString()}</div>
                     </div>
                     <div class="timeline-confidence">${(d.confidence * 100).toFixed(0)}%</div>
                 </div>
-            `).join('');
+            `}).join('');
 
             document.getElementById('timelineCount').textContent = detections.length;
 
@@ -620,18 +828,19 @@
                     const points = await mapResponse.json();
                     points.forEach(point => {
                         if (point.lat && point.lon) {
+                            const displayName = getSpeciesName(point.species) || point.species;
                             const marker = L.marker([point.lat, point.lon], {
                                 icon: L.divIcon({
                                     className: 'bird-marker',
-                                    html: BIRD_ICONS[point.species] || BIRD_ICONS.default,
+                                    html: BIRD_ICONS[displayName] || BIRD_ICONS[point.species] || BIRD_ICONS.default,
                                     iconSize: [30, 30],
                                     iconAnchor: [15, 15]
                                 })
                             }).addTo(map);
 
                             marker.bindPopup(`
-                                <strong>${point.species}</strong><br>
-                                Konfidenz: ${(point.confidence * 100).toFixed(1)}%
+                                <strong>${displayName}</strong><br>
+                                ${t('confidence')}: ${(point.confidence * 100).toFixed(1)}%
                             `);
 
                             markers.push(marker);
@@ -644,14 +853,16 @@
                 if (timelineResponse.ok) {
                     const timeline = await timelineResponse.json();
                     timeline.forEach(entry => {
+                        const displayName = getSpeciesName(entry.species) || entry.species;
                         detections.push({
                             species: entry.species,
+                            displayName,
                             confidence: entry.confidence,
                             timestamp: new Date(entry.timestamp),
                             agreement: `${entry.models_agreed}/2`
                         });
 
-                        speciesCounts[entry.species] = (speciesCounts[entry.species] || 0) + 1;
+                        speciesCounts[displayName] = (speciesCounts[displayName] || 0) + 1;
                     });
                 }
 
@@ -669,7 +880,11 @@
         }
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Set initial language
+            const savedLang = getSavedLanguage();
+            await setLanguage(savedLang === 'de' || savedLang === 'en' ? savedLang : 'de');
+
             initMap();
             initChart();
             connectWebSocket();
