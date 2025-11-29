@@ -80,3 +80,5 @@ mobile/flutter/.flutter-plugins-dependencies
 mobile/react-native/node_modules/
 mobile/react-native/ios/Pods/
 mobile/react-native/android/.gradle/
+BirdSound_v1.0.0_Setup.apk
+installer_output/*.exe

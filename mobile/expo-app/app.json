@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "BirdSound",
+    "slug": "birdsound",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1E1E2E"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.birdsound.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "BirdSound benötigt Mikrofonzugriff für die Vogelstimmen-Aufnahme.",
+        "NSLocationWhenInUseUsageDescription": "BirdSound nutzt den Standort für die Geo-Filterung der Vogelarten."
+      }
+    },
+    "android": {
+      "package": "com.birdsound.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1E1E2E"
+      },
+      "permissions": [
+        "RECORD_AUDIO",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "INTERNET",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-av",
+        {
+          "microphonePermission": "BirdSound benötigt Mikrofonzugriff für die Vogelstimmen-Aufnahme."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "BirdSound nutzt den Standort für die Geo-Filterung der Vogelarten."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "birdsound-local"
+      }
+    }
+  }
+}
