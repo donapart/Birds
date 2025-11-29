@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Colors -->
+    <color name="primary">#4ECDC4</color>
+    <color name="primary_dark">#3BA99C</color>
+    <color name="accent">#FFD93D</color>
+    <color name="background_dark">#1A1A2E</color>
+    <color name="surface_dark">#16213E</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#888888</color>
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FFC107</color>
+    <color name="error">#FF6B6B</color>
+    
+    <!-- System Colors -->
+    <color name="colorPrimary">@color/primary</color>
+    <color name="colorPrimaryDark">@color/primary_dark</color>
+    <color name="colorAccent">@color/accent</color>
+</resources>

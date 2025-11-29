@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.birdsound">
 
     <!-- Audio Recording -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -12,13 +13,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     
-    <!-- Storage for offline cache -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- Storage for offline cache (Android 10+) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="32" />
     
     <!-- USB Audio Interface Support -->
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
-    <uses-permission android:name="android.permission.USB_PERMISSION" />
     
     <!-- Keep screen on during recording -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -26,6 +28,7 @@
     <!-- Foreground service for background recording -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".MainApplication"
@@ -34,7 +37,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:allowBackup="true"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config">
         
         <activity
             android:name=".MainActivity"
@@ -50,7 +54,9 @@
         </activity>
         
         <!-- USB Audio Interface Detection -->
-        <receiver android:name=".UsbAudioReceiver" android:exported="true">
+        <receiver android:name=".UsbAudioReceiver" 
+            android:exported="true"
+            android:enabled="true">
             <intent-filter>
                 <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
                 <action android:name="android.hardware.usb.action.USB_DEVICE_DETACHED" />

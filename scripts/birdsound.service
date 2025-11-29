@@ -1,0 +1,38 @@
+[Unit]
+Description=BirdSound - Bird Sound Recognition API
+Documentation=https://github.com/donapart/Birds
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=birdsound
+Group=birdsound
+WorkingDirectory=/opt/birdsound/backend
+Environment="PATH=/opt/birdsound/backend/venv/bin"
+Environment="PYTHONPATH=/opt/birdsound/backend"
+ExecStart=/opt/birdsound/backend/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8003
+
+# Restart policy
+Restart=always
+RestartSec=10
+TimeoutStartSec=120
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=birdsound
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/opt/birdsound/data /opt/birdsound/audio_storage /opt/birdsound/logs
+
+# Resource limits
+MemoryMax=1G
+CPUQuota=80%
+
+[Install]
+WantedBy=multi-user.target
