@@ -28,7 +28,10 @@ import * as Sharing from 'expo-sharing';
 // ============================================================================
 
 const DEFAULT_SERVER = 'http://192.168.1.100:8003';
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
+
+// Offline-Modus: Lokale Simulation wenn Server nicht erreichbar
+const OFFLINE_MODE_ENABLED = true;
 
 // Deutsche Vogelnamen für häufige Arten
 const GERMAN_BIRD_NAMES = {
@@ -80,7 +83,7 @@ export default function App() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [history, setHistory] = useState([]);
-  const [showExport, setShowExport] = useState(false);
+  const [offlineMode, setOfflineMode] = useState(false);
   
   const timerRef = useRef(null);
   
@@ -118,13 +121,24 @@ export default function App() {
   
   const checkServerConnection = async () => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
       const response = await fetch(`${serverUrl}/api/v1/health`, {
         method: 'GET',
-        timeout: 5000,
+        signal: controller.signal,
       });
-      setIsConnected(response.ok);
+      clearTimeout(timeoutId);
+      
+      const connected = response.ok;
+      setIsConnected(connected);
+      setOfflineMode(!connected);
+      return connected;
     } catch (error) {
+      console.log('Server nicht erreichbar, Offline-Modus aktiviert');
       setIsConnected(false);
+      setOfflineMode(true);
+      return false;
     }
   };
   
@@ -213,6 +227,24 @@ export default function App() {
     setIsAnalyzing(true);
     
     try {
+      // Prüfe Server-Verbindung
+      const serverAvailable = await checkServerConnection();
+      
+      if (!serverAvailable && OFFLINE_MODE_ENABLED) {
+        // Offline-Modus: Lokale Simulation
+        await simulateOfflineAnalysis();
+        return;
+      }
+      
+      if (!serverAvailable) {
+        Alert.alert(
+          'Offline',
+          `Server nicht erreichbar.\n\nServer: ${serverUrl}\n\nBitte stelle sicher, dass:\n• Der Server läuft\n• Du im gleichen WiFi bist\n• Die IP-Adresse korrekt ist`
+        );
+        setIsAnalyzing(false);
+        return;
+      }
+      
       // Audio als Base64 lesen
       const base64Audio = await FileSystem.readAsStringAsync(audioUri, {
         encoding: FileSystem.EncodingType.Base64,
@@ -258,13 +290,67 @@ export default function App() {
       
     } catch (error) {
       console.error('Analysefehler:', error);
-      Alert.alert(
-        'Analysefehler',
-        `Verbindung zum Server fehlgeschlagen.\n\nServer: ${serverUrl}\n\nPrüfe ob der Server läuft.`
-      );
+      
+      if (OFFLINE_MODE_ENABLED) {
+        // Fallback zu Offline-Modus
+        await simulateOfflineAnalysis();
+      } else {
+        Alert.alert(
+          'Analysefehler',
+          `Verbindung zum Server fehlgeschlagen.\n\nServer: ${serverUrl}\n\nPrüfe ob der Server läuft.`
+        );
+      }
     } finally {
       setIsAnalyzing(false);
     }
+  };
+  
+  // Offline-Simulation für Demo-Zwecke
+  const simulateOfflineAnalysis = async () => {
+    // Simulierte Verzögerung
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Demo-Ergebnisse mit zufälligen deutschen Vögeln
+    const demoSpecies = [
+      { scientific: 'Turdus merula', common: 'Amsel', confidence: 0.85 },
+      { scientific: 'Erithacus rubecula', common: 'Rotkehlchen', confidence: 0.72 },
+      { scientific: 'Parus major', common: 'Kohlmeise', confidence: 0.68 },
+      { scientific: 'Cyanistes caeruleus', common: 'Blaumeise', confidence: 0.55 },
+      { scientific: 'Fringilla coelebs', common: 'Buchfink', confidence: 0.48 },
+      { scientific: 'Phylloscopus collybita', common: 'Zilpzalp', confidence: 0.42 },
+      { scientific: 'Sylvia atricapilla', common: 'Mönchsgrasmücke', confidence: 0.38 },
+    ];
+    
+    // Zufällige Auswahl
+    const shuffled = demoSpecies.sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, 3 + Math.floor(Math.random() * 3));
+    
+    // Konfidenz-Werte anpassen
+    const processedPredictions = selected.map((species, idx) => ({
+      species: species.common,
+      scientific: species.scientific,
+      confidence: Math.max(0.3, species.confidence - (idx * 0.1) + (Math.random() * 0.1)),
+      source: 'offline-demo',
+    })).sort((a, b) => b.confidence - a.confidence);
+    
+    setPredictions(processedPredictions);
+    
+    // Zur History hinzufügen
+    if (processedPredictions.length > 0) {
+      setHistory(prev => [{
+        timestamp: new Date(),
+        topPrediction: processedPredictions[0],
+        location: location,
+        offline: true,
+      }, ...prev.slice(0, 49)]);
+    }
+    
+    // Hinweis anzeigen
+    Alert.alert(
+      '📴 Offline-Modus',
+      'Die Erkennung läuft im Demo-Modus.\n\nFür echte Ergebnisse:\n• Verbinde dich mit dem Server\n• Gehe in Einstellungen → Server-URL',
+      [{ text: 'OK' }]
+    );
   };
   
   const processPredictions = (result) => {
@@ -487,10 +573,10 @@ export default function App() {
       <View style={styles.statusBar}>
         <View style={[
           styles.statusDot,
-          { backgroundColor: isConnected ? '#4ECDC4' : '#FF6B6B' }
+          { backgroundColor: isConnected ? '#4ECDC4' : (offlineMode ? '#FFB347' : '#FF6B6B') }
         ]} />
         <Text style={styles.statusText}>
-          {isConnected ? 'Server verbunden' : 'Offline'}
+          {isConnected ? 'Server verbunden' : (offlineMode ? '📴 Offline-Demo' : 'Offline')}
         </Text>
         {location && (
           <Text style={styles.locationText}>

@@ -15,15 +15,23 @@
 | **🖥️ Local/Offline** | Windows PC, Raspberry Pi | ❌ Not required | Field work, private use |
 | **🐳 Docker** | Any with Docker | ❌ Not required | Easy deployment, servers |
 | **☁️ Online Server** | VPS, Cloud | ✅ Required | Team access, mobile apps |
-| **📱 Mobile App** | Android/iOS | ⚡ Optional | Field recordings |
+| **📱 Mobile App** | Android/iOS | ⚡ Optional (Offline-Demo mode) | Field recordings |
 
 ### Available Models / Verfügbare Modelle
 
 | Model | Species | Size | Best For | Status |
 |-------|---------|------|----------|--------|
 | **DimaBird** | ~500 EU | Auto | 🎵 Songbirds, Forest | ✅ Active |
-| **BirdNET ONNX** | 6,000+ | 150MB | 🌍 Global, Calls | ⚡ Optional download |
-| **Google Perch** | 15,000+ | ~500MB | 🔬 Scientific | 🔧 Planned |
+| **BirdNET V2.4** | 6,522 | ~150MB | 🌍 Global, All species | ✅ Active |
+| **Google Perch** | 10,000+ | ~500MB | 🔬 Scientific | 🔧 Optional |
+
+### Downloads / Installation
+
+| Platform | Download | Size | Notes |
+|----------|----------|------|-------|
+| **📱 Android APK** | [BirdSound_v1.0.1_Setup.apk](releases/) | ~90MB | Requires Android 6+ |
+| **🖥️ Windows** | [BirdSound_v1.0.0_Setup_win.exe](releases/) | ~2MB | Requires Python 3.11+ |
+| **🍎 iOS** | Expo Go App | - | Scan QR code from `npx expo start` |
 
 ---
 
@@ -36,12 +44,14 @@ BirdSound is a production-ready bird sound recognition system that uses multiple
 ### ✅ Current Status
 
 - ✅ **HuggingFace Model** loaded (dima806/bird_sounds_classification)
+- ✅ **BirdNET V2.4** integrated (6,522 species worldwide)
 - ✅ **Automatic Database Fallback** (PostgreSQL → SQLite when unavailable)
 - ✅ **All API Endpoints** fully functional
 - ✅ **FastAPI** with interactive documentation
 - ✅ **Cross-platform** (Windows, Linux, Raspberry Pi)
-- ✅ **Mobile-ready** (Flutter & React Native examples)
-- ⚠️ BirdNET ONNX optional (requires manual download)
+- ✅ **Mobile Apps** (Expo/React Native with Offline-Demo mode)
+- ✅ **KML/KMZ Export** for Google Earth
+- ✅ **Windows Installer** (Inno Setup)
 
 ### Features
 
@@ -49,10 +59,12 @@ BirdSound is a production-ready bird sound recognition system that uses multiple
 - **Consensus Voting**: Combine predictions from all models for reliable identification
 - **Real-time Processing**: Process 3-second audio windows with 1-second overlap
 - **GPS Tagging**: Associate detections with location and time
+- **KML/KMZ Export**: Export detections for Google Earth visualization
+- **Offline Demo Mode**: Mobile app works without server connection (demo mode)
 - **Automatic Database Fallback**: Seamlessly switches to SQLite if PostgreSQL unavailable
 - **REST API**: FastAPI backend with comprehensive endpoints and Swagger UI
 - **Internationalization**: Support for English and German
-- **Mobile Ready**: Example implementations for Flutter and React Native
+- **Mobile Ready**: Expo app for Android and iOS
 
 ### 📋 Device Setup Guide
 
@@ -66,7 +78,7 @@ BirdSound is a production-ready bird sound recognition system that uses multiple
 | **👥 Team/Science project** | Docker on VPS/Cloud | ✅ Always online |
 | **🧪 Development/Testing** | Any PC with Python | ❌ Offline OK |
 
-#### BirdNET ONNX Download (Optional, +6000 species)
+#### BirdNET Download (Optional, +6522 species)
 
 ```bash
 # Download BirdNET model (~150MB)
@@ -77,6 +89,48 @@ python scripts/download_models.py --models birdnet
 # https://huggingface.co/kahst/BirdNET-onnx
 # Place in: models/birdnet/BirdNET_GLOBAL_6K_V2.4_Model_FP32.onnx
 ```
+
+### 📱 Mobile App (Expo)
+
+The mobile app works on both Android and iOS with an **Offline Demo Mode**:
+
+```bash
+# Navigate to expo app
+cd mobile/expo-app
+
+# Install dependencies
+npm install
+
+# Start development server
+npx expo start
+
+# For iOS: Scan QR code with Expo Go app
+# For Android: Build APK (see below)
+```
+
+#### Build Android APK
+
+```bash
+cd mobile/expo-app
+
+# Generate native Android project
+npx expo prebuild --platform android
+
+# Build release APK
+cd android
+./gradlew assembleRelease
+
+# APK location: android/app/build/outputs/apk/release/app-release.apk
+```
+
+#### App Features
+
+- 🎙️ Audio recording with real-time analysis
+- 📍 GPS location tagging
+- 📴 **Offline Demo Mode** (works without server)
+- 📤 KML export for Google Earth
+- 🇩🇪 German bird names
+- 🔧 Configurable server URL
 
 ### Architecture
 
@@ -368,8 +422,23 @@ GET /api/v1/recordings?limit=50&offset=0
 # Get specific recording
 GET /api/v1/recordings/{recording_id}
 
-# Export recordings
+# Export recordings as CSV
 GET /api/v1/export/csv?start_date=2025-11-01&end_date=2025-11-30
+```
+
+#### Geo Export (KML/KMZ)
+
+```bash
+# Export as KML (for Google Earth)
+GET /api/v1/export/kml?start_date=2025-11-01&end_date=2025-11-30
+
+# Export as KMZ (compressed KML)
+GET /api/v1/export/kmz?start_date=2025-11-01&end_date=2025-11-30
+
+# Filter by species
+GET /api/v1/export/kml?species=Turdus+merula
+
+# Response: KML file with bird detection locations
 ```
 
 #### System
