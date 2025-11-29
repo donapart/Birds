@@ -36,6 +36,23 @@ class Settings(BaseSettings):
     DEFAULT_LAT: Optional[float] = 52.52  # Berlin
     DEFAULT_LON: Optional[float] = 13.405
 
+    # Storage
+    STORAGE_TYPE: str = "local"  # "local" or "s3"
+    AUDIO_STORAGE_PATH: str = "audio_storage"
+    S3_BUCKET: Optional[str] = None
+    S3_ENDPOINT_URL: Optional[str] = None
+    S3_ACCESS_KEY: Optional[str] = None
+    S3_SECRET_KEY: Optional[str] = None
+    S3_REGION: str = "us-east-1"
+
+    # Redis / Cache
+    REDIS_URL: Optional[str] = None
+    CACHE_TTL: int = 3600
+
+    # Celery
+    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
+
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
 

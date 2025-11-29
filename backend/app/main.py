@@ -17,10 +17,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from app.api.routes import predict, health, recordings, websocket
+from app.api.routes import predict, health, recordings, websocket, export, analysis, species
 from app.core.config import get_settings
 from app.db.database import init_db
 from app.services.model_registry import model_registry
+from app.core.cache import cache_service
 
 # Configure logging
 logging.basicConfig(
@@ -44,6 +45,10 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing database...")
     await init_db()
 
+    # Connect to cache
+    logger.info("Connecting to cache...")
+    await cache_service.connect()
+
     # Load ML models
     logger.info("Loading ML models...")
     await model_registry.load_models()
@@ -54,6 +59,7 @@ async def lifespan(app: FastAPI):
     # Cleanup
     logger.info("Shutting down BirdSound API...")
     await model_registry.unload_models()
+    await cache_service.disconnect()
 
 
 app = FastAPI(
@@ -76,6 +82,9 @@ app.add_middleware(
 app.include_router(health.router, tags=["Health"])
 app.include_router(predict.router, prefix="/api/v1", tags=["Prediction"])
 app.include_router(recordings.router, prefix="/api/v1", tags=["Recordings"])
+app.include_router(export.router, prefix="/api/v1", tags=["Export"])
+app.include_router(analysis.router, prefix="/api/v1", tags=["Analysis"])
+app.include_router(species.router, prefix="/api/v1", tags=["Species"])
 app.include_router(websocket.router, tags=["WebSocket"])
 
 
