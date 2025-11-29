@@ -1,0 +1,26 @@
+# Render.com Blueprint - BirdSound API
+# Deploy: https://render.com/deploy
+
+services:
+  - type: web
+    name: birdsound-api
+    runtime: python
+    plan: free
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r backend/requirements.txt
+      pip install birdnet aiosqlite
+    startCommand: cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHONPATH
+        value: /opt/render/project/src/backend
+      - key: USE_SQLITE
+        value: "true"
+      - key: SQLITE_PATH
+        value: /opt/render/project/src/backend/birdsound.db
+      - key: DEBUG
+        value: "false"
+      - key: USE_MODEL_STUBS
+        value: "false"
+    healthCheckPath: /api/v1/health
+    autoDeploy: true

@@ -27,8 +27,10 @@ import * as Sharing from 'expo-sharing';
 // Konfiguration
 // ============================================================================
 
-const DEFAULT_SERVER = 'http://192.168.1.100:8003';
-const APP_VERSION = '1.0.1';
+// Server-URL: Für lokales Netzwerk die IP des PCs verwenden
+// Für Cloud: render.com URL verwenden (z.B. https://birdsound-api.onrender.com)
+const DEFAULT_SERVER = 'http://192.168.178.171:8003';
+const APP_VERSION = '1.0.2';
 
 // Offline-Modus: Lokale Simulation wenn Server nicht erreichbar
 const OFFLINE_MODE_ENABLED = true;

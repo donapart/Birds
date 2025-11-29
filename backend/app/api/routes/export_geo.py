@@ -14,8 +14,8 @@ from xml.etree import ElementTree as ET
 from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import Response, StreamingResponse
 
-from app.db.database import get_db_session
-from app.db.models import Recording, Detection
+from app.db.database import async_session_maker
+from app.db.models import Recording, Prediction
 
 router = APIRouter(prefix="/export", tags=["export"])
 
@@ -360,7 +360,7 @@ async def get_detections_for_export(
     Returns list of detection dictionaries.
     """
     try:
-        async with get_db_session() as session:
+        async with async_session_maker() as session:
             from sqlalchemy import select, and_
             from sqlalchemy.orm import selectinload
             
@@ -395,7 +395,7 @@ async def get_detections_for_export(
             # Flatten detections
             detections = []
             for rec in recordings:
-                for det in rec.detections:
+                for det in rec.predictions:
                     if det.confidence >= min_confidence:
                         # Species filter
                         if species:
