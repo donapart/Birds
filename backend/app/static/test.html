@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BirdSound Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            background: #1a1a2e; 
+            color: white; 
+            font-family: sans-serif;
+        }
+        #map { 
+            width: 100%; 
+            height: 300px; 
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .level-bar {
+            width: 100%;
+            height: 30px;
+            background: #333;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        #levelFill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4ECDC4, #51cf66);
+            transition: width 0.1s;
+        }
+        canvas {
+            width: 100%;
+            height: 100px;
+            background: #16213e;
+            border-radius: 10px;
+        }
+        .status { 
+            padding: 10px; 
+            background: #16213e; 
+            border-radius: 10px; 
+            margin: 10px 0;
+        }
+        .ok { color: #4ECDC4; }
+        .fail { color: #ff6b6b; }
+    </style>
+</head>
+<body>
+    <h1>🐦 BirdSound Test</h1>
+    
+    <div class="status">
+        <div id="mapStatus">🗺️ Karte: Lädt...</div>
+        <div id="audioStatus">🎤 Audio: Lädt...</div>
+        <div id="canvasStatus">📊 Canvas: Lädt...</div>
+    </div>
+    
+    <h3>Pegel-Meter (Demo):</h3>
+    <div class="level-bar">
+        <div id="levelFill"></div>
+    </div>
+    <div id="levelValue">0%</div>
+    
+    <h3>Spektrogramm (Demo):</h3>
+    <canvas id="spectro"></canvas>
+    
+    <h3>Karte:</h3>
+    <div id="map"></div>
+    
+    <script>
+        // Status-Updates
+        const mapStatus = document.getElementById('mapStatus');
+        const audioStatus = document.getElementById('audioStatus');
+        const canvasStatus = document.getElementById('canvasStatus');
+        
+        // 1. Teste Canvas
+        try {
+            const canvas = document.getElementById('spectro');
+            canvas.width = canvas.offsetWidth || 300;
+            canvas.height = 100;
+            const ctx = canvas.getContext('2d');
+            
+            // Demo-Animation
+            let phase = 0;
+            function animateSpectro() {
+                requestAnimationFrame(animateSpectro);
+                phase += 0.1;
+                
+                // Shift left
+                const imageData = ctx.getImageData(1, 0, canvas.width - 1, canvas.height);
+                ctx.putImageData(imageData, 0, 0);
+                
+                // Draw new column
+                for (let y = 0; y < canvas.height; y++) {
+                    const intensity = Math.sin(phase + y * 0.1) * 0.5 + 0.5;
+                    const hue = 200 - intensity * 100;
+                    ctx.fillStyle = `hsl(${hue}, 70%, ${30 + intensity * 30}%)`;
+                    ctx.fillRect(canvas.width - 1, y, 1, 1);
+                }
+                
+                // Update level
+                const level = 30 + Math.sin(phase * 0.5) * 25;
+                document.getElementById('levelFill').style.width = level + '%';
+                document.getElementById('levelValue').textContent = Math.round(level) + '%';
+            }
+            animateSpectro();
+            
+            canvasStatus.innerHTML = '📊 Canvas: <span class="ok">✓ Funktioniert!</span>';
+        } catch (e) {
+            canvasStatus.innerHTML = '📊 Canvas: <span class="fail">✗ ' + e.message + '</span>';
+        }
+        
+        // 2. Teste Karte
+        try {
+            const map = L.map('map').setView([52.52, 13.405], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OSM'
+            }).addTo(map);
+            
+            // Marker hinzufügen
+            L.marker([52.52, 13.405]).addTo(map).bindPopup('Berlin!');
+            
+            setTimeout(() => map.invalidateSize(), 500);
+            
+            mapStatus.innerHTML = '🗺️ Karte: <span class="ok">✓ Geladen!</span>';
+        } catch (e) {
+            mapStatus.innerHTML = '🗺️ Karte: <span class="fail">✗ ' + e.message + '</span>';
+        }
+        
+        // 3. Teste Audio (nur Status, kein echtes Audio)
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            audioStatus.innerHTML = '🎤 Audio API: <span class="ok">✓ Verfügbar</span>';
+        } else {
+            audioStatus.innerHTML = '🎤 Audio API: <span class="fail">✗ Nicht verfügbar</span>';
+        }
+    </script>
+</body>
+</html>
