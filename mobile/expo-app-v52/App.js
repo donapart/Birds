@@ -1,5 +1,5 @@
 /**
- * BirdSound v5.3.0 - Map Filter (Zeit, Art), 45+ Vogelarten
+ * BirdSound v5.3.2 - AbortSignal Fix, Full Web Dashboard
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, StatusBar, Platform, Alert, TextInput, Modal, Switch, Share, FlatList, Dimensions } from 'react-native';
@@ -83,9 +83,17 @@ export default function App() {
     } catch (e) { setIsOnline(false); }
   };
 
+  // Timeout helper for older Android versions
+  const fetchWithTimeout = (url, options = {}, timeout = 10000) => {
+    return Promise.race([
+      fetch(url, options),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
+    ]);
+  };
+
   const checkBackend = async () => {
     try {
-      const r = await fetch(`${settings.backendUrl}/health`, { headers: { 'ngrok-skip-browser-warning': '1' }, signal: AbortSignal.timeout(5000) });
+      const r = await fetchWithTimeout(`${settings.backendUrl}/health`, { headers: { 'ngrok-skip-browser-warning': '1' } }, 5000);
       const d = await r.json();
       setIsConnected(d.status === 'healthy');
     } catch (e) { setIsConnected(false); }
@@ -93,10 +101,17 @@ export default function App() {
 
   const fetchModels = async () => {
     try {
-      const r = await fetch(`${settings.backendUrl}/api/v1/models`, { headers: { 'ngrok-skip-browser-warning': '1' }, signal: AbortSignal.timeout(5000) });
+      console.log('[BirdSound] Fetching models from:', settings.backendUrl);
+      const r = await fetchWithTimeout(`${settings.backendUrl}/api/v1/models`, { headers: { 'ngrok-skip-browser-warning': '1' } }, 10000);
       const d = await r.json();
-      if (d.models) setAvailableModels(d.models);
-    } catch (e) {}
+      console.log('[BirdSound] Models response:', JSON.stringify(d));
+      if (d.models && d.models.length > 0) {
+        setAvailableModels(d.models);
+        console.log('[BirdSound] Loaded', d.models.length, 'models');
+      }
+    } catch (e) { 
+      console.log('[BirdSound] fetchModels error:', e.message);
+    }
   };
 
   const initGPS = async () => {
@@ -257,7 +272,7 @@ export default function App() {
     <View style={z.c}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0a15" />
       <View style={{ height: sbh, backgroundColor: '#0a0a15' }} />
-      <View style={z.h}><View><Text style={z.t}>🐦 BirdSound v5.3.0</Text><Text style={z.st}>{rank.icon} {rank.name} • {points}P</Text></View><View style={z.hr}><View style={[z.bg, isOnline ? z.bgG : z.bgR]}><Text style={z.bgT}>{isOnline ? '🌐' : '📴'}{offlineQueue.length > 0 ? ` (${offlineQueue.length})` : ''}</Text></View><TouchableOpacity onPress={() => setShowSettings(true)}><Text style={z.ic}>⚙️</Text></TouchableOpacity></View></View>
+      <View style={z.h}><View><Text style={z.t}>🐦 BirdSound v5.3.2</Text><Text style={z.st}>{rank.icon} {rank.name} • {points}P</Text></View><View style={z.hr}><View style={[z.bg, isOnline ? z.bgG : z.bgR]}><Text style={z.bgT}>{isOnline ? '🌐' : '📴'}{offlineQueue.length > 0 ? ` (${offlineQueue.length})` : ''}</Text></View><TouchableOpacity onPress={() => setShowSettings(true)}><Text style={z.ic}>⚙️</Text></TouchableOpacity></View></View>
       <View style={z.tb}>{[['live','🎙️'],['map','🗺️'],['list','📋'],['library','📚'],['sessions','📊'],['achieve','🏆']].map(([id,ic]) => (<TouchableOpacity key={id} style={[z.ta, activeTab===id && z.taA]} onPress={() => setActiveTab(id)}><Text style={z.taI}>{ic}</Text></TouchableOpacity>))}</View>
 
       {activeTab === 'live' && (<ScrollView style={z.ct}>
@@ -393,7 +408,13 @@ if(markers.length>1){var g=L.featureGroup(markers.map(m=>L.marker([m.lat,m.lng])
         <View style={z.mo}><View style={z.moS}><ScrollView>
           <Text style={z.moT}>⚙️ Einstellungen</Text>
           <Text style={z.lbl}>Backend-URL</Text><TextInput style={z.inp} value={settings.backendUrl} onChangeText={v => setSettings({...settings, backendUrl: v})} />
-          <Text style={z.lbl}>🤖 Modell ({availableModels.length})</Text>
+          <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+            <Text style={z.lbl}>🤖 Modell ({availableModels.length})</Text>
+            <TouchableOpacity style={{backgroundColor:'#4ECDC4',paddingHorizontal:12,paddingVertical:6,borderRadius:8}} onPress={() => { fetchModels(); checkBackend(); }}>
+              <Text style={{color:'#fff',fontWeight:'bold',fontSize:12}}>🔄 Laden</Text>
+            </TouchableOpacity>
+          </View>
+          {availableModels.length === 0 && <Text style={{color:'#ff6b6b',fontSize:12,marginBottom:8}}>⚠️ Keine Modelle gefunden. Prüfe Backend-URL und Netzwerk.</Text>}
           <View style={z.mS}><TouchableOpacity style={[z.mO, !settings.selectedModel && z.mOA]} onPress={() => setSettings({...settings, selectedModel: null})}><Text style={z.mOT}>Alle</Text></TouchableOpacity>{availableModels.map(m => (<TouchableOpacity key={m.name} style={[z.mO, settings.selectedModel === m.name && z.mOA]} onPress={() => setSettings({...settings, selectedModel: m.name})}><Text style={z.mOT}>{m.name}</Text></TouchableOpacity>))}</View>
           <Text style={z.lbl}>Konsensus</Text>
           <View style={z.cfR}>{[['weighted_average','Gewichtet'],['majority_vote','Mehrheit'],['max_confidence','Max']].map(([v,l]) => (<TouchableOpacity key={v} style={[z.cfB, settings.consensusMethod === v && z.cfA]} onPress={() => setSettings({...settings, consensusMethod: v})}><Text style={z.cfT}>{l}</Text></TouchableOpacity>))}</View>

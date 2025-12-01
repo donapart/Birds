@@ -29,8 +29,8 @@
 
 | Platform | Download | Size | Notes |
 |----------|----------|------|-------|
-| **📱 Android APK** | [BirdSound_v5.3.0.apk](releases/) | ~25MB | Requires Android 6+ |
-| **🖥️ Windows** | [BirdSound_v5.3.0_Setup_win.exe](releases/) | ~2MB | Requires Python 3.11+ |
+| **📱 Android APK** | [BirdSound_v5.3.2.apk](releases/) | ~86MB | Requires Android 6+ |
+| **🖥️ Windows** | [BirdSound_v5.3.2_Setup_win.exe](releases/) | ~2MB | Requires Python 3.11+ |
 | **🍎 iOS** | Expo Go App | - | Scan QR code from `npx expo start` |
 
 ---
@@ -41,16 +41,17 @@
 
 BirdSound is a production-ready bird sound recognition system that uses multiple ML models to identify bird species from audio recordings. It features automatic database fallback, cross-platform support, and a comprehensive REST API.
 
-### ✅ Current Status (v5.3.0)
+### ✅ Current Status (v5.3.2)
 
 - ✅ **DimaBird Model** (HuggingFace dima806/bird_sounds_classification)
 - ✅ **BirdNET V2.4** integrated (6,522 species worldwide)
 - ✅ **Google Perch** integrated (10,000+ species, TensorFlow Hub)
 - ✅ **Interactive Map** with OpenStreetMap (filter by time, species)
 - ✅ **45+ Bird Species Library** with detailed info, habitat, voice data
+- ✅ **Full Web Dashboard** with tabs (Live, Map, History, Settings)
 - ✅ **KML Export** for Google Earth
 - ✅ **Automatic Database Fallback** (PostgreSQL → SQLite)
-- ✅ **Mobile App** Android v5.3.0 with Offline-Demo mode
+- ✅ **Mobile App** Android v5.3.2 with Offline-Demo mode
 - ✅ **Windows Installer** (Inno Setup)
 - ✅ **Raspberry Pi Scripts** for field deployment
 
@@ -1020,6 +1021,12 @@ Keine Aktion erforderlich! Das System funktioniert mit SQLite.
 MIT-Lizenz - siehe LICENSE-Datei
 
 ## Changelog
+
+### v5.3.2 (2024-12-01)
+- 🐛 **AbortSignal Fix** für ältere Android-Versionen
+- 🖥️ **Vollständiges Web-Dashboard** mit 4 Tabs (Live, Karte, Historie, Einstellungen)
+- 🤖 **Modell-Anzeige** im Web und App mit Laden-Button
+- 📝 **Deployment-Dokumentation** (MultiUserCloudRun.md, DeploymentKonstellationen.md)
 
 ### v5.3.0 (2024-12-01)
 - ✨ **Interaktive Karte** mit OpenStreetMap/Leaflet (kein API Key nötig)

@@ -5,7 +5,7 @@
 ; Or run: iscc BirdSound_Setup.iss
 
 #define MyAppName "BirdSound"
-#define MyAppVersion "5.3.0"
+#define MyAppVersion "5.3.2"
 #define MyAppPublisher "BirdSound Project"
 #define MyAppURL "https://github.com/donapart/Birds"
 #define MyAppExeName "start_birdsound.bat"

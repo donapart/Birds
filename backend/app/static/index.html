@@ -3,440 +3,478 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BirdSound - Live Vogelerkennung</title>
-    
-    <!-- Leaflet -->
+    <title>BirdSound v5.3.2 - Vogelerkennung</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
         
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #1a1a2e;
-            color: #eee;
-            min-height: 100vh;
-            padding: 10px;
-        }
+        /* Tab Navigation */
+        .tabs { display: flex; background: #16213e; border-bottom: 2px solid #4ECDC4; position: sticky; top: 0; z-index: 100; }
+        .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; border: none; background: transparent; color: #888; font-size: 0.9rem; transition: all 0.2s; }
+        .tab:hover { color: #4ECDC4; }
+        .tab.active { color: #4ECDC4; background: rgba(78,205,196,0.1); border-bottom: 2px solid #4ECDC4; margin-bottom: -2px; }
+        .tab-icon { font-size: 1.2rem; display: block; margin-bottom: 4px; }
         
-        .header {
-            background: linear-gradient(135deg, #16213e, #1a1a2e);
-            padding: 15px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
+        /* Content */
+        .content { padding: 15px; display: none; }
+        .content.active { display: block; }
         
-        .header h1 {
-            font-size: 1.3rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        /* Header */
+        .header { background: linear-gradient(135deg, #16213e, #1a1a2e); padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .header h1 { font-size: 1.3rem; display: flex; align-items: center; gap: 8px; }
+        .version { font-size: 0.6em; opacity: 0.7; font-weight: normal; }
+        .status { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #666; }
+        .status-dot.online { background: #44ff44; box-shadow: 0 0 10px #44ff44; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         
-        .status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.9rem;
-        }
+        /* Cards */
+        .card { background: #16213e; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+        .card h3 { color: #4ECDC4; margin-bottom: 12px; font-size: 1rem; }
         
-        .status-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #44ff44;
-            box-shadow: 0 0 10px #44ff44;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .card {
-            background: #16213e;
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        
-        .card h3 {
-            color: #4ECDC4;
-            margin-bottom: 12px;
-            font-size: 1rem;
-        }
-        
-        /* Audio Pegel */
-        .level-container {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .level-bar {
-            flex: 1;
-            height: 25px;
-            background: #0f0f23;
-            border-radius: 12px;
-            overflow: hidden;
-        }
-        
-        #levelFill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #4ECDC4, #45B7AA, #51cf66);
-            border-radius: 12px;
-            transition: width 0.1s ease-out;
-        }
-        
-        #levelText {
-            min-width: 50px;
-            text-align: right;
-            font-weight: bold;
-            color: #4ECDC4;
-        }
-        
-        /* Spektrogramm */
-        #spectroCanvas {
-            width: 100%;
-            height: 120px;
-            background: #0f0f23;
-            border-radius: 8px;
-        }
-        
-        /* Waveform */
-        #waveCanvas {
-            width: 100%;
-            height: 80px;
-            background: #0f0f23;
-            border-radius: 8px;
-        }
-        
-        /* Karte */
-        #map {
-            width: 100%;
-            height: 250px;
-            border-radius: 8px;
-        }
-        
-        /* Erkannte Vögel */
-        .bird-list {
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        
-        .bird-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background: rgba(78, 205, 196, 0.1);
-            border-radius: 8px;
-            margin-bottom: 8px;
-            border-left: 3px solid #4ECDC4;
-        }
-        
-        .bird-name {
-            font-weight: bold;
-        }
-        
-        .bird-confidence {
-            color: #4ECDC4;
-            font-size: 0.9rem;
-        }
-        
-        .bird-time {
-            color: #888;
-            font-size: 0.8rem;
-        }
-        
-        /* Grid Layout */
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-        
-        @media (max-width: 700px) {
-            .grid { grid-template-columns: 1fr; }
-        }
+        /* Models */
+        .models-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+        .model-badge { background: rgba(78,205,196,0.2); padding: 8px 16px; border-radius: 20px; border: 1px solid #4ECDC4; display: flex; align-items: center; gap: 8px; }
+        .model-badge.selected { background: #4ECDC4; color: #1a1a2e; }
+        .model-dot { width: 8px; height: 8px; border-radius: 50%; background: #44ff44; }
         
         /* Record Button */
-        .record-btn {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #4ECDC4, #45B7AA);
-            border: none;
-            border-radius: 12px;
-            color: white;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
+        .record-btn { width: 100%; padding: 20px; background: linear-gradient(135deg, #4ECDC4, #45B7AA); border: none; border-radius: 12px; color: white; font-size: 1.2rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; transition: transform 0.2s; }
+        .record-btn:hover { transform: scale(1.02); }
+        .record-btn.recording { background: linear-gradient(135deg, #ff6b6b, #ee5a5a); animation: recordPulse 1s infinite; }
+        @keyframes recordPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,107,107,0.5); } 50% { box-shadow: 0 0 20px 10px rgba(255,107,107,0.3); } }
         
-        .record-btn:hover {
-            transform: scale(1.02);
-        }
+        /* Stats */
+        .stats-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        .stat { flex: 1; background: #16213e; padding: 15px; border-radius: 12px; text-align: center; }
+        .stat-value { font-size: 1.5rem; font-weight: bold; color: #4ECDC4; }
+        .stat-label { font-size: 0.8rem; color: #888; }
         
-        .record-btn.recording {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
-            animation: recordPulse 1s infinite;
-        }
+        /* Level Bar */
+        .level-container { display: flex; align-items: center; gap: 15px; }
+        .level-bar { flex: 1; height: 25px; background: #0f0f23; border-radius: 12px; overflow: hidden; }
+        #levelFill { height: 100%; width: 0%; background: linear-gradient(90deg, #4ECDC4, #45B7AA, #51cf66); border-radius: 12px; transition: width 0.1s; }
+        #levelText { min-width: 50px; text-align: right; font-weight: bold; color: #4ECDC4; }
         
-        @keyframes recordPulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(255,107,107,0.5); }
-            50% { box-shadow: 0 0 20px 10px rgba(255,107,107,0.3); }
-        }
+        /* Canvas */
+        #spectroCanvas, #waveCanvas { width: 100%; background: #0f0f23; border-radius: 8px; }
+        #spectroCanvas { height: 120px; }
+        #waveCanvas { height: 80px; }
         
-        .no-birds {
-            text-align: center;
-            color: #666;
-            padding: 30px;
-        }
+        /* Grid */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+        
+        /* Map */
+        #map { width: 100%; height: 300px; border-radius: 8px; }
+        
+        /* Bird List */
+        .bird-list { max-height: 400px; overflow-y: auto; }
+        .bird-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(78,205,196,0.1); border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #4ECDC4; cursor: pointer; transition: background 0.2s; }
+        .bird-item:hover { background: rgba(78,205,196,0.2); }
+        .bird-name { font-weight: bold; }
+        .bird-scientific { font-size: 0.8rem; color: #888; font-style: italic; }
+        .bird-confidence { color: #4ECDC4; font-weight: bold; }
+        .bird-time { color: #666; font-size: 0.8rem; }
+        .bird-models { font-size: 0.7rem; color: #888; }
+        .no-birds { text-align: center; color: #666; padding: 30px; }
+        
+        /* Settings */
+        .setting-group { margin-bottom: 20px; }
+        .setting-label { color: #4ECDC4; margin-bottom: 8px; font-size: 0.9rem; }
+        .setting-input { width: 100%; padding: 12px; background: #0f0f23; border: 1px solid #333; border-radius: 8px; color: #eee; font-size: 1rem; }
+        .setting-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .setting-btn { padding: 8px 16px; background: #16213e; border: 1px solid #333; border-radius: 8px; color: #888; cursor: pointer; transition: all 0.2s; }
+        .setting-btn:hover { border-color: #4ECDC4; color: #4ECDC4; }
+        .setting-btn.active { background: #4ECDC4; color: #1a1a2e; border-color: #4ECDC4; }
+        .save-btn { width: 100%; padding: 15px; background: #4ECDC4; border: none; border-radius: 12px; color: #1a1a2e; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        
+        /* Achievements */
+        .achievement { display: flex; align-items: center; gap: 15px; background: #16213e; padding: 15px; border-radius: 12px; margin-bottom: 10px; }
+        .achievement.locked { opacity: 0.5; }
+        .achievement-icon { font-size: 2rem; }
+        .achievement-info { flex: 1; }
+        .achievement-name { font-weight: bold; }
+        .achievement-desc { font-size: 0.8rem; color: #888; }
+        .achievement-points { color: #4ECDC4; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🐦 BirdSound <span style="font-size: 0.6em; opacity: 0.7; font-weight: normal;">v5.3.0</span></h1>
-        <div class="status">
-            <div class="status-dot"></div>
-            <span>LIVE</span>
-        </div>
+    <!-- Tab Navigation -->
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('live')"><span class="tab-icon">🎤</span>Live</div>
+        <div class="tab" onclick="switchTab('map')"><span class="tab-icon">🗺️</span>Karte</div>
+        <div class="tab" onclick="switchTab('history')"><span class="tab-icon">📊</span>Historie</div>
+        <div class="tab" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span>Einstellungen</div>
     </div>
-    
-    <button class="record-btn" id="recordBtn" onclick="toggleRecording()">
-        🎤 Aufnahme starten
-    </button>
-    
-    <div class="card">
-        <h3>🎚️ Audio-Pegel</h3>
-        <div class="level-container">
-            <div class="level-bar">
-                <div id="levelFill"></div>
+
+    <!-- Live Tab -->
+    <div id="tab-live" class="content active">
+        <div class="header">
+            <h1>🐦 BirdSound <span class="version">v5.3.2</span></h1>
+            <div class="status">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Offline</span>
             </div>
-            <span id="levelText">0%</span>
         </div>
-    </div>
-    
-    <div class="grid">
+
+        <div class="stats-row">
+            <div class="stat"><div class="stat-value" id="totalDetections">0</div><div class="stat-label">Erkennungen</div></div>
+            <div class="stat"><div class="stat-value" id="uniqueSpecies">0</div><div class="stat-label">Arten</div></div>
+            <div class="stat"><div class="stat-value" id="streamTime">0:00</div><div class="stat-label">Zeit</div></div>
+        </div>
+
         <div class="card">
-            <h3>📊 Spektrogramm</h3>
-            <canvas id="spectroCanvas"></canvas>
+            <h3>🤖 Modelle</h3>
+            <div class="models-grid" id="modelsGrid">
+                <div class="model-badge" style="opacity:0.5">Lade Modelle...</div>
+            </div>
         </div>
-        
+
+        <button class="record-btn" id="recordBtn" onclick="toggleRecording()">
+            🎤 Aufnahme starten
+        </button>
+
         <div class="card">
-            <h3>〰️ Wellenform</h3>
-            <canvas id="waveCanvas"></canvas>
+            <h3>🎚️ Audio-Pegel</h3>
+            <div class="level-container">
+                <div class="level-bar"><div id="levelFill"></div></div>
+                <span id="levelText">0%</span>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card"><h3>📊 Spektrogramm</h3><canvas id="spectroCanvas"></canvas></div>
+            <div class="card"><h3>〰️ Wellenform</h3><canvas id="waveCanvas"></canvas></div>
+        </div>
+
+        <div class="card">
+            <h3>🐦 Erkannte Vögel</h3>
+            <div class="bird-list" id="birdList">
+                <div class="no-birds">Noch keine Vögel erkannt...<br>Starte die Aufnahme!</div>
+            </div>
         </div>
     </div>
-    
-    <div class="card">
-        <h3>🗺️ Karte - Beobachtungen</h3>
-        <div id="map"></div>
-    </div>
-    
-    <div class="card">
-        <h3>🐦 Erkannte Vögel</h3>
-        <div class="bird-list" id="birdList">
-            <div class="no-birds">Noch keine Vögel erkannt...<br>Starte die Aufnahme!</div>
+
+    <!-- Map Tab -->
+    <div id="tab-map" class="content">
+        <div class="card">
+            <h3>🗺️ Beobachtungskarte</h3>
+            <div id="map"></div>
         </div>
     </div>
-    
-    <script>
-        // === KONFIGURATION ===
-        const API_URL = window.location.origin;
-        let isRecording = false;
-        let animationId = null;
-        let phase = 0;
-        
-        // === CANVAS SETUP ===
-        const spectroCanvas = document.getElementById('spectroCanvas');
-        const waveCanvas = document.getElementById('waveCanvas');
-        let spectroCtx, waveCtx;
-        
-        function initCanvas() {
-            // Spektrogramm
-            spectroCanvas.width = spectroCanvas.offsetWidth || 300;
-            spectroCanvas.height = 120;
-            spectroCtx = spectroCanvas.getContext('2d');
+
+    <!-- History Tab -->
+    <div id="tab-history" class="content">
+        <div class="stats-row">
+            <div class="stat"><div class="stat-value" id="histTotalDetections">0</div><div class="stat-label">Gesamt</div></div>
+            <div class="stat"><div class="stat-value" id="histUniqueSpecies">0</div><div class="stat-label">Arten</div></div>
+        </div>
+
+        <div class="card">
+            <h3>🏆 Erfolge</h3>
+            <div id="achievements"></div>
+        </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="tab-settings" class="content">
+        <div class="card">
+            <h3>⚙️ Einstellungen</h3>
             
-            // Waveform
-            waveCanvas.width = waveCanvas.offsetWidth || 300;
-            waveCanvas.height = 80;
-            waveCtx = waveCanvas.getContext('2d');
-            
-            console.log('Canvas initialisiert:', spectroCanvas.width, 'x', spectroCanvas.height);
-        }
-        
-        // === KARTE ===
-        let map;
-        function initMap() {
-            try {
-                map = L.map('map').setView([52.52, 13.405], 10);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap'
-                }).addTo(map);
-                
-                // Demo-Marker
-                L.marker([52.52, 13.405]).addTo(map)
-                    .bindPopup('🐦 Amsel - 89%');
-                L.marker([52.48, 13.35]).addTo(map)
-                    .bindPopup('🐦 Kohlmeise - 76%');
-                    
-                setTimeout(() => map.invalidateSize(), 300);
-                console.log('Karte initialisiert');
-            } catch (e) {
-                console.error('Karten-Fehler:', e);
-            }
-        }
-        
-        // === ANIMATION ===
-        function animate() {
-            animationId = requestAnimationFrame(animate);
-            phase += 0.08;
-            
-            // Simulierter Audio-Pegel
-            const level = isRecording ? 
-                30 + Math.sin(phase) * 20 + Math.random() * 15 :
-                5 + Math.sin(phase * 0.3) * 3;
-            
-            updateLevel(level);
-            drawSpectro(level);
-            drawWave(level);
-        }
-        
-        function updateLevel(level) {
-            document.getElementById('levelFill').style.width = level + '%';
-            document.getElementById('levelText').textContent = Math.round(level) + '%';
-        }
-        
-        function drawSpectro(level) {
-            if (!spectroCtx) return;
-            
-            // Shift nach links
-            const imageData = spectroCtx.getImageData(1, 0, spectroCanvas.width - 1, spectroCanvas.height);
-            spectroCtx.putImageData(imageData, 0, 0);
-            
-            // Neue Spalte zeichnen
-            for (let y = 0; y < spectroCanvas.height; y++) {
-                const freq = y / spectroCanvas.height;
-                const intensity = Math.sin(phase + freq * 5) * 0.5 + 0.5;
-                const amp = (level / 100) * intensity;
-                
-                const hue = 200 - amp * 150;
-                const light = 20 + amp * 40;
-                spectroCtx.fillStyle = `hsl(${hue}, 70%, ${light}%)`;
-                spectroCtx.fillRect(spectroCanvas.width - 1, y, 1, 1);
-            }
-        }
-        
-        function drawWave(level) {
-            if (!waveCtx) return;
-            
-            waveCtx.fillStyle = '#0f0f23';
-            waveCtx.fillRect(0, 0, waveCanvas.width, waveCanvas.height);
-            
-            waveCtx.strokeStyle = '#4ECDC4';
-            waveCtx.lineWidth = 2;
-            waveCtx.beginPath();
-            
-            const centerY = waveCanvas.height / 2;
-            const amplitude = (level / 100) * centerY * 0.8;
-            
-            for (let x = 0; x < waveCanvas.width; x++) {
-                const y = centerY + Math.sin((x * 0.03) + phase) * amplitude * 
-                          (1 + Math.sin(x * 0.01 + phase * 0.5) * 0.3);
-                
-                if (x === 0) waveCtx.moveTo(x, y);
-                else waveCtx.lineTo(x, y);
-            }
-            
-            waveCtx.stroke();
-        }
-        
-        // === AUFNAHME ===
-        function toggleRecording() {
-            isRecording = !isRecording;
-            const btn = document.getElementById('recordBtn');
-            
-            if (isRecording) {
-                btn.innerHTML = '⏹️ Aufnahme stoppen';
-                btn.classList.add('recording');
-                
-                // Simuliere Vogelerkennung nach 3 Sekunden
-                setTimeout(() => {
-                    if (isRecording) addBird('Amsel', 89);
-                }, 3000);
-                setTimeout(() => {
-                    if (isRecording) addBird('Kohlmeise', 76);
-                }, 6000);
-                setTimeout(() => {
-                    if (isRecording) addBird('Buchfink', 65);
-                }, 9000);
-            } else {
-                btn.innerHTML = '🎤 Aufnahme starten';
-                btn.classList.remove('recording');
-            }
-        }
-        
-        function addBird(name, confidence) {
-            const list = document.getElementById('birdList');
-            const nobirds = list.querySelector('.no-birds');
-            if (nobirds) nobirds.remove();
-            
-            const time = new Date().toLocaleTimeString('de-DE');
-            const item = document.createElement('div');
-            item.className = 'bird-item';
-            item.innerHTML = `
-                <div>
-                    <div class="bird-name">🐦 ${name}</div>
-                    <div class="bird-time">${time}</div>
+            <div class="setting-group">
+                <div class="setting-label">Backend-URL</div>
+                <input type="text" class="setting-input" id="backendUrl" value="">
+            </div>
+
+            <div class="setting-group">
+                <div class="setting-label">🤖 Modell</div>
+                <div class="setting-row" id="modelSettings"></div>
+            </div>
+
+            <div class="setting-group">
+                <div class="setting-label">Konsensus-Methode</div>
+                <div class="setting-row">
+                    <button class="setting-btn active" data-consensus="weighted_average">Gewichtet</button>
+                    <button class="setting-btn" data-consensus="majority_vote">Mehrheit</button>
+                    <button class="setting-btn" data-consensus="max_confidence">Maximum</button>
                 </div>
-                <div class="bird-confidence">${confidence}%</div>
-            `;
-            list.insertBefore(item, list.firstChild);
-            
-            // Marker auf Karte
-            if (map) {
-                const lat = 52.4 + Math.random() * 0.3;
-                const lng = 13.2 + Math.random() * 0.4;
-                L.marker([lat, lng]).addTo(map)
-                    .bindPopup(`🐦 ${name} - ${confidence}%`);
-            }
-        }
-        
-        // === NATIVE APP SUPPORT ===
-        window.updateNativeAudioLevel = function(level, db) {
-            updateLevel(level);
-        };
-        
-        // === INIT ===
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('BirdSound wird geladen...');
+            </div>
+
+            <div class="setting-group">
+                <div class="setting-label">Chunk-Dauer (Sekunden)</div>
+                <div class="setting-row">
+                    <button class="setting-btn" data-chunk="2">2s</button>
+                    <button class="setting-btn active" data-chunk="3">3s</button>
+                    <button class="setting-btn" data-chunk="5">5s</button>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <div class="setting-label">Min. Konfidenz</div>
+                <div class="setting-row">
+                    <button class="setting-btn" data-conf="0.05">5%</button>
+                    <button class="setting-btn active" data-conf="0.1">10%</button>
+                    <button class="setting-btn" data-conf="0.2">20%</button>
+                </div>
+            </div>
+
+            <button class="save-btn" onclick="saveSettings()">💾 Speichern</button>
+        </div>
+
+        <div class="card">
+            <h3>ℹ️ Info</h3>
+            <p style="color:#888; line-height: 1.6;">
+                <strong>BirdSound v5.3.2</strong><br>
+                Echtzeit-Vogelstimmenerkennung mit KI<br><br>
+                Modelle: DimaBird, BirdNET V2.4, Google Perch<br>
+                45+ europäische Vogelarten<br><br>
+                © 2024-2025 BirdSound Project
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        let settings = { backendUrl: API_URL, selectedModel: null, consensusMethod: 'weighted_average', chunkDuration: 3, minConfidence: 0.1 };
+        let models = [];
+        let detections = [];
+        let isRecording = false;
+        let streamTime = 0;
+        let streamTimer = null;
+        let mediaRecorder = null;
+        let audioContext = null;
+        let analyser = null;
+        let map = null;
+        let phase = 0;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            loadSettings();
+            await checkBackend();
+            await fetchModels();
             initCanvas();
             initMap();
             animate();
-            console.log('BirdSound bereit!');
+            loadDetections();
+            updateAchievements();
         });
-        
-        // Fallback für sofortigen Start
-        setTimeout(() => {
-            if (!spectroCtx) {
-                initCanvas();
-                initMap();
-                animate();
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+            if (tab === 'map' && map) setTimeout(() => map.invalidateSize(), 100);
+        }
+
+        async function checkBackend() {
+            try {
+                const r = await fetch(`${settings.backendUrl}/health`, { headers: { 'ngrok-skip-browser-warning': '1' } });
+                const d = await r.json();
+                const online = d.status === 'healthy';
+                document.getElementById('statusDot').className = 'status-dot' + (online ? ' online' : '');
+                document.getElementById('statusText').textContent = online ? `${d.models_loaded} Modelle` : 'Offline';
+                return online;
+            } catch (e) {
+                document.getElementById('statusDot').className = 'status-dot';
+                document.getElementById('statusText').textContent = 'Offline';
+                return false;
             }
-        }, 500);
+        }
+
+        async function fetchModels() {
+            try {
+                const r = await fetch(`${settings.backendUrl}/api/v1/models`, { headers: { 'ngrok-skip-browser-warning': '1' } });
+                const d = await r.json();
+                models = d.models || [];
+                renderModels();
+            } catch (e) { console.error('fetchModels:', e); }
+        }
+
+        function renderModels() {
+            const grid = document.getElementById('modelsGrid');
+            const settingsRow = document.getElementById('modelSettings');
+            if (models.length === 0) {
+                grid.innerHTML = '<div class="model-badge" style="opacity:0.5">Keine Modelle</div>';
+                settingsRow.innerHTML = '<button class="setting-btn" onclick="fetchModels()">🔄 Neu laden</button>';
+                return;
+            }
+            grid.innerHTML = models.map(m => `<div class="model-badge"><span class="model-dot" style="background:${m.is_loaded ? '#44ff44' : '#ff6b6b'}"></span>${m.name}</div>`).join('');
+            settingsRow.innerHTML = `<button class="setting-btn${!settings.selectedModel ? ' active' : ''}" onclick="selectModel(null)">Alle</button>` +
+                models.map(m => `<button class="setting-btn${settings.selectedModel === m.name ? ' active' : ''}" onclick="selectModel('${m.name}')">${m.name}</button>`).join('');
+        }
+
+        function selectModel(name) { settings.selectedModel = name; renderModels(); }
+
+        async function toggleRecording() {
+            if (isRecording) { stopRecording(); } else { await startRecording(); }
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new AudioContext();
+                analyser = audioContext.createAnalyser();
+                audioContext.createMediaStreamSource(stream).connect(analyser);
+                analyser.fftSize = 256;
+
+                mediaRecorder = new MediaRecorder(stream);
+                let chunks = [];
+                mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+                mediaRecorder.onstop = async () => {
+                    if (chunks.length > 0) {
+                        await analyzeAudio(new Blob(chunks, { type: 'audio/webm' }));
+                        chunks = [];
+                    }
+                    if (isRecording) {
+                        mediaRecorder.start();
+                        setTimeout(() => { if (mediaRecorder.state === 'recording') mediaRecorder.stop(); }, settings.chunkDuration * 1000);
+                    }
+                };
+                mediaRecorder.start();
+                setTimeout(() => { if (mediaRecorder.state === 'recording') mediaRecorder.stop(); }, settings.chunkDuration * 1000);
+
+                isRecording = true;
+                streamTime = 0;
+                streamTimer = setInterval(() => { streamTime++; document.getElementById('streamTime').textContent = formatTime(streamTime); }, 1000);
+                document.getElementById('recordBtn').innerHTML = '⏹️ Aufnahme stoppen';
+                document.getElementById('recordBtn').classList.add('recording');
+            } catch (e) { alert('Mikrofon-Zugriff verweigert: ' + e.message); }
+        }
+
+        function stopRecording() {
+            isRecording = false;
+            if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+            if (streamTimer) clearInterval(streamTimer);
+            document.getElementById('recordBtn').innerHTML = '🎤 Aufnahme starten';
+            document.getElementById('recordBtn').classList.remove('recording');
+        }
+
+        async function analyzeAudio(blob) {
+            try {
+                const formData = new FormData();
+                formData.append('file', blob, 'audio.webm');
+                if (settings.selectedModel) formData.append('model', settings.selectedModel);
+                formData.append('min_confidence', settings.minConfidence);
+
+                const r = await fetch(`${settings.backendUrl}/api/v1/predict/upload`, { method: 'POST', headers: { 'ngrok-skip-browser-warning': '1' }, body: formData });
+                const d = await r.json();
+                if (d.predictions && d.predictions.length > 0) d.predictions.forEach(p => addDetection(p));
+            } catch (e) { console.error('Analyse:', e); }
+        }
+
+        function addDetection(pred) {
+            const detection = { id: Date.now(), species: pred.species_common || pred.species || 'Unbekannt', scientific: pred.species_scientific || '', confidence: Math.round((pred.confidence || 0) * 100), time: new Date().toISOString(), models: pred.models || [pred.model || 'unknown'] };
+            detections.unshift(detection);
+            saveDetections();
+            renderDetections();
+            updateStats();
+        }
+
+        function renderDetections() {
+            const list = document.getElementById('birdList');
+            if (detections.length === 0) { list.innerHTML = '<div class="no-birds">Noch keine Vögel erkannt...<br>Starte die Aufnahme!</div>'; return; }
+            list.innerHTML = detections.slice(0, 50).map(d => `<div class="bird-item"><div><div class="bird-name">🐦 ${d.species}</div><div class="bird-scientific">${d.scientific}</div><div class="bird-time">${new Date(d.time).toLocaleTimeString('de-DE')}</div></div><div style="text-align:right"><div class="bird-confidence">${d.confidence}%</div></div></div>`).join('');
+        }
+
+        function updateStats() {
+            const uniqueSet = new Set(detections.map(d => d.species));
+            document.getElementById('totalDetections').textContent = detections.length;
+            document.getElementById('uniqueSpecies').textContent = uniqueSet.size;
+            document.getElementById('histTotalDetections').textContent = detections.length;
+            document.getElementById('histUniqueSpecies').textContent = uniqueSet.size;
+        }
+
+        let spectroCanvas, waveCanvas, spectroCtx, waveCtx;
+        function initCanvas() {
+            spectroCanvas = document.getElementById('spectroCanvas');
+            waveCanvas = document.getElementById('waveCanvas');
+            spectroCanvas.width = spectroCanvas.offsetWidth || 300; spectroCanvas.height = 120;
+            waveCanvas.width = waveCanvas.offsetWidth || 300; waveCanvas.height = 80;
+            spectroCtx = spectroCanvas.getContext('2d');
+            waveCtx = waveCanvas.getContext('2d');
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            phase += 0.08;
+            let level = 5;
+            if (analyser && isRecording) {
+                const data = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(data);
+                level = Math.min(100, data.reduce((a, b) => a + b, 0) / data.length * 2);
+            }
+            document.getElementById('levelFill').style.width = level + '%';
+            document.getElementById('levelText').textContent = Math.round(level) + '%';
+
+            if (spectroCtx) {
+                const imageData = spectroCtx.getImageData(1, 0, spectroCanvas.width - 1, spectroCanvas.height);
+                spectroCtx.putImageData(imageData, 0, 0);
+                for (let y = 0; y < spectroCanvas.height; y++) {
+                    const amp = (level / 100) * (Math.sin(phase + y / spectroCanvas.height * 5) * 0.5 + 0.5);
+                    spectroCtx.fillStyle = `hsl(${200 - amp * 150}, 70%, ${20 + amp * 40}%)`;
+                    spectroCtx.fillRect(spectroCanvas.width - 1, y, 1, 1);
+                }
+            }
+            if (waveCtx) {
+                waveCtx.fillStyle = '#0f0f23';
+                waveCtx.fillRect(0, 0, waveCanvas.width, waveCanvas.height);
+                waveCtx.strokeStyle = '#4ECDC4';
+                waveCtx.lineWidth = 2;
+                waveCtx.beginPath();
+                const centerY = waveCanvas.height / 2;
+                for (let x = 0; x < waveCanvas.width; x++) {
+                    const y = centerY + Math.sin((x * 0.03) + phase) * (level / 100) * centerY * 0.8;
+                    if (x === 0) waveCtx.moveTo(x, y); else waveCtx.lineTo(x, y);
+                }
+                waveCtx.stroke();
+            }
+        }
+
+        function initMap() {
+            try {
+                map = L.map('map').setView([52.52, 13.405], 10);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+            } catch (e) {}
+        }
+
+        const ACHIEVEMENTS = [
+            { id: 'first', name: 'Erste Entdeckung', desc: 'Erkenne deinen ersten Vogel', icon: '🎉', points: 10, check: () => detections.length >= 1 },
+            { id: 'ten', name: 'Vogelfreund', desc: 'Erkenne 10 Vögel', icon: '🐦', points: 25, check: () => detections.length >= 10 },
+            { id: 'species5', name: 'Artensammler', desc: 'Erkenne 5 verschiedene Arten', icon: '🌟', points: 50, check: () => new Set(detections.map(d => d.species)).size >= 5 },
+            { id: 'hundred', name: 'Experte', desc: 'Erkenne 100 Vögel', icon: '🏆', points: 100, check: () => detections.length >= 100 }
+        ];
+
+        function updateAchievements() {
+            document.getElementById('achievements').innerHTML = ACHIEVEMENTS.map(a => `<div class="achievement${a.check() ? '' : ' locked'}"><div class="achievement-icon">${a.icon}</div><div class="achievement-info"><div class="achievement-name">${a.name}</div><div class="achievement-desc">${a.desc}</div></div><div class="achievement-points">${a.points} ⭐</div></div>`).join('');
+        }
+
+        function loadSettings() {
+            try { const saved = localStorage.getItem('birdsound_settings'); if (saved) settings = { ...settings, ...JSON.parse(saved) }; document.getElementById('backendUrl').value = settings.backendUrl; } catch (e) {}
+        }
+
+        function saveSettings() {
+            settings.backendUrl = document.getElementById('backendUrl').value;
+            localStorage.setItem('birdsound_settings', JSON.stringify(settings));
+            fetchModels(); checkBackend();
+            alert('Einstellungen gespeichert!');
+        }
+
+        function loadDetections() {
+            try { const saved = localStorage.getItem('birdsound_detections'); if (saved) detections = JSON.parse(saved); renderDetections(); updateStats(); } catch (e) {}
+        }
+
+        function saveDetections() {
+            try { localStorage.setItem('birdsound_detections', JSON.stringify(detections.slice(0, 1000))); } catch (e) {}
+        }
+
+        function formatTime(sec) { return `${Math.floor(sec / 60)}:${(sec % 60).toString().padStart(2, '0')}`; }
+
+        document.querySelectorAll('[data-consensus]').forEach(btn => { btn.onclick = () => { document.querySelectorAll('[data-consensus]').forEach(b => b.classList.remove('active')); btn.classList.add('active'); settings.consensusMethod = btn.dataset.consensus; }; });
+        document.querySelectorAll('[data-chunk]').forEach(btn => { btn.onclick = () => { document.querySelectorAll('[data-chunk]').forEach(b => b.classList.remove('active')); btn.classList.add('active'); settings.chunkDuration = parseInt(btn.dataset.chunk); }; });
+        document.querySelectorAll('[data-conf]').forEach(btn => { btn.onclick = () => { document.querySelectorAll('[data-conf]').forEach(b => b.classList.remove('active')); btn.classList.add('active'); settings.minConfidence = parseFloat(btn.dataset.conf); }; });
     </script>
 </body>
 </html>
