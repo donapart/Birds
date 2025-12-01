@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     # Application
     APP_NAME: str = "BirdSound API"
-    APP_VERSION: str = "0.1.0"
+    APP_VERSION: str = "5.3.0"
     DEBUG: bool = False
 
     # ML Model loading

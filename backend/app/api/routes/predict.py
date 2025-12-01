@@ -2,12 +2,14 @@
 Prediction API endpoints.
 """
 import logging
+import base64
 from typing import List, Optional
+from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.audio import AudioChunkRequest, AudioChunkBatchRequest
+from app.schemas.audio import AudioChunkRequest, AudioChunkBatchRequest, AudioFormat
 from app.schemas.prediction import (
     PredictionResponse,
     BatchPredictionResponse,
@@ -113,7 +115,86 @@ async def predict_quick(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Quick prediction failed: {e}")
-        raise HTTPException(status_code=500, detail="Prediction processing failed")
+        raise HTTPException(status_code=500, detail="Prediction failed")
+
+
+@router.post("/predict/upload")
+async def predict_upload(
+    file: UploadFile = File(...),
+    device_id: str = Form(default="mobile-app"),
+    latitude: Optional[float] = Form(default=None),
+    longitude: Optional[float] = Form(default=None),
+    model: Optional[str] = Form(default=None),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Upload audio file for prediction with GPS coordinates.
+    
+    Accepts multipart form data with:
+    - file: Audio file (m4a, wav, mp3)
+    - device_id: Device identifier
+    - latitude/longitude: GPS coordinates
+    - model: Optional specific model to use
+    
+    Stores results with GPS and timestamp in database.
+    """
+    from datetime import timezone
+    
+    # Read and encode audio
+    audio_bytes = await file.read()
+    audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
+    
+    # Determine format from filename
+    filename = file.filename or "audio.m4a"
+    if filename.endswith('.wav'):
+        audio_format = AudioFormat.WAV
+    elif filename.endswith('.mp3'):
+        audio_format = AudioFormat.MP3
+    else:
+        audio_format = AudioFormat.M4A
+    
+    # Create request
+    request = AudioChunkRequest(
+        device_id=device_id,
+        timestamp_utc=datetime.now(timezone.utc),
+        audio_base64=audio_base64,
+        audio_format=audio_format,
+        sample_rate=48000,
+        latitude=latitude,
+        longitude=longitude,
+        models=[model] if model else None
+    )
+    
+    try:
+        service = PredictionService(db=db)
+        response = await service.process_audio_chunk(request, store_in_db=True)
+        
+        # Return simplified response for mobile
+        return {
+            "recording_id": str(response.recording_id),
+            "timestamp": response.timestamp_utc.isoformat(),
+            "latitude": latitude,
+            "longitude": longitude,
+            "processing_time_ms": response.processing_time_ms,
+            "predictions": [
+                {
+                    "species": p.species_common,
+                    "scientific_name": p.species_scientific,
+                    "confidence": p.confidence,
+                    "model": mp.model_name
+                }
+                for mp in response.model_predictions
+                for p in mp.predictions
+            ],
+            "consensus": {
+                "species": response.consensus.species_common,
+                "confidence": response.consensus.confidence,
+                "models_agree": response.consensus.agreement_count
+            }
+        }
+    except Exception as e:
+        logger.error(f"Upload prediction failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/models")

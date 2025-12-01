@@ -23,14 +23,14 @@
 |-------|---------|------|----------|--------|
 | **DimaBird** | ~500 EU | Auto | 🎵 Songbirds, Forest | ✅ Active |
 | **BirdNET V2.4** | 6,522 | ~150MB | 🌍 Global, All species | ✅ Active |
-| **Google Perch** | 10,000+ | ~500MB | 🔬 Scientific | 🔧 Optional |
+| **Google Perch** | 10,000+ | ~500MB | 🔬 Scientific | ✅ Optional |
 
 ### Downloads / Installation
 
 | Platform | Download | Size | Notes |
 |----------|----------|------|-------|
-| **📱 Android APK** | [BirdSound_v1.0.1_Setup.apk](releases/) | ~90MB | Requires Android 6+ |
-| **🖥️ Windows** | [BirdSound_v1.0.0_Setup_win.exe](releases/) | ~2MB | Requires Python 3.11+ |
+| **📱 Android APK** | [BirdSound_v5.3.0.apk](releases/) | ~25MB | Requires Android 6+ |
+| **🖥️ Windows** | [BirdSound_v5.3.0_Setup_win.exe](releases/) | ~2MB | Requires Python 3.11+ |
 | **🍎 iOS** | Expo Go App | - | Scan QR code from `npx expo start` |
 
 ---
@@ -41,22 +41,24 @@
 
 BirdSound is a production-ready bird sound recognition system that uses multiple ML models to identify bird species from audio recordings. It features automatic database fallback, cross-platform support, and a comprehensive REST API.
 
-### ✅ Current Status
+### ✅ Current Status (v5.3.0)
 
-- ✅ **HuggingFace Model** loaded (dima806/bird_sounds_classification)
+- ✅ **DimaBird Model** (HuggingFace dima806/bird_sounds_classification)
 - ✅ **BirdNET V2.4** integrated (6,522 species worldwide)
-- ✅ **Automatic Database Fallback** (PostgreSQL → SQLite when unavailable)
-- ✅ **All API Endpoints** fully functional
-- ✅ **FastAPI** with interactive documentation
-- ✅ **Cross-platform** (Windows, Linux, Raspberry Pi)
-- ✅ **Mobile Apps** (Expo/React Native with Offline-Demo mode)
-- ✅ **KML/KMZ Export** for Google Earth
+- ✅ **Google Perch** integrated (10,000+ species, TensorFlow Hub)
+- ✅ **Interactive Map** with OpenStreetMap (filter by time, species)
+- ✅ **45+ Bird Species Library** with detailed info, habitat, voice data
+- ✅ **KML Export** for Google Earth
+- ✅ **Automatic Database Fallback** (PostgreSQL → SQLite)
+- ✅ **Mobile App** Android v5.3.0 with Offline-Demo mode
 - ✅ **Windows Installer** (Inno Setup)
+- ✅ **Raspberry Pi Scripts** for field deployment
 
 ### Features
 
-- **Multi-Model Analysis**: Run multiple ML models (BirdNET, HuggingFace) in parallel
+- **Multi-Model Analysis**: Run 3 ML models (BirdNET, DimaBird, Perch) in parallel
 - **Consensus Voting**: Combine predictions from all models for reliable identification
+- **Interactive Map**: OpenStreetMap with time/species filters
 - **Real-time Processing**: Process 3-second audio windows with 1-second overlap
 - **GPS Tagging**: Associate detections with location and time
 - **KML/KMZ Export**: Export detections for Google Earth visualization
@@ -1017,11 +1019,39 @@ Keine Aktion erforderlich! Das System funktioniert mit SQLite.
 
 MIT-Lizenz - siehe LICENSE-Datei
 
+## Changelog
+
+### v5.3.0 (2024-12-01)
+- ✨ **Interaktive Karte** mit OpenStreetMap/Leaflet (kein API Key nötig)
+- 🔍 **Kartenfilter** nach Zeit (Heute/Woche/Monat) und Arten
+- 🐦 **45+ Vogelarten** in der Bibliothek mit Details
+- 🌍 **KML Export** direkt aus der Karte
+- 🔧 Stabilitätsverbesserungen für Android
+
+### v5.2.x (2024-11)
+- 🤖 **Google Perch Model** integriert (10.000+ Arten)
+- 🗺️ Map-Tab hinzugefügt
+- 📊 Session-Reports mit Statistiken
+- ⚙️ Erweiterte Einstellungen (Auto-Stop, Modellwahl)
+
+### v5.1.x (2024-11)
+- 🎯 **Multi-Model Support** (BirdNET + DimaBird parallel)
+- 🏆 Achievement-System mit Punkten
+- 📱 Offline-Queue für schlechte Verbindung
+
+### v5.0.x (2024-10)
+- 🚀 Initiale Expo/React Native App
+- 🎙️ Echtzeit-Audio-Streaming
+- 📍 GPS-Tagging für Erkennungen
+
 ## Danksagungen
 
 - [BirdNET](https://birdnet.cornell.edu/) vom Cornell Lab of Ornithology
+- [Google Perch](https://tfhub.dev/google/bird-vocalization-classifier) für Bird Vocalization Classifier
 - [HuggingFace](https://huggingface.co/) für Model-Hosting und Transformers-Bibliothek
 - [FastAPI](https://fastapi.tiangolo.com/) für das exzellente Web-Framework
+- [OpenStreetMap](https://www.openstreetmap.org/) für die freien Kartendaten
+- [Leaflet](https://leafletjs.com/) für die JavaScript-Kartenbibliothek
 
 ## Support
 

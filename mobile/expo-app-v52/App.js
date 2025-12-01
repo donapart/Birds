@@ -1,9 +1,9 @@
 /**
- * BirdSound v5.2.0 - Multi-Model, Session Reports, Advanced Settings, MAP VIEW
+ * BirdSound v5.3.0 - Map Filter (Zeit, Art), 45+ Vogelarten
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, StatusBar, Platform, Alert, TextInput, Modal, Switch, Share, FlatList, Dimensions } from 'react-native';
-import MapView, { Marker, Callout } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import * as FileSystem from 'expo-file-system';
@@ -40,6 +40,7 @@ export default function App() {
   const [showSessionReport, setShowSessionReport] = useState(null);
   const [filter, setFilter] = useState({ species: '' });
   const [searchQuery, setSearchQuery] = useState('');
+  const [mapFilter, setMapFilter] = useState({ session: 'all', species: 'all', timeRange: 'all' });
   
   const recordingRef = useRef(null);
   const timerRef = useRef(null);
@@ -225,7 +226,27 @@ export default function App() {
   const cc = (c) => c >= 0.8 ? '#51cf66' : c >= 0.5 ? '#ffd43b' : '#ff6b6b';
   const sbh = Platform.OS === 'android' ? Constants.statusBarHeight : 0;
 
-  const detWithLocation = detections.filter(d => d.location);
+  // Map Filter Logik
+  const allDetWithLocation = detections.filter(d => d.location);
+  const uniqueMapSpecies = [...new Set(allDetWithLocation.map(d => d.species))].sort();
+  const uniqueMapSessions = [...new Set(allDetWithLocation.map(d => d.sessionId).filter(Boolean))];
+  
+  const detWithLocation = allDetWithLocation.filter(d => {
+    // Session Filter
+    if (mapFilter.session !== 'all' && d.sessionId !== mapFilter.session) return false;
+    // Species Filter
+    if (mapFilter.species !== 'all' && d.species !== mapFilter.species) return false;
+    // Zeit Filter
+    if (mapFilter.timeRange !== 'all') {
+      const now = Date.now();
+      const detTime = new Date(d.time).getTime();
+      if (mapFilter.timeRange === 'today' && now - detTime > 24 * 60 * 60 * 1000) return false;
+      if (mapFilter.timeRange === 'week' && now - detTime > 7 * 24 * 60 * 60 * 1000) return false;
+      if (mapFilter.timeRange === 'month' && now - detTime > 30 * 24 * 60 * 60 * 1000) return false;
+    }
+    return true;
+  });
+
   const mapRegion = detWithLocation.length > 0 ? {
     latitude: detWithLocation[0].location.lat,
     longitude: detWithLocation[0].location.lng,
@@ -236,7 +257,7 @@ export default function App() {
     <View style={z.c}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0a15" />
       <View style={{ height: sbh, backgroundColor: '#0a0a15' }} />
-      <View style={z.h}><View><Text style={z.t}>🐦 BirdSound v5.2</Text><Text style={z.st}>{rank.icon} {rank.name} • {points}P</Text></View><View style={z.hr}><View style={[z.bg, isOnline ? z.bgG : z.bgR]}><Text style={z.bgT}>{isOnline ? '🌐' : '📴'}{offlineQueue.length > 0 ? ` (${offlineQueue.length})` : ''}</Text></View><TouchableOpacity onPress={() => setShowSettings(true)}><Text style={z.ic}>⚙️</Text></TouchableOpacity></View></View>
+      <View style={z.h}><View><Text style={z.t}>🐦 BirdSound v5.3.0</Text><Text style={z.st}>{rank.icon} {rank.name} • {points}P</Text></View><View style={z.hr}><View style={[z.bg, isOnline ? z.bgG : z.bgR]}><Text style={z.bgT}>{isOnline ? '🌐' : '📴'}{offlineQueue.length > 0 ? ` (${offlineQueue.length})` : ''}</Text></View><TouchableOpacity onPress={() => setShowSettings(true)}><Text style={z.ic}>⚙️</Text></TouchableOpacity></View></View>
       <View style={z.tb}>{[['live','🎙️'],['map','🗺️'],['list','📋'],['library','📚'],['sessions','📊'],['achieve','🏆']].map(([id,ic]) => (<TouchableOpacity key={id} style={[z.ta, activeTab===id && z.taA]} onPress={() => setActiveTab(id)}><Text style={z.taI}>{ic}</Text></TouchableOpacity>))}</View>
 
       {activeTab === 'live' && (<ScrollView style={z.ct}>
@@ -258,19 +279,52 @@ export default function App() {
       </ScrollView>)}
 
       {activeTab === 'map' && (<View style={z.mapC}>
-        <MapView style={z.map} initialRegion={mapRegion} showsUserLocation showsMyLocationButton>
-          {detWithLocation.map(d => (
-            <Marker key={d.id} coordinate={{ latitude: d.location.lat, longitude: d.location.lng }} title={d.species} description={`${Math.round(d.confidence*100)}% • ${new Date(d.time).toLocaleTimeString()}`}>
-              <View style={z.mk}><Text style={z.mkI}>{BIRD_LIBRARY[d.species]?.icon || '🐦'}</Text></View>
-              <Callout onPress={() => setShowBirdDetail(d)}>
-                <View style={z.co}><Text style={z.coT}>{d.species}</Text><Text style={z.coS}>{Math.round(d.confidence*100)}%</Text></View>
-              </Callout>
-            </Marker>
-          ))}
-        </MapView>
+        <View style={z.mapFil}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow: 0}}>
+            <TouchableOpacity style={[z.mfB, mapFilter.timeRange==='all' && z.mfA]} onPress={() => setMapFilter({...mapFilter, timeRange: 'all'})}><Text style={z.mfT}>🕐 Alle</Text></TouchableOpacity>
+            <TouchableOpacity style={[z.mfB, mapFilter.timeRange==='today' && z.mfA]} onPress={() => setMapFilter({...mapFilter, timeRange: 'today'})}><Text style={z.mfT}>Heute</Text></TouchableOpacity>
+            <TouchableOpacity style={[z.mfB, mapFilter.timeRange==='week' && z.mfA]} onPress={() => setMapFilter({...mapFilter, timeRange: 'week'})}><Text style={z.mfT}>Woche</Text></TouchableOpacity>
+            <TouchableOpacity style={[z.mfB, mapFilter.timeRange==='month' && z.mfA]} onPress={() => setMapFilter({...mapFilter, timeRange: 'month'})}><Text style={z.mfT}>Monat</Text></TouchableOpacity>
+            <View style={z.mfS}/>
+            <TouchableOpacity style={[z.mfB, mapFilter.species==='all' && z.mfA]} onPress={() => setMapFilter({...mapFilter, species: 'all'})}><Text style={z.mfT}>🐦 Alle Arten</Text></TouchableOpacity>
+            {uniqueMapSpecies.slice(0,5).map(sp => (
+              <TouchableOpacity key={sp} style={[z.mfB, mapFilter.species===sp && z.mfA]} onPress={() => setMapFilter({...mapFilter, species: sp})}>
+                <Text style={z.mfT}>{BIRD_LIBRARY[sp]?.icon||'🐦'} {sp.substring(0,8)}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+        <WebView
+          style={{flex: 1}}
+          originWhitelist={['*']}
+          key={`map-${mapFilter.timeRange}-${mapFilter.species}-${mapFilter.session}`}
+          source={{ html: `
+<!DOCTYPE html>
+<html><head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>body{margin:0;padding:0}#map{width:100vw;height:100vh}.bird-marker{background:#16213e;border:2px solid #4ecdc4;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px}.info{position:fixed;bottom:60px;left:10px;right:10px;background:rgba(22,33,62,0.95);color:#fff;padding:10px;border-radius:10px;font-family:sans-serif;font-size:11px;z-index:1000}</style>
+</head><body>
+<div id="map"></div>
+<div class="info"><b>📍 ${detWithLocation.length}</b> von ${allDetWithLocation.length} Fundorten • <b>${Object.keys(detWithLocation.reduce((a,d)=>{a[d.species]=1;return a;},{})).length}</b> Arten</div>
+<script>
+var map = L.map('map').setView([${location?.latitude || detWithLocation[0]?.location?.lat || 52.52}, ${location?.longitude || detWithLocation[0]?.location?.lng || 13.405}], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OSM'}).addTo(map);
+var markers = ${JSON.stringify(detWithLocation.filter(d=>d.location?.lat && d.location?.lng).map(d=>({lat:d.location.lat,lng:d.location.lng,name:d.species,conf:Math.round(d.confidence*100),time:new Date(d.time).toLocaleString('de-DE'),icon:BIRD_LIBRARY[d.species]?.icon||'🐦'})))};
+markers.forEach(function(m){
+  var icon = L.divIcon({className:'',html:'<div class="bird-marker">'+m.icon+'</div>',iconSize:[32,32],iconAnchor:[16,16]});
+  L.marker([m.lat,m.lng],{icon:icon}).addTo(map).bindPopup('<b>'+m.name+'</b><br>'+m.conf+'%<br><small>'+m.time+'</small>');
+});
+if(markers.length>1){var g=L.featureGroup(markers.map(m=>L.marker([m.lat,m.lng])));map.fitBounds(g.getBounds().pad(0.1));}
+</script></body></html>
+          `}}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+        />
         <View style={z.mapO}>
-          <Text style={z.mapSt}>📍 {detWithLocation.length} Fundorte</Text>
-          <TouchableOpacity style={z.mapB} onPress={exportKML}><Text style={z.mapBT}>🌍 KML Export</Text></TouchableOpacity>
+          <TouchableOpacity style={z.mapB} onPress={exportKML}><Text style={z.mapBT}>🌍 KML</Text></TouchableOpacity>
+          <TouchableOpacity style={[z.mapB,{marginLeft:8}]} onPress={() => setMapFilter({session:'all',species:'all',timeRange:'all'})}><Text style={z.mapBT}>↻ Reset</Text></TouchableOpacity>
         </View>
       </View>)}
 
@@ -363,7 +417,21 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const z = StyleSheet.create({
   c: { flex: 1, backgroundColor: '#0a0a15' },
   h: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, backgroundColor: '#0f0f1a', borderBottomWidth: 1, borderBottomColor: '#1a1a2e' },
-  mapC: { flex: 1 }, map: { flex: 1, width: SCREEN_WIDTH }, mk: { backgroundColor: '#16213e', padding: 6, borderRadius: 16, borderWidth: 2, borderColor: '#4ecdc4' }, mkI: { fontSize: 18 }, co: { padding: 6, minWidth: 100 }, coT: { fontWeight: '600', fontSize: 12 }, coS: { color: '#4ecdc4', fontSize: 11 }, mapO: { position: 'absolute', bottom: 16, left: 16, right: 16, backgroundColor: 'rgba(22,33,62,0.95)', borderRadius: 10, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, mapSt: { color: '#fff', fontSize: 12 }, mapB: { backgroundColor: '#4ecdc4', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }, mapBT: { color: '#000', fontWeight: '600', fontSize: 11 },
+  mapC: { flex: 1 }, map: { flex: 1, width: SCREEN_WIDTH }, 
+  mapEmpty: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#16213e' }, mapEmT: { color: '#888', fontSize: 14 },
+  mk: { backgroundColor: '#16213e', padding: 6, borderRadius: 16, borderWidth: 2, borderColor: '#4ecdc4' }, mkI: { fontSize: 18 }, 
+  mapO: { position: 'absolute', bottom: 70, right: 16, backgroundColor: 'rgba(22,33,62,0.95)', borderRadius: 10, padding: 8, flexDirection: 'row' }, 
+  mapInfo: { flex: 1 }, mapSt: { color: '#fff', fontSize: 12, fontWeight: '600' }, mapSub: { color: '#4ecdc4', fontSize: 10 },
+  mapB: { backgroundColor: '#4ecdc4', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6 }, mapBT: { color: '#000', fontWeight: '600', fontSize: 11 },
+  mapFil: { backgroundColor: '#0f0f1a', paddingVertical: 8, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#1a1a2e' },
+  mfB: { backgroundColor: '#1a1a2e', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, marginHorizontal: 3 },
+  mfA: { backgroundColor: '#4ecdc4' },
+  mfT: { color: '#fff', fontSize: 11, fontWeight: '500' },
+  mfS: { width: 1, backgroundColor: '#333', marginHorizontal: 6 },
+  mapLeg: { position: 'absolute', top: 8, left: 8, right: 8, backgroundColor: 'rgba(22,33,62,0.95)', borderRadius: 8, padding: 8 },
+  mapLegT: { color: '#888', fontSize: 10, marginBottom: 6 }, 
+  mapLegI: { alignItems: 'center', marginRight: 12, backgroundColor: 'rgba(78,205,196,0.1)', padding: 6, borderRadius: 8 }, 
+  mapLegIc: { fontSize: 18 }, mapLegN: { color: '#fff', fontSize: 8, marginTop: 2 },
   t: { fontSize: 18, fontWeight: '700', color: '#fff' }, st: { fontSize: 10, color: '#4ecdc4' },
   hr: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   bg: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }, bgG: { backgroundColor: 'rgba(81,207,102,0.2)' }, bgR: { backgroundColor: 'rgba(255,107,107,0.2)' }, bgT: { color: '#fff', fontSize: 10 },

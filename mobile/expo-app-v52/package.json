@@ -1,6 +1,7 @@
 {
-  "name": "expo-app",
-  "version": "1.0.0",
+  "name": "birdsound",
+  "version": "5.3.0",
+  "description": "BirdSound - Real-time Bird Sound Recognition App",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
