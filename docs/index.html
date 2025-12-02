@@ -5,289 +5,376 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🐦 BirdSound - Echtzeit-Vogelstimmen-Erkennung</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             color: #eee;
             min-height: 100vh;
             line-height: 1.6;
         }
-        
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-        
-        header {
-            text-align: center;
-            padding: 3rem 0;
-        }
-        
-        .logo {
-            font-size: 5rem;
-            margin-bottom: 1rem;
-            animation: bounce 2s infinite;
-        }
-        
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-        
-        h1 {
-            font-size: 2.5rem;
-            color: #4ECDC4;
-            margin-bottom: 0.5rem;
-        }
-        
-        .subtitle {
-            font-size: 1.2rem;
-            color: #888;
-            margin-bottom: 2rem;
-        }
-        
-        .downloads {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 3rem;
-        }
-        
+        .container { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+        header { text-align: center; padding: 3rem 0; }
+        .logo { font-size: 5rem; margin-bottom: 1rem; animation: bounce 2s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        h1 { font-size: 2.5rem; color: #4ECDC4; margin-bottom: 0.5rem; }
+        h2 { font-size: 1.8rem; color: #4ECDC4; margin: 2.5rem 0 1rem 0; padding-bottom: 0.5rem; border-bottom: 2px solid rgba(78, 205, 196, 0.3); }
+        h3 { font-size: 1.3rem; color: #67d4cd; margin: 1.5rem 0 0.75rem 0; }
+        .subtitle { font-size: 1.2rem; color: #888; margin-bottom: 2rem; }
+        .downloads { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 3rem; }
         .download-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 1rem 2rem;
+            display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem;
             background: linear-gradient(135deg, #4ECDC4 0%, #44a08d 100%);
-            color: #1a1a2e;
-            text-decoration: none;
-            border-radius: 50px;
-            font-weight: bold;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+            color: #1a1a2e; text-decoration: none; border-radius: 50px; font-weight: bold;
+            transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
         }
-        
-        .download-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
-        }
-        
-        .download-btn.secondary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-        }
-        
-        .download-btn.secondary:hover {
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
-        
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-        }
-        
+        .download-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4); }
+        .download-btn.secondary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .download-btn.raspberry { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
+        .download-btn.docker { background: linear-gradient(135deg, #2496ed 0%, #1a6fb5 100%); }
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
         .feature-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
-            padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.3s ease;
         }
-        
-        .feature-card:hover {
-            transform: translateY(-5px);
-            border-color: #4ECDC4;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-        
-        .feature-icon {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-        }
-        
-        .feature-card h3 {
-            color: #4ECDC4;
-            margin-bottom: 0.5rem;
-        }
-        
-        .feature-card p {
-            color: #aaa;
-            font-size: 0.9rem;
-        }
-        
-        .stats {
-            display: flex;
-            justify-content: center;
-            gap: 3rem;
-            flex-wrap: wrap;
-            margin-bottom: 3rem;
-            padding: 2rem;
-            background: rgba(78, 205, 196, 0.1);
-            border-radius: 16px;
-        }
-        
-        .stat {
-            text-align: center;
-        }
-        
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #4ECDC4;
-        }
-        
-        .stat-label {
-            color: #888;
-            font-size: 0.9rem;
-        }
-        
-        .screenshot {
-            width: 100%;
-            max-width: 800px;
-            margin: 2rem auto;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        footer {
-            text-align: center;
-            padding: 2rem 0;
-            color: #666;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            margin-top: 3rem;
-        }
-        
-        footer a {
-            color: #4ECDC4;
-            text-decoration: none;
-        }
-        
-        footer a:hover {
-            text-decoration: underline;
-        }
-        
-        .version-badge {
-            display: inline-block;
-            background: rgba(78, 205, 196, 0.2);
-            color: #4ECDC4;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            margin-left: 0.5rem;
-        }
+        .feature-card:hover { transform: translateY(-5px); border-color: #4ECDC4; }
+        .feature-icon { font-size: 2rem; margin-bottom: 1rem; }
+        .feature-card h3 { color: #4ECDC4; margin: 0 0 0.5rem 0; }
+        .feature-card p { color: #aaa; font-size: 0.9rem; }
+        .stats { display: flex; justify-content: center; gap: 3rem; flex-wrap: wrap; margin-bottom: 3rem; padding: 2rem; background: rgba(78, 205, 196, 0.1); border-radius: 16px; }
+        .stat { text-align: center; }
+        .stat-number { font-size: 2.5rem; font-weight: bold; color: #4ECDC4; }
+        .stat-label { color: #888; font-size: 0.9rem; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0 2rem 0; background: rgba(255, 255, 255, 0.03); border-radius: 12px; overflow: hidden; }
+        th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        th { background: rgba(78, 205, 196, 0.15); color: #4ECDC4; font-weight: 600; }
+        tr:hover { background: rgba(255, 255, 255, 0.05); }
+        pre { background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 1rem; overflow-x: auto; margin: 1rem 0; }
+        code { font-family: 'Monaco', 'Menlo', monospace; font-size: 0.9rem; color: #67d4cd; }
+        pre code { color: #ccc; }
+        .architecture { background: rgba(0, 0, 0, 0.3); border-radius: 12px; padding: 1.5rem; font-family: monospace; font-size: 0.85rem; line-height: 1.4; overflow-x: auto; white-space: pre; }
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .tab-btn { padding: 0.75rem 1.5rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: #aaa; cursor: pointer; transition: all 0.3s; }
+        .tab-btn:hover, .tab-btn.active { background: rgba(78, 205, 196, 0.2); color: #4ECDC4; border-color: #4ECDC4; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .status-ok { color: #4ECDC4; }
+        ul, ol { margin: 1rem 0; padding-left: 1.5rem; }
+        li { margin: 0.5rem 0; color: #bbb; }
+        .content a { color: #4ECDC4; text-decoration: none; }
+        .content a:hover { text-decoration: underline; }
+        p { margin: 0.75rem 0; color: #bbb; }
+        nav { position: sticky; top: 0; background: rgba(26, 26, 46, 0.95); backdrop-filter: blur(10px); padding: 1rem 0; z-index: 100; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        nav ul { display: flex; justify-content: center; gap: 1.5rem; list-style: none; flex-wrap: wrap; }
+        nav a { color: #aaa; text-decoration: none; font-size: 0.9rem; transition: color 0.3s; }
+        nav a:hover { color: #4ECDC4; }
+        footer { text-align: center; padding: 2rem 0; color: #666; border-top: 1px solid rgba(255, 255, 255, 0.1); margin-top: 3rem; }
+        footer a { color: #4ECDC4; text-decoration: none; }
+        .version-badge { display: inline-block; background: rgba(78, 205, 196, 0.2); color: #4ECDC4; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; margin-left: 0.5rem; }
     </style>
 </head>
 <body>
-    <div class="container">
+    <nav>
+        <ul>
+            <li><a href="#overview">Übersicht</a></li>
+            <li><a href="#models">Modelle</a></li>
+            <li><a href="#installation">Installation</a></li>
+            <li><a href="#api">API</a></li>
+            <li><a href="#mobile">Mobile App</a></li>
+            <li><a href="#architecture">Architektur</a></li>
+            <li><a href="#changelog">Changelog</a></li>
+        </ul>
+    </nav>
+
+    <div class="container content">
         <header>
             <div class="logo">🐦</div>
             <h1>BirdSound <span class="version-badge">v5.3.2</span></h1>
-            <p class="subtitle">Echtzeit-Vogelstimmen-Erkennung mit KI</p>
-            
+            <p class="subtitle">Multi-Modell ML-System zur Echtzeit-Vogelstimmen-Erkennung</p>
             <div class="downloads">
-                <a href="https://github.com/donapart/Birds/releases/download/v5.3.2/BirdSound_v5.3.2.apk" class="download-btn">
-                    📱 Android APK
-                </a>
-                <a href="https://github.com/donapart/Birds/releases/download/v5.3.2/BirdSound_5.3.2_Setup.exe" class="download-btn secondary">
-                    🖥️ Windows
-                </a>
-                <a href="https://github.com/donapart/Birds/blob/main/README.md#option-2-raspberry-pi-installation" class="download-btn" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
-                    🍓 Raspberry Pi
-                </a>
+                <a href="https://github.com/donapart/Birds/releases/download/v5.3.2/BirdSound_v5.3.2.apk" class="download-btn">📱 Android APK</a>
+                <a href="https://github.com/donapart/Birds/releases/download/v5.3.2/BirdSound_5.3.2_Setup.exe" class="download-btn secondary">🖥️ Windows</a>
+                <a href="#raspberry" class="download-btn raspberry">🍓 Raspberry Pi</a>
+                <a href="#docker" class="download-btn docker">🐳 Docker</a>
             </div>
         </header>
         
         <div class="stats">
-            <div class="stat">
-                <div class="stat-number">10.000+</div>
-                <div class="stat-label">Vogelarten weltweit</div>
-            </div>
-            <div class="stat">
-                <div class="stat-number">3</div>
-                <div class="stat-label">ML-Modelle</div>
-            </div>
-            <div class="stat">
-                <div class="stat-number">&lt;300ms</div>
-                <div class="stat-label">Erkennungszeit</div>
-            </div>
-            <div class="stat">
-                <div class="stat-number">100%</div>
-                <div class="stat-label">Offline-fähig</div>
-            </div>
+            <div class="stat"><div class="stat-number">10.000+</div><div class="stat-label">Vogelarten weltweit</div></div>
+            <div class="stat"><div class="stat-number">3</div><div class="stat-label">ML-Modelle</div></div>
+            <div class="stat"><div class="stat-number">&lt;300ms</div><div class="stat-label">Erkennungszeit</div></div>
+            <div class="stat"><div class="stat-number">100%</div><div class="stat-label">Offline-fähig</div></div>
         </div>
-        
-        <div class="features">
-            <div class="feature-card">
-                <div class="feature-icon">🤖</div>
-                <h3>Multi-Modell Analyse</h3>
-                <p>DimaBird + BirdNET V2.4 + Google Perch für maximale Genauigkeit durch Konsens-Voting.</p>
+
+        <section id="overview">
+            <h2>🗺️ Schnellübersicht</h2>
+            <h3>Deployment-Optionen</h3>
+            <table>
+                <tr><th>Modus</th><th>Gerät</th><th>Internet</th><th>Anwendungsfall</th></tr>
+                <tr><td>🖥️ <strong>Lokal/Offline</strong></td><td>Windows PC, Raspberry Pi</td><td>❌ Nicht erforderlich</td><td>Feldarbeit, privat</td></tr>
+                <tr><td>🐳 <strong>Docker</strong></td><td>Jedes mit Docker</td><td>❌ Nicht erforderlich</td><td>Einfaches Deployment</td></tr>
+                <tr><td>☁️ <strong>Online Server</strong></td><td>VPS, Cloud</td><td>✅ Erforderlich</td><td>Team-Zugang, Mobile Apps</td></tr>
+                <tr><td>📱 <strong>Mobile App</strong></td><td>Android/iOS</td><td>⚡ Optional (Offline-Demo)</td><td>Feldaufnahmen</td></tr>
+            </table>
+            <h3>Welches Gerät für was?</h3>
+            <table>
+                <tr><th>Ihr Ziel</th><th>Empfohlenes Setup</th><th>Internet nötig</th></tr>
+                <tr><td>🏠 <strong>Vogel-Beobachtung zuhause</strong></td><td>Windows/Mac + USB-Mikrofon</td><td>❌ Offline OK</td></tr>
+                <tr><td>🌲 <strong>Feldarbeit</strong></td><td>Raspberry Pi + externes Mikrofon</td><td>❌ Offline OK</td></tr>
+                <tr><td>📱 <strong>Mobile Aufnahmen</strong></td><td>Android App + Server zuhause</td><td>⚡ Nur für Sync</td></tr>
+                <tr><td>👥 <strong>Team/Wissenschaft</strong></td><td>Docker auf VPS/Cloud</td><td>✅ Immer online</td></tr>
+                <tr><td>🧪 <strong>Entwicklung/Tests</strong></td><td>Beliebiger PC mit Python</td><td>❌ Offline OK</td></tr>
+            </table>
+        </section>
+
+        <section id="models">
+            <h2>🤖 Verfügbare Modelle</h2>
+            <table>
+                <tr><th>Modell</th><th>Arten</th><th>Größe</th><th>Ideal für</th><th>Status</th></tr>
+                <tr><td><strong>DimaBird</strong></td><td>~500 EU</td><td>Auto-Download</td><td>🎵 Singvögel, Wald</td><td class="status-ok">✅ Aktiv</td></tr>
+                <tr><td><strong>BirdNET V2.4</strong></td><td>6.522</td><td>~150MB</td><td>🌍 Global, alle Arten</td><td class="status-ok">✅ Aktiv</td></tr>
+                <tr><td><strong>Google Perch</strong></td><td>10.000+</td><td>~500MB</td><td>🔬 Wissenschaftlich</td><td class="status-ok">✅ Optional</td></tr>
+            </table>
+            <h3>BirdNET herunterladen (Optional)</h3>
+            <pre><code># BirdNET-Modell herunterladen (~150MB)
+cd backend
+python scripts/download_models.py --models birdnet</code></pre>
+        </section>
+
+        <section>
+            <h2>✨ Funktionen</h2>
+            <div class="features">
+                <div class="feature-card"><div class="feature-icon">🤖</div><h3>Multi-Modell Analyse</h3><p>3 ML-Modelle parallel mit Konsens-Voting für zuverlässige Erkennung.</p></div>
+                <div class="feature-card"><div class="feature-icon">🗺️</div><h3>Interaktive Karte</h3><p>OpenStreetMap mit Zeit- und Artenfilter. KML/KMZ-Export für Google Earth.</p></div>
+                <div class="feature-card"><div class="feature-icon">📴</div><h3>Offline-Modus</h3><p>Demo-Modus komplett ohne Internet. Perfekt für Feldarbeit im Wald.</p></div>
+                <div class="feature-card"><div class="feature-icon">📊</div><h3>Web-Dashboard</h3><p>4 Tabs: Live-Aufnahme, Karte, Historie, Einstellungen mit echtem Mikrofon.</p></div>
+                <div class="feature-card"><div class="feature-icon">🏆</div><h3>Achievements</h3><p>Gamification mit Punktesystem. Entdecke neue Arten und sammle Erfolge.</p></div>
+                <div class="feature-card"><div class="feature-icon">📍</div><h3>GPS-Tagging</h3><p>Automatische Standort-Verknüpfung bei jeder Erkennung.</p></div>
+                <div class="feature-card"><div class="feature-icon">🍓</div><h3>Raspberry Pi</h3><p>Läuft auf Pi 4 mit systemd-Service. Perfekt für Dauerbetrieb im Garten.</p></div>
+                <div class="feature-card"><div class="feature-icon">🐳</div><h3>Docker</h3><p>Ein-Klick-Deployment mit docker-compose. Für Server und Cloud.</p></div>
             </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">🗺️</div>
-                <h3>Interaktive Karte</h3>
-                <p>OpenStreetMap mit Filter nach Zeit und Arten. KML/KMZ-Export für Google Earth.</p>
+        </section>
+
+        <section id="installation">
+            <h2>📥 Installation</h2>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="showTab('windows')">🖥️ Windows</button>
+                <button class="tab-btn" onclick="showTab('raspberry')">🍓 Raspberry Pi</button>
+                <button class="tab-btn" onclick="showTab('docker')">🐳 Docker</button>
             </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">📴</div>
-                <h3>Offline-Modus</h3>
-                <p>Demo-Modus ohne Internet. Perfekt für Feldarbeit im Wald.</p>
+            <div id="windows" class="tab-content active">
+                <h3>Voraussetzungen</h3>
+                <ul><li>Python 3.11+</li><li>Git</li></ul>
+                <h3>Installation</h3>
+                <pre><code># Repository klonen
+git clone https://github.com/donapart/Birds.git
+cd Birds\backend
+
+# Virtuelle Umgebung erstellen
+python -m venv venv
+.\venv\Scripts\activate
+
+# Abhängigkeiten installieren
+pip install -r requirements.txt
+pip install torchaudio transformers aiosqlite
+
+# Umgebung konfigurieren
+copy .env.example .env</code></pre>
+                <h3>Server starten</h3>
+                <pre><code>$env:PYTHONPATH="D:\Birds\Birds\backend"
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8003
+
+# Server: http://localhost:8003
+# API-Docs: http://localhost:8003/docs</code></pre>
             </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <h3>Web-Dashboard</h3>
-                <p>Vollständiges Dashboard mit 4 Tabs: Live-Aufnahme, Karte, Historie, Einstellungen.</p>
+            <div id="raspberry" class="tab-content">
+                <h3>Installation</h3>
+                <pre><code>sudo apt update
+sudo apt install -y python3 python3-pip python3-venv git
+
+git clone https://github.com/donapart/Birds.git
+cd Birds/backend
+
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+pip install torchaudio transformers aiosqlite
+
+cp .env.example .env
+nano .env  # USE_SQLITE=true setzen</code></pre>
+                <h3>Als systemd-Service</h3>
+                <pre><code># /etc/systemd/system/birdsound.service
+[Unit]
+Description=BirdSound API Service
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/Birds/backend
+Environment="PYTHONPATH=/home/pi/Birds/backend"
+ExecStart=/home/pi/Birds/backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8003
+Restart=always
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+                <pre><code>sudo systemctl enable birdsound
+sudo systemctl start birdsound</code></pre>
             </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">🏆</div>
-                <h3>Achievements</h3>
-                <p>Gamification mit Punktesystem. Entdecke neue Arten und sammle Erfolge.</p>
+            <div id="docker" class="tab-content">
+                <h3>Schnellstart mit Docker</h3>
+                <pre><code>git clone https://github.com/donapart/Birds.git
+cd Birds
+docker-compose up -d
+
+# API: http://localhost:8000/docs</code></pre>
             </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">🔧</div>
-                <h3>REST API</h3>
-                <p>FastAPI mit Swagger-Dokumentation. PostgreSQL oder SQLite Datenbank.</p>
-            </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">🍓</div>
-                <h3>Raspberry Pi</h3>
-                <p>Läuft auf Pi 4 mit systemd-Service. Perfekt für Dauerbetrieb im Garten.</p>
-            </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">🐳</div>
-                <h3>Docker</h3>
-                <p>Ein-Klick-Deployment mit docker-compose. Für Server und Cloud.</p>
-            </div>
-        </div>
-        
+        </section>
+
+        <section id="api">
+            <h2>🔧 REST API</h2>
+            <p>Interaktive Dokumentation unter <code>/docs</code> (Swagger UI) oder <code>/redoc</code>.</p>
+            <h3>Hauptendpunkte</h3>
+            <table>
+                <tr><th>Endpunkt</th><th>Methode</th><th>Beschreibung</th></tr>
+                <tr><td><code>/api/v1/predict/quick</code></td><td>POST</td><td>Schnellvorhersage (ohne DB)</td></tr>
+                <tr><td><code>/api/v1/predict</code></td><td>POST</td><td>Vorhersage mit Speicherung</td></tr>
+                <tr><td><code>/api/v1/predict/upload</code></td><td>POST</td><td>Audio-Datei hochladen</td></tr>
+                <tr><td><code>/api/v1/models</code></td><td>GET</td><td>Verfügbare Modelle</td></tr>
+                <tr><td><code>/api/v1/species</code></td><td>GET</td><td>Artensuche</td></tr>
+                <tr><td><code>/api/v1/recordings</code></td><td>GET</td><td>Aufnahmen auflisten</td></tr>
+                <tr><td><code>/api/v1/export/kml</code></td><td>GET</td><td>KML-Export</td></tr>
+                <tr><td><code>/api/v1/health</code></td><td>GET</td><td>Health-Check</td></tr>
+            </table>
+            <h3>Beispiel: Vorhersage-Antwort</h3>
+            <pre><code>{
+  "consensus": {
+    "species_common": "Rotkehlchen",
+    "species_scientific": "Erithacus rubecula",
+    "confidence": 0.85
+  },
+  "model_results": [
+    {"model_name": "DimaBird", "predictions": [...], "inference_time_ms": 234}
+  ]
+}</code></pre>
+        </section>
+
+        <section id="mobile">
+            <h2>📱 Mobile App</h2>
+            <p>Die App funktioniert auf Android und iOS mit <strong>Offline-Demo-Modus</strong>:</p>
+            <ul>
+                <li>🎙️ Audio-Aufnahme mit Echtzeit-Analyse</li>
+                <li>📍 GPS-Standort-Tagging</li>
+                <li>📴 Offline-Demo-Modus (ohne Server)</li>
+                <li>📤 KML-Export für Google Earth</li>
+                <li>🗺️ Interaktive Karte mit Erkennungen</li>
+                <li>🏆 Achievement-System</li>
+            </ul>
+            <h3>APK bauen</h3>
+            <pre><code>cd mobile/expo-app
+npm install
+npx expo prebuild --platform android
+cd android
+./gradlew assembleRelease</code></pre>
+        </section>
+
+        <section id="architecture">
+            <h2>🏗️ Architektur</h2>
+            <div class="architecture">┌─────────────────┐     ┌─────────────────────────────────────┐
+│   Mobile App    │     │         Backend (FastAPI)            │
+│   (Expo/RN)     │────▶│                                      │
+│                 │     │  ┌─────────┐  ┌──────────────────┐  │
+│  - Audio Capture│     │  │ BirdNET │  │  DimaBird        │  │
+│  - GPS Location │     │  │ (ONNX)  │  │  (HuggingFace)   │  │
+└─────────────────┘     │  └────┬────┘  └────────┬─────────┘  │
+                        │       └───────┬────────┘             │
+┌─────────────────┐     │               ▼                      │
+│  Web Dashboard  │────▶│       ┌───────────────┐              │
+│  (Browser)      │     │       │   Consensus   │              │
+│                 │     │       │    Engine     │              │
+│  - Live Tab     │     │       └───────┬───────┘              │
+│  - Karte Tab    │     │               ▼                      │
+│  - Historie     │     │       ┌───────────────┐              │
+│  - Settings     │     │       │  PostgreSQL   │              │
+└─────────────────┘     │       │   or SQLite   │              │
+                        └───────────────────────────────────────┘</div>
+            <h3>Projektstruktur</h3>
+            <pre><code>Birds/
+├── backend/          # FastAPI Server
+│   ├── app/          # Hauptcode
+│   ├── scripts/      # Hilfsskripte
+│   └── tests/        # Unit-Tests
+├── mobile/           # Expo/React Native App
+├── installer/        # Windows/NSIS Installer
+├── docs/             # GitHub Pages
+└── docker-compose.yml</code></pre>
+        </section>
+
+        <section id="changelog">
+            <h2>📋 Changelog</h2>
+            <h3>v5.3.2 (2024-12-01)</h3>
+            <ul>
+                <li>🐛 <strong>AbortSignal Fix</strong> für ältere Android-Versionen</li>
+                <li>🖥️ <strong>Vollständiges Web-Dashboard</strong> mit 4 Tabs</li>
+                <li>🤖 <strong>Modell-Anzeige</strong> im Web und App</li>
+            </ul>
+            <h3>v5.3.0 (2024-12-01)</h3>
+            <ul>
+                <li>✨ <strong>Interaktive Karte</strong> mit OpenStreetMap/Leaflet</li>
+                <li>🔍 <strong>Kartenfilter</strong> nach Zeit und Arten</li>
+                <li>🐦 <strong>45+ Vogelarten</strong> in der Bibliothek</li>
+            </ul>
+            <h3>v5.2.x (2024-11)</h3>
+            <ul>
+                <li>🤖 <strong>Google Perch Model</strong> integriert</li>
+                <li>🗺️ Map-Tab hinzugefügt</li>
+            </ul>
+            <h3>v5.1.x (2024-11)</h3>
+            <ul>
+                <li>🎯 <strong>Multi-Model Support</strong></li>
+                <li>🏆 Achievement-System</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>⚡ Performance</h2>
+            <table>
+                <tr><th>Plattform</th><th>Modell-Laden</th><th>Inferenzzeit</th><th>Speicher</th></tr>
+                <tr><td><strong>Windows PC</strong></td><td>~8 Sekunden</td><td>~200-300ms</td><td>~2GB</td></tr>
+                <tr><td><strong>Raspberry Pi 4</strong></td><td>~15-20 Sekunden</td><td>~800ms-1.5s</td><td>~1.5GB</td></tr>
+            </table>
+        </section>
+
         <footer>
             <p>
                 <a href="https://github.com/donapart/Birds">GitHub</a> · 
                 <a href="https://github.com/donapart/Birds/issues">Issues</a> · 
-                <a href="https://github.com/donapart/Birds/blob/main/README.md">Dokumentation</a>
+                <a href="https://github.com/donapart/Birds/blob/main/README.md">Vollständige README</a>
             </p>
             <p style="margin-top: 1rem;">
                 MIT License · Powered by <a href="https://birdnet.cornell.edu/">BirdNET</a>, <a href="https://huggingface.co/">HuggingFace</a> & <a href="https://tfhub.dev/google/bird-vocalization-classifier">Google Perch</a>
             </p>
+            <p style="margin-top: 0.5rem; font-size: 0.8rem;">© 2024-2025 BirdSound Project</p>
         </footer>
     </div>
+
+    <script>
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+        document.querySelectorAll('nav a, a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const href = this.getAttribute('href');
+                if (href.startsWith('#')) {
+                    e.preventDefault();
+                    const target = document.querySelector(href);
+                    if (target) target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
 </body>
 </html>
