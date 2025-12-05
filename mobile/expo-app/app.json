@@ -2,7 +2,7 @@
   "expo": {
     "name": "BirdSound",
     "slug": "birdsound",
-    "version": "2.0.0",
+    "version": "5.5.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -17,12 +17,13 @@
       "bundleIdentifier": "com.birdsound.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "BirdSound benötigt Mikrofonzugriff für die Vogelstimmen-Aufnahme.",
-        "NSLocationWhenInUseUsageDescription": "BirdSound nutzt den Standort für die Geo-Filterung der Vogelarten."
+        "NSLocationWhenInUseUsageDescription": "BirdSound nutzt den Standort für die Geo-Filterung der Vogelarten.",
+        "UIBackgroundModes": ["audio", "location", "fetch", "processing"]
       }
     },
     "android": {
       "package": "com.birdsound.app",
-      "versionCode": 20,
+      "versionCode": 55,
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -33,6 +34,10 @@
         "MODIFY_AUDIO_SETTINGS",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MICROPHONE",
+        "WAKE_LOCK",
         "INTERNET",
         "WRITE_EXTERNAL_STORAGE",
         "READ_EXTERNAL_STORAGE",
@@ -52,7 +57,10 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "BirdSound nutzt den Standort für die Geo-Filterung der Vogelarten."
+          "locationWhenInUsePermission": "BirdSound nutzt den Standort für die Geo-Filterung der Vogelarten.",
+          "locationAlwaysAndWhenInUsePermission": "BirdSound nutzt den Standort im Hintergrund für kontinuierliche Vogelerkennung.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true
         }
       ]
     ],

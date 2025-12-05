@@ -8,12 +8,12 @@
 
 ### Quick Reference
 
-**Base URL:** `http://localhost:8002/api/v1`
+**Base URL:** `http://localhost:8003/api/v1`
 
 **Interactive Documentation:**
 
-- Swagger UI: <http://localhost:8002/docs>
-- ReDoc: <http://localhost:8002/redoc>
+- Swagger UI: <http://localhost:8003/docs>
+- ReDoc: <http://localhost:8003/redoc>
 
 **Language Support:**
 
@@ -38,15 +38,15 @@ GET /api/v1/health
 ```json
 {
   "status": "healthy",
-  "models_loaded": 1,
-  "models": ["DimaBird"]
+  "models_loaded": 3,
+  "models": ["DimaBird", "BirdNET", "Perch"]
 }
 ```
 
 **cURL Example:**
 
 ```bash
-curl http://localhost:8002/api/v1/health
+curl http://localhost:8003/health
 ```
 
 ---
@@ -67,6 +67,21 @@ GET /api/v1/models
     "name": "DimaBird",
     "version": "dima806/bird_sounds_classification",
     "type": "huggingface",
+    "species_count": 50,
+    "status": "loaded"
+  },
+  {
+    "name": "BirdNET",
+    "version": "2.4-official",
+    "type": "tensorflow",
+    "species_count": 6522,
+    "status": "loaded"
+  },
+  {
+    "name": "Perch",
+    "version": "1.0.0",
+    "type": "tensorflow-hub",
+    "species_count": 15000,
     "status": "loaded"
   }
 ]
@@ -77,7 +92,7 @@ GET /api/v1/models
 ```python
 import requests
 
-response = requests.get("http://localhost:8002/api/v1/models")
+response = requests.get("http://localhost:8003/api/v1/models")
 models = response.json()
 print(f"Loaded models: {[m['name'] for m in models]}")
 ```
@@ -154,7 +169,7 @@ with open("bird_sound.wav", "rb") as f:
 
 # Make prediction
 response = requests.post(
-    "http://localhost:8002/api/v1/predict/quick",
+    "http://localhost:8003/api/v1/predict/quick",
     json={
         "device_id": "python-client",
         "timestamp_utc": "2025-11-29T12:00:00Z",
@@ -215,7 +230,7 @@ async function predictBirdSound(audioBlob) {
   });
 
   // Make prediction
-  const response = await fetch('http://localhost:8002/api/v1/predict', {
+  const response = await fetch('http://localhost:8003/api/v1/predict', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -270,7 +285,7 @@ GET /api/v1/species?search={query}&limit=10&lang=en
 **cURL Example:**
 
 ```bash
-curl "http://localhost:8002/api/v1/species?search=robin&lang=en"
+curl "http://localhost:8003/api/v1/species?search=robin&lang=en"
 ```
 
 ---
@@ -378,7 +393,7 @@ GET /api/v1/export/csv?start_date=2025-11-01&end_date=2025-11-30&min_confidence=
 **cURL Example:**
 
 ```bash
-curl "http://localhost:8002/api/v1/export/csv?start_date=2025-11-01" -o recordings.csv
+curl "http://localhost:8003/api/v1/export/csv?start_date=2025-11-01" -o recordings.csv
 ```
 
 ---
@@ -406,7 +421,7 @@ All endpoints return standard HTTP status codes:
 import requests
 
 try:
-    response = requests.post("http://localhost:8002/api/v1/predict/quick", json=data)
+    response = requests.post("http://localhost:8003/api/v1/predict/quick", json=data)
     response.raise_for_status()  # Raise exception for 4xx/5xx
     result = response.json()
 except requests.exceptions.HTTPError as e:
@@ -430,7 +445,7 @@ Currently no rate limiting (add if deploying publicly).
 For continuous audio streaming (advanced use case).
 
 ```javascript
-const ws = new WebSocket('ws://localhost:8002/api/v1/ws/predict');
+const ws = new WebSocket('ws://localhost:8003/api/v1/ws/predict');
 
 ws.onopen = () => {
   console.log('Connected to prediction stream');
@@ -460,12 +475,12 @@ ws.send(JSON.stringify({
 
 ### Schnellreferenz
 
-**Basis-URL:** `http://localhost:8002/api/v1`
+**Basis-URL:** `http://localhost:8003/api/v1`
 
 **Interaktive Dokumentation:**
 
-- Swagger UI: <http://localhost:8002/docs>
-- ReDoc: <http://localhost:8002/redoc>
+- Swagger UI: <http://localhost:8003/docs>
+- ReDoc: <http://localhost:8003/redoc>
 
 **Sprachunterstützung:**
 
@@ -511,7 +526,7 @@ with open("vogel.wav", "rb") as f:
 
 # Vorhersage machen
 response = requests.post(
-    "http://localhost:8002/api/v1/predict/quick",
+    "http://localhost:8003/api/v1/predict/quick",
     json={
         "device_id": "python-client",
         "timestamp_utc": "2025-11-29T12:00:00Z",
@@ -538,17 +553,17 @@ GET /api/v1/species?search=rotkehlchen&lang=de
 **cURL-Beispiel:**
 
 ```bash
-curl "http://localhost:8002/api/v1/species?search=rotkehlchen&lang=de"
+curl "http://localhost:8003/api/v1/species?search=rotkehlchen&lang=de"
 ```
 
 #### 4. Aufzeichnungen exportieren
 
 ```bash
 # Als CSV exportieren
-curl "http://localhost:8002/api/v1/export/csv?start_date=2025-11-01" -o aufzeichnungen.csv
+curl "http://localhost:8003/api/v1/export/csv?start_date=2025-11-01" -o aufzeichnungen.csv
 
 # Als JSON exportieren
-curl "http://localhost:8002/api/v1/export/json?start_date=2025-11-01" -o aufzeichnungen.json
+curl "http://localhost:8003/api/v1/export/json?start_date=2025-11-01" -o aufzeichnungen.json
 ```
 
 ---
@@ -569,7 +584,7 @@ import sounddevice as sd
 import soundfile as sf
 import numpy as np
 
-API_BASE = "http://localhost:8002/api/v1"
+API_BASE = "http://localhost:8003/api/v1"
 DEVICE_ID = "python-recorder"
 SAMPLE_RATE = 48000
 DURATION = 3  # seconds
@@ -650,7 +665,7 @@ if __name__ == "__main__":
 import axios from 'axios';
 import * as fs from 'fs';
 
-const API_BASE = 'http://localhost:8002/api/v1';
+const API_BASE = 'http://localhost:8003/api/v1';
 
 interface PredictionRequest {
   device_id: string;
@@ -703,6 +718,6 @@ predictBird('./bird_sound.wav')
 
 ## Support
 
-- Interactive Docs: <http://localhost:8002/docs>
+- Interactive Docs: <http://localhost:8003/docs>
 - GitHub Issues: <https://github.com/yourusername/Birds/issues>
 - Full Documentation: See README.md

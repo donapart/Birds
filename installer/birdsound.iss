@@ -1,12 +1,12 @@
 ; BirdSound Windows Installer Script
-; Inno Setup Script für BirdSound v1.0.0
+; Inno Setup Script für BirdSound v5.4.0
 
 #define MyAppName "BirdSound"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "5.4.0"
 #define MyAppPublisher "BirdSound Project"
 #define MyAppURL "https://github.com/donapart/Birds"
 #define MyAppExeName "start_server.bat"
-#define SourceDir "d:\Birds\Birds"
+#define SourceDir "d:\Projekte\Birds"
 
 [Setup]
 AppId={{8A9F4B2C-1234-5678-9ABC-DEF012345678}

@@ -1,9 +1,10 @@
 /**
- * BirdSound v5.2.0 - Multi-Model, Session Reports, Advanced Settings, MAP VIEW
+ * BirdSound v5.5.0 - Multi-Model, Session Reports, Advanced Settings, MAP VIEW, BACKGROUND RECORDING, 3D SPECTROGRAM
  */
-import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, StatusBar, Platform, Alert, TextInput, Modal, Switch, Share, FlatList, Dimensions } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, StatusBar, Platform, Alert, TextInput, Modal, Switch, Share, FlatList, Dimensions, AppState } from 'react-native';
 import MapView, { Marker, Callout } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import * as FileSystem from 'expo-file-system';
@@ -11,20 +12,457 @@ import * as Sharing from 'expo-sharing';
 import * as Network from 'expo-network';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import * as TaskManager from 'expo-task-manager';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { BIRD_LIBRARY } from './src/data/BirdLibrary';
 import { ACHIEVEMENTS, calculateUnlockedAchievements, calculateTotalPoints, getRank } from './src/data/Achievements';
 
 const URL = 'https://available-nonsegmentary-arlene.ngrok-free.dev';
+const BACKGROUND_LOCATION_TASK = 'background-location-task';
+
+// 3D Spektrogramm (Wasserfall-Diagramm) HTML/WebGL
+const SPECTROGRAM_HTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a1a2e; overflow: hidden; touch-action: none; }
+    canvas { display: block; width: 100%; height: 100%; }
+    #info { position: absolute; bottom: 8px; left: 8px; color: #4ecdc4; font-family: monospace; font-size: 10px; opacity: 0.8; }
+    #freq { position: absolute; top: 8px; right: 8px; color: #fff; font-family: monospace; font-size: 11px; text-align: right; line-height: 1.6; }
+    #axes { position: absolute; bottom: 8px; right: 8px; color: #888; font-family: monospace; font-size: 9px; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div id="info">3D Spektrogramm</div>
+  <div id="freq">
+    <div style="color:#00ff00">8kHz</div>
+    <div style="color:#80ff00">4kHz</div>
+    <div style="color:#ffff00">2kHz</div>
+    <div style="color:#ff8000">1kHz</div>
+  </div>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const info = document.getElementById('info');
+    
+    // Konfiguration - Waterfall Chart Style
+    const CONFIG = {
+      bands: 128,          // Mehr Frequenzbänder für feinere Auflösung
+      history: 100,        // Längere Zeithistorie (Tiefe)
+      perspective: 800,    // Perspektive-Distanz
+      rotationX: 0.65,     // X-Rotation (Neigung) - flacher Blickwinkel
+      rotationY: -0.35,    // Y-Rotation - leicht gedreht
+      smoothing: 0.6,      // Glättung
+      heightScale: 200,    // Höhenskalierung der Balken
+      baseHeight: 0,       // Basishöhe
+      gridLines: true,     // Gitterlinien anzeigen
+    };
+    
+    // Datenstrukturen
+    let spectrogramData = [];
+    let currentBands = new Array(CONFIG.bands).fill(0);
+    let animationId = null;
+    
+    // Canvas-Größe
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      ctx.scale(dpr, dpr);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+    
+    // Waterfall-Farbpalette: Rot -> Orange -> Gelb -> Grün (wie in den Screenshots)
+    function getWaterfallColor(value) {
+      const v = Math.min(1, Math.max(0, value));
+      let r, g, b;
+      
+      if (v < 0.25) {
+        // Rot zu Orange
+        const t = v / 0.25;
+        r = 255;
+        g = Math.floor(80 * t);
+        b = 0;
+      } else if (v < 0.5) {
+        // Orange zu Gelb
+        const t = (v - 0.25) / 0.25;
+        r = 255;
+        g = 80 + Math.floor(175 * t);
+        b = 0;
+      } else if (v < 0.75) {
+        // Gelb zu Hellgrün
+        const t = (v - 0.5) / 0.25;
+        r = 255 - Math.floor(155 * t);
+        g = 255;
+        b = 0;
+      } else {
+        // Hellgrün zu Grün
+        const t = (v - 0.75) / 0.25;
+        r = 100 - Math.floor(100 * t);
+        g = 255;
+        b = Math.floor(50 * t);
+      }
+      
+      return { r, g, b };
+    }
+    
+    // 3D Projektion - isometrische Perspektive wie Waterfall Chart
+    function project3D(x, y, z) {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const centerX = w * 0.5;
+      const centerY = h * 0.75;
+      
+      // Rotation anwenden
+      const cosX = Math.cos(CONFIG.rotationX);
+      const sinX = Math.sin(CONFIG.rotationX);
+      const cosY = Math.cos(CONFIG.rotationY);
+      const sinY = Math.sin(CONFIG.rotationY);
+      
+      // Y-Achsen-Rotation
+      const x1 = x * cosY - z * sinY;
+      const z1 = x * sinY + z * cosY;
+      
+      // X-Achsen-Rotation
+      const y1 = y * cosX - z1 * sinX;
+      const z2 = y * sinX + z1 * cosX;
+      
+      // Perspektivische Projektion
+      const scale = CONFIG.perspective / (CONFIG.perspective + z2);
+      
+      return {
+        x: centerX + x1 * scale,
+        y: centerY - y1 * scale,
+        z: z2,
+        scale: scale
+      };
+    }
+    
+    // Zeichne Gitterlinien auf der Grundfläche
+    function drawGrid() {
+      const w = window.innerWidth;
+      const gridWidth = w * 0.8;
+      const gridDepth = w * 0.6;
+      const gridLines = 10;
+      
+      ctx.strokeStyle = 'rgba(100, 100, 120, 0.4)';
+      ctx.lineWidth = 1;
+      
+      // Horizontale Linien (Frequenz)
+      for (let i = 0; i <= gridLines; i++) {
+        const x = -gridWidth/2 + (i / gridLines) * gridWidth;
+        const p1 = project3D(x, 0, 0);
+        const p2 = project3D(x, 0, gridDepth);
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+      
+      // Vertikale Linien (Zeit)
+      for (let i = 0; i <= gridLines; i++) {
+        const z = (i / gridLines) * gridDepth;
+        const p1 = project3D(-gridWidth/2, 0, z);
+        const p2 = project3D(gridWidth/2, 0, z);
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+      
+      // Achsenbeschriftung
+      ctx.fillStyle = '#888';
+      ctx.font = '10px monospace';
+      
+      // Frequenz-Achse
+      const freqLabels = ['1kHz', '2kHz', '4kHz', '8kHz'];
+      freqLabels.forEach((label, i) => {
+        const x = -gridWidth/2 + ((i + 1) / 5) * gridWidth;
+        const p = project3D(x, 0, gridDepth + 20);
+        ctx.fillText(label, p.x - 15, p.y + 15);
+      });
+    }
+    
+    // Zeichne Achsen
+    function drawAxes() {
+      const w = window.innerWidth;
+      const axisLen = w * 0.1;
+      
+      // Y-Achse (Amplitude)
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 1;
+      
+      const origin = project3D(-w * 0.4, 0, 0);
+      const yTop = project3D(-w * 0.4, CONFIG.heightScale * 1.2, 0);
+      
+      ctx.beginPath();
+      ctx.moveTo(origin.x, origin.y);
+      ctx.lineTo(yTop.x, yTop.y);
+      ctx.stroke();
+      
+      // Y-Achsen-Striche
+      for (let i = 1; i <= 4; i++) {
+        const y = (i / 4) * CONFIG.heightScale * 1.2;
+        const p = project3D(-w * 0.4, y, 0);
+        ctx.beginPath();
+        ctx.moveTo(p.x - 5, p.y);
+        ctx.lineTo(p.x + 5, p.y);
+        ctx.stroke();
+      }
+    }
+    
+    // Hauptzeichenfunktion - Waterfall 3D
+    function draw() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      
+      // Hintergrund
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(0, 0, w, h);
+      
+      // Gitter und Achsen
+      if (CONFIG.gridLines) {
+        drawGrid();
+        drawAxes();
+      }
+      
+      const gridWidth = w * 0.8;
+      const gridDepth = w * 0.6;
+      const bandWidth = gridWidth / CONFIG.bands;
+      const rowDepth = gridDepth / CONFIG.history;
+      
+      // Spektrogramm von hinten nach vorne zeichnen (Painter's Algorithm)
+      for (let z = spectrogramData.length - 1; z >= 0; z--) {
+        const row = spectrogramData[z];
+        if (!row) continue;
+        
+        const zPos = z * rowDepth;
+        const nextZPos = (z + 1) * rowDepth;
+        
+        for (let x = 0; x < row.length - 1; x++) {
+          const value = row[x] || 0;
+          const nextValue = row[x + 1] || 0;
+          const nextRowValue = (spectrogramData[z + 1] && spectrogramData[z + 1][x]) || 0;
+          const nextRowNextValue = (spectrogramData[z + 1] && spectrogramData[z + 1][x + 1]) || 0;
+          
+          const xPos = -gridWidth/2 + x * bandWidth;
+          const nextXPos = -gridWidth/2 + (x + 1) * bandWidth;
+          
+          const height = value * CONFIG.heightScale;
+          const nextHeight = nextValue * CONFIG.heightScale;
+          const backHeight = nextRowValue * CONFIG.heightScale;
+          const backNextHeight = nextRowNextValue * CONFIG.heightScale;
+          
+          // 4 Eckpunkte der Oberfläche
+          const p1 = project3D(xPos, height, zPos);
+          const p2 = project3D(nextXPos, nextHeight, zPos);
+          const p3 = project3D(nextXPos, backNextHeight, nextZPos);
+          const p4 = project3D(xPos, backHeight, nextZPos);
+          
+          // Durchschnittswert für Farbe
+          const avgValue = (value + nextValue + nextRowValue + nextRowNextValue) / 4;
+          
+          if (avgValue > 0.01) {
+            const color = getWaterfallColor(avgValue);
+            
+            // Schattierung basierend auf Tiefe
+            const depthFade = 1 - (z / CONFIG.history) * 0.5;
+            const r = Math.floor(color.r * depthFade);
+            const g = Math.floor(color.g * depthFade);
+            const b = Math.floor(color.b * depthFade);
+            
+            // Fläche zeichnen
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.lineTo(p3.x, p3.y);
+            ctx.lineTo(p4.x, p4.y);
+            ctx.closePath();
+            
+            ctx.fillStyle = \`rgb(\${r},\${g},\${b})\`;
+            ctx.fill();
+            
+            // Leichte Konturlinie für 3D-Effekt
+            if (avgValue > 0.1) {
+              ctx.strokeStyle = \`rgba(\${Math.min(255, r + 30)},\${Math.min(255, g + 30)},\${b},0.3)\`;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+          
+          // Vertikale Balken von der Grundfläche - nur für stärkere Signale
+          if (value > 0.15 && z < 3) {
+            const base = project3D(xPos + bandWidth/2, 0, zPos);
+            const top = project3D(xPos + bandWidth/2, height, zPos);
+            
+            const color = getWaterfallColor(value);
+            ctx.strokeStyle = \`rgba(\${color.r},\${color.g},\${color.b},0.6)\`;
+            ctx.lineWidth = Math.max(1, bandWidth * p1.scale * 0.5);
+            ctx.beginPath();
+            ctx.moveTo(base.x, base.y);
+            ctx.lineTo(top.x, top.y);
+            ctx.stroke();
+          }
+        }
+      }
+      
+      // Info aktualisieren
+      const maxBand = currentBands.indexOf(Math.max(...currentBands));
+      const dominantFreq = Math.round((maxBand / CONFIG.bands) * 8000);
+      const maxVal = Math.max(...currentBands);
+      if (dominantFreq > 200 && maxVal > 0.05) {
+        info.textContent = \`🎵 \${dominantFreq} Hz • Level: \${Math.round(maxVal * 100)}%\`;
+      } else {
+        info.textContent = '3D Spektrogramm';
+      }
+    }
+    
+    // Animation
+    function animate() {
+      draw();
+      animationId = requestAnimationFrame(animate);
+    }
+    animate();
+    
+    // Audio-Daten vom React Native empfangen
+    function updateSpectrum(data) {
+      if (!data || !data.length) return;
+      
+      // Smooth interpolation
+      for (let i = 0; i < CONFIG.bands; i++) {
+        const srcIdx = Math.floor(i * data.length / CONFIG.bands);
+        const value = data[srcIdx] || 0;
+        currentBands[i] = currentBands[i] * CONFIG.smoothing + value * (1 - CONFIG.smoothing);
+      }
+      
+      // Add to history
+      spectrogramData.unshift([...currentBands]);
+      if (spectrogramData.length > CONFIG.history) {
+        spectrogramData.pop();
+      }
+    }
+    
+    // Simulierte Frequenzdaten basierend auf Audio-Level
+    function updateFromLevel(level) {
+      const normalizedLevel = Math.min(1, level / 100);
+      const bands = new Array(CONFIG.bands);
+      
+      for (let i = 0; i < CONFIG.bands; i++) {
+        const freqFactor = i / CONFIG.bands;
+        // Vogelstimmen: 1-8 kHz, Peak bei 2-4 kHz
+        const birdPeak1 = Math.exp(-Math.pow((freqFactor - 0.3) * 4, 2));
+        const birdPeak2 = Math.exp(-Math.pow((freqFactor - 0.5) * 5, 2)) * 0.7;
+        const birdWeight = birdPeak1 + birdPeak2;
+        
+        // Natürliche Variation mit Harmonischen
+        const harmonics = Math.sin(freqFactor * Math.PI * 8) * 0.2 + 0.8;
+        const noise = 0.5 + Math.random() * 0.5;
+        
+        bands[i] = normalizedLevel * birdWeight * noise * harmonics;
+      }
+      
+      updateSpectrum(bands);
+    }
+    
+    // Clear Spektrogramm
+    function clearSpectrum() {
+      spectrogramData = [];
+      currentBands = new Array(CONFIG.bands).fill(0);
+    }
+    
+    // Handler für Nachrichten von React Native
+    function handleMessage(event) {
+      try {
+        const data = event.data || event.detail;
+        const msg = typeof data === 'string' ? JSON.parse(data) : data;
+        if (msg.type === 'level') {
+          updateFromLevel(msg.value);
+        } else if (msg.type === 'spectrum') {
+          updateSpectrum(msg.data);
+        } else if (msg.type === 'clear') {
+          clearSpectrum();
+        } else if (msg.type === 'config') {
+          Object.assign(CONFIG, msg.config);
+        }
+      } catch(e) { console.log('Message parse error:', e); }
+    }
+    
+    // Beide Event-Typen für Android und iOS Kompatibilität
+    window.addEventListener('message', handleMessage);
+    document.addEventListener('message', handleMessage);
+    
+    // Touch-Interaktion für Rotation
+    let touchStart = null;
+    let lastPinchDist = 0;
+    
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      } else if (e.touches.length === 2) {
+        lastPinchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+      }
+    });
+    
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1 && touchStart) {
+        const dx = e.touches[0].clientX - touchStart.x;
+        const dy = e.touches[0].clientY - touchStart.y;
+        CONFIG.rotationY = Math.max(-1, Math.min(1, CONFIG.rotationY + dx * 0.003));
+        CONFIG.rotationX = Math.max(0.3, Math.min(1.2, CONFIG.rotationX + dy * 0.003));
+        touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      } else if (e.touches.length === 2) {
+        const dist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        const delta = dist - lastPinchDist;
+        CONFIG.heightScale = Math.max(50, Math.min(400, CONFIG.heightScale + delta * 0.5));
+        lastPinchDist = dist;
+      }
+    });
+    
+    canvas.addEventListener('touchend', () => { touchStart = null; });
+  </script>
+</body>
+</html>
+`;
+
+// Background Location Task für kontinuierliche Updates
+TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
+  if (error) {
+    console.error('Background location error:', error);
+    return;
+  }
+  if (data) {
+    const { locations } = data;
+    // Speichere letzten Standort für Background-Aufnahmen
+    if (locations && locations.length > 0) {
+      const latestLocation = locations[locations.length - 1];
+      await AsyncStorage.setItem('lastBackgroundLocation', JSON.stringify(latestLocation.coords));
+    }
+  }
+});
 
 export default function App() {
   const [settings, setSettings] = useState({
     backendUrl: URL, chunkDuration: 3, minConfidence: 0.1, enableGPS: true, offlineMode: true,
     selectedModel: null, consensusMethod: 'weighted_average', autoStopMinutes: 0,
+    backgroundRecording: false,  // Neue Einstellung für Hintergrund-Aufnahme
   });
   const [availableModels, setAvailableModels] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isInBackground, setIsInBackground] = useState(false);
   const [streamTime, setStreamTime] = useState(0);
   const [audioLevel, setAudioLevel] = useState(0);
   const [location, setLocation] = useState(null);
@@ -46,12 +484,60 @@ export default function App() {
   const analysisRef = useRef(null);
   const autoStopRef = useRef(null);
   const sessionRef = useRef(null);
+  const appStateRef = useRef(AppState.currentState);
+  const spectrogramRef = useRef(null);
+
+  // Sende Audio-Level an 3D-Spektrogramm WebView
+  const updateSpectrogram = useCallback((level) => {
+    if (spectrogramRef.current) {
+      spectrogramRef.current.postMessage(JSON.stringify({ type: 'level', value: level }));
+    }
+  }, []);
+
+  const clearSpectrogram = useCallback(() => {
+    if (spectrogramRef.current) {
+      spectrogramRef.current.postMessage(JSON.stringify({ type: 'clear' }));
+    }
+  }, []);
+
+  // AppState Listener für Background-Erkennung
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, [isStreaming, settings.backgroundRecording]);
+
+  const handleAppStateChange = async (nextAppState) => {
+    const wasInBackground = appStateRef.current.match(/inactive|background/);
+    const isNowActive = nextAppState === 'active';
+    
+    if (wasInBackground && isNowActive) {
+      // App kommt in den Vordergrund
+      setIsInBackground(false);
+      console.log('App active - resuming foreground mode');
+    } else if (appStateRef.current === 'active' && nextAppState.match(/inactive|background/)) {
+      // App geht in den Hintergrund
+      setIsInBackground(true);
+      console.log('App backgrounded - streaming:', isStreaming, 'bgEnabled:', settings.backgroundRecording);
+      
+      if (isStreaming && settings.backgroundRecording) {
+        // Halte App wach für Hintergrund-Aufnahme
+        await activateKeepAwakeAsync('birdsound-recording');
+        console.log('Keep-awake activated for background recording');
+      }
+    }
+    
+    appStateRef.current = nextAppState;
+  };
 
   useEffect(() => { init(); return cleanup; }, []);
   useEffect(() => { const i = setInterval(checkNetwork, 10000); return () => clearInterval(i); }, []);
 
   const init = async () => {
-    await loadData(); await checkNetwork(); await checkBackend(); await fetchModels();
+    const savedUrl = await loadData();
+    const url = savedUrl || URL;
+    await checkNetwork();
+    await checkBackend(url);
+    await fetchModels(url);
     if (settings.enableGPS) initGPS();
   };
 
@@ -68,8 +554,14 @@ export default function App() {
       if (stats) setUserStats(JSON.parse(stats));
       if (queue) setOfflineQueue(JSON.parse(queue));
       if (sessions) setSessionHistory(JSON.parse(sessions));
-      if (saved) setSettings(s => ({ ...s, ...JSON.parse(saved) }));
-    } catch (e) {}
+      let savedUrl = null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setSettings(s => ({ ...s, ...parsed }));
+        savedUrl = parsed.backendUrl;
+      }
+      return savedUrl;
+    } catch (e) { return null; }
   };
 
   const saveData = async (key, data) => { try { await AsyncStorage.setItem(key, JSON.stringify(data)); } catch (e) {} };
@@ -82,34 +574,92 @@ export default function App() {
     } catch (e) { setIsOnline(false); }
   };
 
-  const checkBackend = async () => {
+  const fetchWithTimeout = async (url, options = {}, timeout = 5000) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
     try {
-      const r = await fetch(`${settings.backendUrl}/health`, { headers: { 'ngrok-skip-browser-warning': '1' }, signal: AbortSignal.timeout(5000) });
-      const d = await r.json();
-      setIsConnected(d.status === 'healthy');
-    } catch (e) { setIsConnected(false); }
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(id);
+      return response;
+    } catch (e) {
+      clearTimeout(id);
+      throw e;
+    }
   };
 
-  const fetchModels = async () => {
+  const checkBackend = async (url) => {
+    const backendUrl = url || settings.backendUrl;
     try {
-      const r = await fetch(`${settings.backendUrl}/api/v1/models`, { headers: { 'ngrok-skip-browser-warning': '1' }, signal: AbortSignal.timeout(5000) });
+      const r = await fetchWithTimeout(`${backendUrl}/health`, { headers: { 'ngrok-skip-browser-warning': '1' } });
       const d = await r.json();
+      setIsConnected(d.status === 'healthy');
+    } catch (e) { setIsConnected(false); console.log('Backend check failed:', e.message); }
+  };
+
+  const fetchModels = async (url) => {
+    const backendUrl = url || settings.backendUrl;
+    try {
+      console.log('Fetching models from:', backendUrl);
+      const r = await fetchWithTimeout(`${backendUrl}/api/v1/models`, { headers: { 'ngrok-skip-browser-warning': '1' } });
+      const d = await r.json();
+      console.log('Models response:', d);
       if (d.models) setAvailableModels(d.models);
-    } catch (e) {}
+    } catch (e) { console.log('Fetch models failed:', e.message); }
   };
 
   const initGPS = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') { const loc = await Location.getCurrentPositionAsync({}); setLocation(loc.coords); }
-    } catch (e) {}
+      if (status === 'granted') { 
+        const loc = await Location.getCurrentPositionAsync({}); 
+        setLocation(loc.coords);
+        
+        // Für Background-Recording: Background-Location-Permission anfragen
+        if (settings.backgroundRecording) {
+          const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
+          if (bgStatus === 'granted') {
+            console.log('Background location permission granted');
+          }
+        }
+      }
+    } catch (e) { console.log('GPS init error:', e); }
   };
 
   const startStreaming = async () => {
     try {
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') { Alert.alert('Fehler', 'Mikrofon benötigt'); return; }
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      
+      // Audio-Modus für Background-Recording konfigurieren
+      await Audio.setAudioModeAsync({ 
+        allowsRecordingIOS: true, 
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: settings.backgroundRecording,  // WICHTIG für iOS Background
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+      
+      // Keep-Awake aktivieren wenn Background-Recording aktiv
+      if (settings.backgroundRecording) {
+        await activateKeepAwakeAsync('birdsound-recording');
+        
+        // Starte Background-Location-Tracking für kontinuierliche Standort-Updates
+        if (settings.enableGPS) {
+          const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
+          if (bgStatus === 'granted') {
+            await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+              accuracy: Location.Accuracy.Balanced,
+              timeInterval: 30000,  // Alle 30 Sekunden
+              distanceInterval: 50, // Oder alle 50 Meter
+              foregroundService: {
+                notificationTitle: '🐦 BirdSound aktiv',
+                notificationBody: 'Vogelstimmen werden aufgezeichnet...',
+                notificationColor: '#51cf66',
+              },
+            });
+          }
+        }
+      }
       
       const session = { id: Date.now(), startTime: new Date().toISOString(), endTime: null, location, detections: [], speciesCount: {}, totalAnalyzed: 0, modelUsed: settings.selectedModel || 'all' };
       sessionRef.current = session;
@@ -130,6 +680,18 @@ export default function App() {
     [timerRef, analysisRef, autoStopRef].forEach(r => { if (r.current) { clearInterval(r.current); clearTimeout(r.current); r.current = null; } });
     if (recordingRef.current) { try { await recordingRef.current.stopAndUnloadAsync(); } catch (e) {} recordingRef.current = null; }
     
+    // Keep-Awake und Background-Location deaktivieren
+    deactivateKeepAwake('birdsound-recording');
+    try {
+      const isTracking = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+      if (isTracking) {
+        await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+      }
+    } catch (e) { /* Ignore if not tracking */ }
+    
+    // Spektrogramm zurücksetzen
+    clearSpectrogram();
+    
     if (sessionRef.current) {
       const final = { ...sessionRef.current, endTime: new Date().toISOString(), duration: streamTime };
       const history = [final, ...sessionHistory].slice(0, 50);
@@ -141,7 +703,17 @@ export default function App() {
 
   const startChunk = async () => {
     try {
-      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY, (s) => { if (s.metering) setAudioLevel(Math.max(0, (s.metering + 60) * 1.67)); }, 50);
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY, 
+        (s) => { 
+          if (s.metering) {
+            const level = Math.max(0, (s.metering + 60) * 1.67);
+            setAudioLevel(level);
+            updateSpectrogram(level);  // 3D-Spektrogramm aktualisieren
+          }
+        }, 
+        50  // Update alle 50ms für flüssige Animation
+      );
       recordingRef.current = recording;
     } catch (e) {}
   };
@@ -217,6 +789,24 @@ export default function App() {
     await FileSystem.writeAsStringAsync(p, report); await Sharing.shareAsync(p);
   };
 
+  const deleteSession = (session) => {
+    const hasDetections = (session.detections?.length || 0) > 0;
+    const title = hasDetections ? '🗑️ Session löschen?' : '🗑️ Leere Session verwerfen?';
+    const msg = hasDetections 
+      ? `Diese Session vom ${new Date(session.startTime).toLocaleDateString('de-DE')} mit ${session.detections.length} Erkennungen wirklich löschen?`
+      : `Diese Session ohne Erkennungen verwerfen?`;
+    
+    Alert.alert(title, msg, [
+      { text: 'Abbrechen', style: 'cancel' },
+      { text: hasDetections ? 'Löschen' : 'Verwerfen', style: 'destructive', onPress: () => {
+        const updated = sessionHistory.filter(s => s.id !== session.id);
+        setSessionHistory(updated);
+        saveData('sessionHistory', updated);
+        setShowSessionReport(null);
+      }}
+    ]);
+  };
+
   const filtered = detections.filter(d => !filter.species || d.species.toLowerCase().includes(filter.species.toLowerCase()));
   const { unlocked, locked } = calculateUnlockedAchievements({ ...userStats, uniqueSpecies: uniqueSpecies.size, hasOwl: detections.some(d => ['Waldkauz','Uhu'].includes(d.species)), hasWoodpecker: detections.some(d => ['Buntspecht','Grünspecht'].includes(d.species)), hasRaptor: detections.some(d => ['Mäusebussard','Turmfalke'].includes(d.species)), hasNightingale: detections.some(d => d.species === 'Nachtigall'), hasCuckoo: detections.some(d => d.species === 'Kuckuck') });
   const points = calculateTotalPoints(userStats);
@@ -236,7 +826,7 @@ export default function App() {
     <View style={z.c}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0a15" />
       <View style={{ height: sbh, backgroundColor: '#0a0a15' }} />
-      <View style={z.h}><View><Text style={z.t}>🐦 BirdSound v5.2</Text><Text style={z.st}>{rank.icon} {rank.name} • {points}P</Text></View><View style={z.hr}><View style={[z.bg, isOnline ? z.bgG : z.bgR]}><Text style={z.bgT}>{isOnline ? '🌐' : '📴'}{offlineQueue.length > 0 ? ` (${offlineQueue.length})` : ''}</Text></View><TouchableOpacity onPress={() => setShowSettings(true)}><Text style={z.ic}>⚙️</Text></TouchableOpacity></View></View>
+      <View style={z.h}><View><Text style={z.t}>🐦 BirdSound v5.5</Text><Text style={z.st}>{rank.icon} {rank.name} • {points}P</Text></View><View style={z.hr}><View style={[z.bg, isConnected ? z.bgG : z.bgR]}><Text style={z.bgT}>{isConnected ? '🟢' : '🔴'}{offlineQueue.length > 0 ? ` (${offlineQueue.length})` : ''}</Text></View><TouchableOpacity onPress={() => setShowSettings(true)}><Text style={z.ic}>⚙️</Text></TouchableOpacity></View></View>
       <View style={z.tb}>{[['live','🎙️'],['map','🗺️'],['list','📋'],['library','📚'],['sessions','📊'],['achieve','🏆']].map(([id,ic]) => (<TouchableOpacity key={id} style={[z.ta, activeTab===id && z.taA]} onPress={() => setActiveTab(id)}><Text style={z.taI}>{ic}</Text></TouchableOpacity>))}</View>
 
       {activeTab === 'live' && (<ScrollView style={z.ct}>
@@ -247,9 +837,45 @@ export default function App() {
           </TouchableOpacity>
           <Text style={z.tm}>{fmt(streamTime)}</Text>
           {settings.autoStopMinutes > 0 && <Text style={z.as}>Auto-Stop: {settings.autoStopMinutes}min</Text>}
-          <View style={z.lv}><View style={[z.lvF, { width: `${audioLevel}%` }]} /></View>
           {location && <Text style={z.gp}>📍 {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</Text>}
         </View>
+        
+        {/* 3D Spektrogramm (Wasserfall-Diagramm) */}
+        <View style={z.spectrogram}>
+          <View style={z.spectrogramHeader}>
+            <Text style={z.cdT}>🌊 3D-Spektrogramm</Text>
+            <TouchableOpacity style={z.spectrogramReset} onPress={clearSpectrogram}><Text style={z.spectrogramResetT}>↺</Text></TouchableOpacity>
+          </View>
+          <View style={z.spectrogramContainer}>
+            <WebView
+              ref={spectrogramRef}
+              source={{ html: SPECTROGRAM_HTML }}
+              style={z.spectrogramView}
+              scrollEnabled={false}
+              bounces={false}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              originWhitelist={['*']}
+              onMessage={() => {}}
+              injectedJavaScript="window.ReactNativeWebView = window.ReactNativeWebView || {postMessage: function(){}}; true;"
+              allowsInlineMediaPlayback={true}
+              mediaPlaybackRequiresUserAction={false}
+            />
+            {!isStreaming && (
+              <View style={z.spectrogramOverlay}>
+                <Text style={z.spectrogramHint}>▶️ Starte Aufnahme für Live-Visualisierung</Text>
+                <Text style={z.spectrogramSubHint}>Touch: Drehen • Pinch: Zoom</Text>
+              </View>
+            )}
+          </View>
+          <View style={z.freqLabels}>
+            <Text style={[z.freqLabel, { color: '#4ecdc4' }]}>1kHz</Text>
+            <Text style={[z.freqLabel, { color: '#51cf66' }]}>2kHz</Text>
+            <Text style={[z.freqLabel, { color: '#ffd43b' }]}>4kHz</Text>
+            <Text style={[z.freqLabel, { color: '#ff6b6b' }]}>8kHz</Text>
+          </View>
+        </View>
+
         <View style={z.cd}><Text style={z.cdT}>🎵 Erkennungen</Text>
           {detections.slice(0, 5).map(d => (<TouchableOpacity key={d.id} style={z.dt} onPress={() => setShowBirdDetail(d)}><Text style={z.dtI}>{BIRD_LIBRARY[d.species]?.icon || '🐦'}</Text><View style={z.dtC}><Text style={z.dtS}>{d.species}</Text><Text style={z.dtSc}>{d.scientific}</Text></View><Text style={[z.dtP, { color: cc(d.confidence) }]}>{Math.round(d.confidence*100)}%</Text></TouchableOpacity>))}
           {!detections.length && <Text style={z.em}>Starte Streaming...</Text>}
@@ -258,16 +884,24 @@ export default function App() {
       </ScrollView>)}
 
       {activeTab === 'map' && (<View style={z.mapC}>
-        <MapView style={z.map} initialRegion={mapRegion} showsUserLocation showsMyLocationButton>
-          {detWithLocation.map(d => (
-            <Marker key={d.id} coordinate={{ latitude: d.location.lat, longitude: d.location.lng }} title={d.species} description={`${Math.round(d.confidence*100)}% • ${new Date(d.time).toLocaleTimeString()}`}>
-              <View style={z.mk}><Text style={z.mkI}>{BIRD_LIBRARY[d.species]?.icon || '🐦'}</Text></View>
-              <Callout onPress={() => setShowBirdDetail(d)}>
-                <View style={z.co}><Text style={z.coT}>{d.species}</Text><Text style={z.coS}>{Math.round(d.confidence*100)}%</Text></View>
-              </Callout>
-            </Marker>
-          ))}
-        </MapView>
+        {detWithLocation.length > 0 || location ? (
+          <MapView style={z.map} initialRegion={mapRegion} showsUserLocation={true} showsMyLocationButton={true} loadingEnabled={true} loadingIndicatorColor="#4ecdc4" loadingBackgroundColor="#0a0a15">
+            {detWithLocation.map(d => (
+              <Marker key={d.id} coordinate={{ latitude: d.location.lat, longitude: d.location.lng }} title={d.species} description={`${Math.round(d.confidence*100)}% • ${new Date(d.time).toLocaleTimeString()}`}>
+                <View style={z.mk}><Text style={z.mkI}>{BIRD_LIBRARY[d.species]?.icon || '🐦'}</Text></View>
+                <Callout onPress={() => setShowBirdDetail(d)}>
+                  <View style={z.co}><Text style={z.coT}>{d.species}</Text><Text style={z.coS}>{Math.round(d.confidence*100)}%</Text></View>
+                </Callout>
+              </Marker>
+            ))}
+          </MapView>
+        ) : (
+          <View style={z.mapPlaceholder}>
+            <Text style={z.mapPlaceholderIcon}>🗺️</Text>
+            <Text style={z.mapPlaceholderText}>Karte wird geladen...</Text>
+            <Text style={z.mapPlaceholderHint}>GPS aktivieren für Standort</Text>
+          </View>
+        )}
         <View style={z.mapO}>
           <Text style={z.mapSt}>📍 {detWithLocation.length} Fundorte</Text>
           <TouchableOpacity style={z.mapB} onPress={exportKML}><Text style={z.mapBT}>🌍 KML Export</Text></TouchableOpacity>
@@ -291,11 +925,14 @@ export default function App() {
 
       {activeTab === 'sessions' && (<ScrollView style={z.ct}>
         <Text style={z.sc}>📊 Sessions ({sessionHistory.length})</Text>
-        {sessionHistory.map(s => (<TouchableOpacity key={s.id} style={z.sC} onPress={() => setShowSessionReport(s)}>
-          <View style={z.sH}><Text style={z.sD}>{new Date(s.startTime).toLocaleDateString('de-DE')}</Text><Text style={z.sT}>{fmt(s.duration || 0)}</Text></View>
-          <View style={z.sSt}><View style={z.sSi}><Text style={z.sSV}>{s.detections?.length || 0}</Text><Text style={z.sSL}>Erkennungen</Text></View><View style={z.sSi}><Text style={z.sSV}>{Object.keys(s.speciesCount || {}).length}</Text><Text style={z.sSL}>Arten</Text></View></View>
-          <Text style={z.sM}>🤖 {s.modelUsed === 'all' ? 'Alle' : s.modelUsed}</Text>
-        </TouchableOpacity>))}
+        {sessionHistory.map(s => (<View key={s.id} style={z.sC}>
+          <TouchableOpacity onPress={() => setShowSessionReport(s)}>
+            <View style={z.sH}><Text style={z.sD}>{new Date(s.startTime).toLocaleDateString('de-DE')}</Text><Text style={z.sT}>{fmt(s.duration || 0)}</Text></View>
+            <View style={z.sSt}><View style={z.sSi}><Text style={z.sSV}>{s.detections?.length || 0}</Text><Text style={z.sSL}>Erkennungen</Text></View><View style={z.sSi}><Text style={z.sSV}>{Object.keys(s.speciesCount || {}).length}</Text><Text style={z.sSL}>Arten</Text></View></View>
+            <Text style={z.sM}>🤖 {s.modelUsed === 'all' ? 'Alle' : s.modelUsed}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={z.sDelBtn} onPress={() => deleteSession(s)}><Text style={z.sDelBtnT}>🗑️</Text></TouchableOpacity>
+        </View>))}
         {!sessionHistory.length && <Text style={z.em}>Noch keine Sessions</Text>}
       </ScrollView>)}
 
@@ -331,7 +968,7 @@ export default function App() {
           {Object.entries(showSessionReport.speciesCount || {}).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([sp,ct],i) => (<View key={sp} style={z.spR}><Text style={z.spN}>{i+1}.</Text><Text style={z.spI}>{BIRD_LIBRARY[sp]?.icon || '🐦'}</Text><Text style={z.spNm}>{sp}</Text><Text style={z.spC}>{ct}x</Text></View>))}
           <Text style={z.dSc}>📈 Biodiversität</Text>
           <View style={z.bio}><View style={z.bioI}><Text style={z.bioL}>Shannon</Text><Text style={z.bioV}>{calcShannon(showSessionReport.speciesCount).toFixed(2)}</Text></View><View style={z.bioI}><Text style={z.bioL}>Simpson</Text><Text style={z.bioV}>{calcSimpson(showSessionReport.speciesCount).toFixed(2)}</Text></View></View>
-          <TouchableOpacity style={z.sv} onPress={() => exportSessionReport(showSessionReport)}><Text style={z.svT}>📤 Exportieren</Text></TouchableOpacity>
+          <View style={z.sBtns}><TouchableOpacity style={z.sv} onPress={() => exportSessionReport(showSessionReport)}><Text style={z.svT}>📤 Exportieren</Text></TouchableOpacity><TouchableOpacity style={z.sDel} onPress={() => deleteSession(showSessionReport)}><Text style={z.sDelT}>{(showSessionReport.detections?.length || 0) === 0 ? '🗑️ Verwerfen' : '🗑️ Löschen'}</Text></TouchableOpacity></View>
         </>)}</ScrollView><TouchableOpacity style={z.cl} onPress={() => setShowSessionReport(null)}><Text style={z.clT}>Schließen</Text></TouchableOpacity></View></View>
       </Modal>
 
@@ -351,6 +988,8 @@ export default function App() {
           <View style={z.cfR}>{[0.05,0.1,0.2,0.3,0.5].map(c => (<TouchableOpacity key={c} style={[z.cfB, settings.minConfidence === c && z.cfA]} onPress={() => setSettings({...settings, minConfidence: c})}><Text style={z.cfT}>{Math.round(c*100)}%</Text></TouchableOpacity>))}</View>
           <View style={z.sw}><Text style={z.swL}>📴 Offline</Text><Switch value={settings.offlineMode} onValueChange={v => setSettings({...settings, offlineMode: v})} /></View>
           <View style={z.sw}><Text style={z.swL}>📍 GPS</Text><Switch value={settings.enableGPS} onValueChange={v => setSettings({...settings, enableGPS: v})} /></View>
+          <View style={z.sw}><Text style={z.swL}>🔒 Hintergrund-Aufnahme</Text><Switch value={settings.backgroundRecording} onValueChange={v => setSettings({...settings, backgroundRecording: v})} /></View>
+          {settings.backgroundRecording && <Text style={z.hint}>Aufnahme läuft weiter bei Tastensperre oder wenn App minimiert ist. Erhöht Akkuverbrauch.</Text>}
           <TouchableOpacity style={z.sv} onPress={() => { saveData('settings', settings); fetchModels(); setShowSettings(false); }}><Text style={z.svT}>Speichern</Text></TouchableOpacity>
         </ScrollView><TouchableOpacity style={z.cl} onPress={() => setShowSettings(false)}><Text style={z.clT}>Abbrechen</Text></TouchableOpacity></View></View>
       </Modal>
@@ -364,6 +1003,7 @@ const z = StyleSheet.create({
   c: { flex: 1, backgroundColor: '#0a0a15' },
   h: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, backgroundColor: '#0f0f1a', borderBottomWidth: 1, borderBottomColor: '#1a1a2e' },
   mapC: { flex: 1 }, map: { flex: 1, width: SCREEN_WIDTH }, mk: { backgroundColor: '#16213e', padding: 6, borderRadius: 16, borderWidth: 2, borderColor: '#4ecdc4' }, mkI: { fontSize: 18 }, co: { padding: 6, minWidth: 100 }, coT: { fontWeight: '600', fontSize: 12 }, coS: { color: '#4ecdc4', fontSize: 11 }, mapO: { position: 'absolute', bottom: 16, left: 16, right: 16, backgroundColor: 'rgba(22,33,62,0.95)', borderRadius: 10, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, mapSt: { color: '#fff', fontSize: 12 }, mapB: { backgroundColor: '#4ecdc4', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }, mapBT: { color: '#000', fontWeight: '600', fontSize: 11 },
+  mapPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a15' }, mapPlaceholderIcon: { fontSize: 48, marginBottom: 12 }, mapPlaceholderText: { color: '#fff', fontSize: 16, fontWeight: '600' }, mapPlaceholderHint: { color: '#666', fontSize: 12, marginTop: 8 },
   t: { fontSize: 18, fontWeight: '700', color: '#fff' }, st: { fontSize: 10, color: '#4ecdc4' },
   hr: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   bg: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }, bgG: { backgroundColor: 'rgba(81,207,102,0.2)' }, bgR: { backgroundColor: 'rgba(255,107,107,0.2)' }, bgT: { color: '#fff', fontSize: 10 },
@@ -379,6 +1019,18 @@ const z = StyleSheet.create({
   as: { color: '#ff6b6b', fontSize: 9, marginTop: 2 },
   lv: { width: '100%', height: 10, backgroundColor: '#0a0a15', borderRadius: 5, marginTop: 8, overflow: 'hidden' }, lvF: { height: '100%', backgroundColor: '#4ecdc4', borderRadius: 5 },
   gp: { color: '#888', fontSize: 9, marginTop: 4 },
+  // 3D Spektrogramm Styles
+  spectrogram: { backgroundColor: '#16213e', borderRadius: 10, padding: 10, marginBottom: 8 },
+  spectrogramHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  spectrogramReset: { backgroundColor: 'rgba(78,205,196,0.2)', borderRadius: 12, width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  spectrogramResetT: { color: '#4ecdc4', fontSize: 14, fontWeight: '700' },
+  spectrogramContainer: { height: 200, borderRadius: 8, overflow: 'hidden', backgroundColor: '#1a1a2e', position: 'relative' },
+  spectrogramView: { flex: 1, backgroundColor: 'transparent' },
+  spectrogramOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(10,10,21,0.8)' },
+  spectrogramHint: { color: '#4ecdc4', fontSize: 12, textAlign: 'center' },
+  spectrogramSubHint: { color: '#666', fontSize: 10, marginTop: 6 },
+  freqLabels: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 8, marginTop: 6 },
+  freqLabel: { fontSize: 9, fontWeight: '600' },
   dt: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', padding: 8, borderRadius: 6, marginBottom: 3, width: '100%' }, dtI: { fontSize: 20, marginRight: 8 }, dtC: { flex: 1 }, dtS: { color: '#fff', fontWeight: '600', fontSize: 12 }, dtSc: { color: '#888', fontSize: 9, fontStyle: 'italic' }, dtP: { fontSize: 11, fontWeight: '700' },
   em: { color: '#666', textAlign: 'center', paddingVertical: 16 },
   ss: { flexDirection: 'row', marginTop: 4 }, sst: { flex: 1, backgroundColor: '#16213e', borderRadius: 8, padding: 10, alignItems: 'center', marginHorizontal: 2 }, ssV: { fontSize: 18, fontWeight: '700', color: '#4ecdc4' }, ssL: { fontSize: 8, color: '#888', textTransform: 'uppercase', marginTop: 2 },
@@ -387,7 +1039,8 @@ const z = StyleSheet.create({
   fb: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#1a1a2e' }, fbB: { flex: 1, alignItems: 'center', paddingVertical: 6, borderRightWidth: 1, borderRightColor: '#1a1a2e' }, fbA: { backgroundColor: 'rgba(78,205,196,0.2)' },
   lb: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#16213e', borderRadius: 8, padding: 10, marginBottom: 4 }, lbI: { fontSize: 24, marginRight: 10 }, lbC: { flex: 1 }, lbN: { color: '#fff', fontWeight: '600', fontSize: 12 }, lbS: { color: '#4ecdc4', fontSize: 10, fontStyle: 'italic' }, lbF: { color: '#666', fontSize: 9 }, lbR: { fontSize: 9 },
   sc: { color: '#888', fontSize: 11, fontWeight: '600', marginBottom: 8, marginTop: 8 },
-  sC: { backgroundColor: '#16213e', borderRadius: 10, padding: 12, marginBottom: 8 }, sH: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }, sD: { color: '#fff', fontWeight: '600', fontSize: 12 }, sT: { color: '#4ecdc4', fontSize: 11 }, sSt: { flexDirection: 'row', marginBottom: 6 }, sSi: { flex: 1, alignItems: 'center' }, sSV: { color: '#4ecdc4', fontSize: 16, fontWeight: '700' }, sSL: { color: '#666', fontSize: 8, textTransform: 'uppercase' }, sM: { color: '#888', fontSize: 9, borderTopWidth: 1, borderTopColor: '#1a1a2e', paddingTop: 6 },
+  sC: { backgroundColor: '#16213e', borderRadius: 10, padding: 12, marginBottom: 8, position: 'relative' }, sH: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }, sD: { color: '#fff', fontWeight: '600', fontSize: 12 }, sT: { color: '#4ecdc4', fontSize: 11 }, sSt: { flexDirection: 'row', marginBottom: 6 }, sSi: { flex: 1, alignItems: 'center' }, sSV: { color: '#4ecdc4', fontSize: 16, fontWeight: '700' }, sSL: { color: '#666', fontSize: 8, textTransform: 'uppercase' }, sM: { color: '#888', fontSize: 9, borderTopWidth: 1, borderTopColor: '#1a1a2e', paddingTop: 6 },
+  sDelBtn: { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(255,107,107,0.2)', borderRadius: 15, width: 30, height: 30, alignItems: 'center', justifyContent: 'center' }, sDelBtnT: { fontSize: 14 },
   rC: { backgroundColor: '#16213e', borderRadius: 10, padding: 16, alignItems: 'center', marginBottom: 12 }, rI: { fontSize: 40 }, rN: { color: '#fff', fontSize: 16, fontWeight: '700', marginTop: 6 }, rP: { color: '#4ecdc4', fontSize: 11, marginTop: 2 },
   ac: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#16213e', borderRadius: 8, padding: 10, marginBottom: 4, opacity: 0.5 }, acU: { opacity: 1, borderLeftWidth: 3, borderLeftColor: '#4ecdc4' }, acI: { fontSize: 20, marginRight: 8 }, acC: { flex: 1 }, acN: { color: '#fff', fontWeight: '600', fontSize: 11 }, acD: { color: '#888', fontSize: 9 }, acP: { color: '#4ecdc4', fontSize: 11, fontWeight: '700' },
   exC: { flexDirection: 'row', gap: 8, marginTop: 8 }, ex: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#16213e', borderRadius: 8, padding: 12 }, exI: { fontSize: 18, marginRight: 8 }, exT: { color: '#fff', fontSize: 12 },
@@ -398,9 +1051,11 @@ const z = StyleSheet.create({
   spR: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', padding: 8, borderRadius: 6, marginBottom: 3 }, spN: { color: '#4ecdc4', fontSize: 12, fontWeight: '700', width: 20 }, spI: { fontSize: 16, marginRight: 6 }, spNm: { flex: 1, color: '#fff', fontSize: 11 }, spC: { color: '#888', fontSize: 10 },
   bio: { flexDirection: 'row', gap: 8, marginBottom: 12 }, bioI: { flex: 1, backgroundColor: 'rgba(78,205,196,0.1)', borderRadius: 8, padding: 10, alignItems: 'center' }, bioL: { color: '#888', fontSize: 8, textTransform: 'uppercase' }, bioV: { color: '#4ecdc4', fontSize: 18, fontWeight: '700', marginTop: 2 },
   lbl: { color: '#fff', fontSize: 11, fontWeight: '600', marginTop: 10, marginBottom: 4 }, inp: { backgroundColor: '#0a0a15', borderWidth: 1, borderColor: '#333', borderRadius: 6, padding: 8, color: '#fff', fontSize: 11 },
+  hint: { color: '#ff6b6b', fontSize: 9, fontStyle: 'italic', marginTop: 4, marginBottom: 8 },
   sw: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#1a1a2e' }, swL: { color: '#fff', fontSize: 11 },
   mS: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 }, mO: { paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#0a0a15', borderRadius: 6, borderWidth: 1, borderColor: '#333' }, mOA: { backgroundColor: '#4ecdc4', borderColor: '#4ecdc4' }, mOT: { color: '#fff', fontSize: 10 },
   cfR: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 }, cfB: { paddingHorizontal: 10, paddingVertical: 5, backgroundColor: '#0a0a15', borderRadius: 6 }, cfA: { backgroundColor: '#4ecdc4' }, cfT: { color: '#fff', fontSize: 10 },
-  sv: { backgroundColor: '#4ecdc4', borderRadius: 8, padding: 10, alignItems: 'center', marginTop: 12 }, svT: { color: '#000', fontWeight: '600', fontSize: 12 },
+  sBtns: { flexDirection: 'row', gap: 8, marginTop: 12 }, sv: { flex: 1, backgroundColor: '#4ecdc4', borderRadius: 8, padding: 10, alignItems: 'center' }, svT: { color: '#000', fontWeight: '600', fontSize: 12 },
+  sDel: { flex: 1, backgroundColor: '#ff6b6b', borderRadius: 8, padding: 10, alignItems: 'center' }, sDelT: { color: '#fff', fontWeight: '600', fontSize: 12 },
   cl: { backgroundColor: '#333', borderRadius: 8, padding: 10, alignItems: 'center', marginTop: 6 }, clT: { color: '#fff', fontWeight: '600', fontSize: 12 },
 });

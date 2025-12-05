@@ -116,10 +116,10 @@ MIN_CONFIDENCE_THRESHOLD=0.1
 $env:PYTHONPATH="D:\Birds\Birds\backend"
 
 # Start server
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8002
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8003
 
-# Server running at: http://localhost:8002
-# API Documentation: http://localhost:8002/docs
+# Server running at: http://localhost:8003
+# API Documentation: http://localhost:8003/docs
 ```
 
 **7. Test Installation**
@@ -150,7 +150,7 @@ Expected output:
 # Extract to C:\nssm
 
 # Install service
-C:\nssm\nssm.exe install BirdSound "D:\Birds\Birds\backend\venv\Scripts\python.exe" "-m uvicorn app.main:app --host 0.0.0.0 --port 8002"
+C:\nssm\nssm.exe install BirdSound "D:\Birds\Birds\backend\venv\Scripts\python.exe" "-m uvicorn app.main:app --host 0.0.0.0 --port 8003"
 
 # Set working directory
 C:\nssm\nssm.exe set BirdSound AppDirectory "D:\Birds\Birds\backend"
@@ -173,7 +173,7 @@ C:\nssm\nssm.exe status BirdSound
 4. Trigger: "At startup"
 5. Action: "Start a program"
    - Program: `D:\Birds\Birds\backend\venv\Scripts\python.exe`
-   - Arguments: `-m uvicorn app.main:app --host 0.0.0.0 --port 8002`
+   - Arguments: `-m uvicorn app.main:app --host 0.0.0.0 --port 8003`
    - Start in: `D:\Birds\Birds\backend`
 6. ✅ Run with highest privileges
 7. ✅ Run whether user is logged on or not
@@ -280,10 +280,10 @@ MIN_CONFIDENCE_THRESHOLD=0.15  # Slightly higher to reduce processing
 export PYTHONPATH=/home/pi/Birds/backend
 
 # Start server
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8002
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8003
 
 # Test from another terminal:
-curl http://localhost:8002/api/v1/health
+curl http://localhost:8003/api/v1/health
 ```
 
 **8. Create Systemd Service**
@@ -304,7 +304,7 @@ Type=simple
 User=pi
 WorkingDirectory=/home/pi/Birds/backend
 Environment="PYTHONPATH=/home/pi/Birds/backend"
-ExecStart=/home/pi/Birds/backend/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8002
+ExecStart=/home/pi/Birds/backend/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8003
 Restart=always
 RestartSec=10
 
@@ -339,7 +339,7 @@ journalctl -u birdsound -f
 **10. Configure Firewall (Optional)**
 
 ```bash
-# Allow port 8002
+# Allow port 8003
 sudo ufw allow 8002/tcp
 sudo ufw enable
 ```
@@ -383,29 +383,35 @@ cp backend/.env.example backend/.env
 **4. Start Services**
 
 ```bash
-# Start all services (backend + database + adminer)
-docker-compose up -d
+# Start all services (backend + database + redis)
+docker compose --profile full up -d
 
 # View logs
-docker-compose logs -f backend
+docker compose logs -f api
 
 # Check status
-docker-compose ps
+docker compose ps
 ```
 
 **5. Access Services**
 
-- API: <http://localhost:8000/docs>
+- API: <http://localhost:8003/docs>
+- Health Check: <http://localhost:8003/health>
 - Database Admin: <http://localhost:8080> (login: postgres/postgres)
+
+**Loaded Models (v5.4.0):**
+- DimaBird (50 EU species)
+- BirdNET (6,522 species worldwide)
+- Google Perch (15,000+ species)
 
 **6. Stop Services**
 
 ```bash
 # Stop all services
-docker-compose down
+docker compose --profile full down
 
 # Stop and remove volumes (database data)
-docker-compose down -v
+docker compose --profile full down -v
 ```
 
 ---
@@ -558,11 +564,11 @@ Invoke-WebRequest -Uri "https://huggingface.co/kahst/BirdNET-onnx/resolve/main/B
 # 5. Restart PowerShell
 ```
 
-**Problem: Port 8002 already in use**
+**Problem: port 8003 already in use**
 
 ```powershell
 # Find process using port
-Get-NetTCPConnection -LocalPort 8002
+Get-NetTCPConnection -Localport 8003
 
 # Kill process
 Stop-Process -Id <PID> -Force
@@ -809,10 +815,10 @@ MIN_CONFIDENCE_THRESHOLD=0.1
 $env:PYTHONPATH="D:\Birds\Birds\backend"
 
 # Server starten
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8002
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8003
 
-# Server läuft unter: http://localhost:8002
-# API-Dokumentation: http://localhost:8002/docs
+# Server läuft unter: http://localhost:8003
+# API-Dokumentation: http://localhost:8003/docs
 ```
 
 **7. Installation testen**

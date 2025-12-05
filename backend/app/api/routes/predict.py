@@ -210,11 +210,11 @@ async def list_models():
     models = []
     for name, model in model_registry.models.items():
         models.append({
-            "name": model.model_name,
-            "version": model.model_version,
-            "is_loaded": model.is_loaded,
-            "top_n": model.top_n,
-            "min_confidence": model.min_confidence
+            "name": getattr(model, 'model_name', getattr(model, 'name', name)),
+            "version": getattr(model, 'version', '1.0.0'),
+            "is_loaded": getattr(model, 'is_loaded', getattr(model, '_loaded', False)),
+            "top_n": getattr(model, 'top_n', 5),
+            "min_confidence": getattr(model, 'min_confidence', 0.1)
         })
 
     return {
@@ -232,10 +232,10 @@ async def get_model_info(model_name: str):
         raise HTTPException(status_code=404, detail=f"Model {model_name} not found")
 
     return {
-        "name": model.model_name,
-        "version": model.model_version,
-        "is_loaded": model.is_loaded,
-        "top_n": model.top_n,
-        "min_confidence": model.min_confidence,
+        "name": getattr(model, 'model_name', getattr(model, 'name', model_name)),
+        "version": getattr(model, 'version', '1.0.0'),
+        "is_loaded": getattr(model, 'is_loaded', getattr(model, '_loaded', False)),
+        "top_n": getattr(model, 'top_n', 5),
+        "min_confidence": getattr(model, 'min_confidence', 0.1),
         "class": model.__class__.__name__
     }

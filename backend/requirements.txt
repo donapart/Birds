@@ -10,6 +10,7 @@ pydantic-settings>=2.1.0
 # Database
 sqlalchemy>=2.0.23
 asyncpg>=0.29.0
+aiosqlite>=0.19.0
 alembic>=1.12.0
 
 # Audio Processing
@@ -22,6 +23,13 @@ soundfile>=0.12.0
 onnxruntime>=1.16.0
 # onnxruntime-gpu>=1.16.0  # Uncomment for GPU support
 
+# BirdNET Official Package (6,000+ species)
+birdnet>=0.2.0
+
+# Google Perch Model (15,000+ species) - requires TensorFlow
+tensorflow>=2.13.0
+tensorflow-hub>=0.14.0
+
 # ML - HuggingFace Transformers
 transformers>=4.35.0
 torch>=2.0.0
@@ -29,6 +37,7 @@ torch>=2.0.0
 
 # Utilities
 httpx>=0.25.0
+aiohttp>=3.9.0
 python-dotenv>=1.0.0
 websockets>=12.0
 

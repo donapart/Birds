@@ -21,17 +21,39 @@
 
 | Model | Species | Size | Best For | Status |
 |-------|---------|------|----------|--------|
-| **DimaBird** | ~500 EU | Auto | 🎵 Songbirds, Forest | ✅ Active |
-| **BirdNET V2.4** | 6,522 | ~150MB | 🌍 Global, All species | ✅ Active |
-| **Google Perch** | 10,000+ | ~500MB | 🔬 Scientific | ✅ Optional |
+| **DimaBird** | ~50 EU | Auto | 🎵 Songbirds, Forest | ✅ Active |
+| **BirdNET V2.4** | 6,522 | ~77MB | 🌍 Global, All species | ✅ Active |
+| **Google Perch** | 15,000+ | ~96MB | 🔬 Scientific | ✅ Active |
 
 ### Downloads / Installation
 
 | Platform | Download | Size | Notes |
 |----------|----------|------|-------|
-| **📱 Android APK** | [BirdSound_v5.3.2.apk](releases/) | ~86MB | Requires Android 6+ |
-| **🖥️ Windows** | [BirdSound_v5.3.2_Setup_win.exe](releases/) | ~2MB | Requires Python 3.11+ |
+| **📱 Android APK** | [BirdSound_v5.5.0.apk](BirdSound-v5.5.0.apk) | ~90MB | Requires Android 6+ |
+| **🖥️ Windows** | [BirdSound_v5.5.0_Setup_win.exe](releases/) | ~2MB | Requires Python 3.11+ |
 | **🍎 iOS** | Expo Go App | - | Scan QR code from `npx expo start` |
+
+### 📱 Android APK Download (QR-Code)
+
+Scan this QR code to download the APK directly to your Android device:
+
+```
+████████████████████████████████
+██ ▄▄▄▄▄ █▀▀█▄▄█▀█▄▀██ ▄▄▄▄▄ ██
+██ █   █ █▄█▄█▀▀██▀ ██ █   █ ██
+██ █▄▄▄█ █ ▄▀▀▀█▀▄▀▄██ █▄▄▄█ ██
+██▄▄▄▄▄▄▄█ █ █▄█ █▄▀█▄▄▄▄▄▄▄██
+██▄▀██▄▄▄▄▄█▀▄▀▀▀  ▄██▀▀▀████ █
+██ ▀  █▀▄▀▀▄▄▄▀▄█▀▄ █▀█▄▀▄▀▄██
+██▄█▄██▄▄▄▄█▄▀▄█▄▀█ ▄▄▄ █▀▄███
+██ ▄▄▄▄▄ █▄▀▀ █▀█▀▀ █▄█ ▄▄▄▀██
+██ █   █ █▀▄▀▄█▀▄█▀▄ ▄▄ ▄█▀▄██
+██ █▄▄▄█ █▀▀▄▀█▄▄██▀▄█▀▀▄▄▄ ██
+██▄▄▄▄▄▄▄█▄█▄█▄▄██▄████▄█▄████
+████████████████████████████████
+```
+
+**Direct Link:** `https://github.com/donapart/Birds/raw/main/BirdSound-v5.5.0.apk`
 
 ---
 
@@ -41,17 +63,20 @@
 
 BirdSound is a production-ready bird sound recognition system that uses multiple ML models to identify bird species from audio recordings. It features automatic database fallback, cross-platform support, and a comprehensive REST API.
 
-### ✅ Current Status (v5.3.2)
+### ✅ Current Status (v5.5.0)
 
 - ✅ **DimaBird Model** (HuggingFace dima806/bird_sounds_classification)
 - ✅ **BirdNET V2.4** integrated (6,522 species worldwide)
-- ✅ **Google Perch** integrated (10,000+ species, TensorFlow Hub)
+- ✅ **Google Perch** integrated (15,000+ species, TensorFlow Hub)
+- ✅ **Background Recording** - continues when app minimized or screen locked
+- ✅ **3D Spectrogram** - Real-time waterfall diagram with Android/iOS support
+- ✅ **Session Management** - Delete sessions, detailed reports
 - ✅ **Interactive Map** with OpenStreetMap (filter by time, species)
 - ✅ **45+ Bird Species Library** with detailed info, habitat, voice data
 - ✅ **Full Web Dashboard** with tabs (Live, Map, History, Settings)
 - ✅ **KML Export** for Google Earth
 - ✅ **Automatic Database Fallback** (PostgreSQL → SQLite)
-- ✅ **Mobile App** Android v5.3.2 with Offline-Demo mode
+- ✅ **Mobile App** Android v5.5.0 with Offline-Demo mode
 - ✅ **Windows Installer** (Inno Setup)
 - ✅ **Raspberry Pi Scripts** for field deployment
 

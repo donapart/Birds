@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     # Application
     APP_NAME: str = "BirdSound API"
-    APP_VERSION: str = "5.3.2"
+    APP_VERSION: str = "5.4.0"
     DEBUG: bool = False
 
     # ML Model loading
@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     HF_MODEL_NAME: str = "dima806/bird_sounds_classification"
     
     # Google Perch Model (15,000 species)
-    ENABLE_PERCH_MODEL: bool = False  # Set True to enable Perch
+    ENABLE_PERCH_MODEL: bool = True  # Set True to enable Perch
     PERCH_MODEL_PATH: Optional[str] = "models/perch"  # Path to TensorFlow SavedModel
     
     # Xeno-canto Integration
