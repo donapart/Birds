@@ -89,13 +89,18 @@
     <div class="container content">
         <header>
             <div class="logo">🐦</div>
-            <h1>BirdSound <span class="version-badge">v5.3.2</span></h1>
+            <h1>BirdSound <span class="version-badge">v5.5.0</span></h1>
             <p class="subtitle">Multi-Modell ML-System zur Echtzeit-Vogelstimmen-Erkennung</p>
             <div class="downloads">
-                <a href="https://github.com/donapart/Birds/releases/download/v5.3.2/BirdSound_v5.3.2.apk" class="download-btn">📱 Android APK</a>
-                <a href="https://github.com/donapart/Birds/releases/download/v5.3.2/BirdSound_5.3.2_Setup.exe" class="download-btn secondary">🖥️ Windows</a>
+                <a href="https://github.com/donapart/Birds/raw/main/BirdSound-v5.5.0.apk" class="download-btn">📱 Android APK</a>
+                <a href="https://github.com/donapart/Birds/releases" class="download-btn secondary">🖥️ Windows</a>
                 <a href="#raspberry" class="download-btn raspberry">🍓 Raspberry Pi</a>
                 <a href="#docker" class="download-btn docker">🐳 Docker</a>
+            </div>
+            <!-- QR Code für APK Download -->
+            <div style="margin-top: 1.5rem; text-align: center;">
+                <p style="color: #888; margin-bottom: 0.5rem;">📲 Scan für APK-Download:</p>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://github.com/donapart/Birds/raw/main/BirdSound-v5.5.0.apk" alt="QR Code APK Download" style="border-radius: 8px; background: white; padding: 8px;">
             </div>
         </header>
         
@@ -147,8 +152,8 @@ python scripts/download_models.py --models birdnet</code></pre>
                 <div class="feature-card"><div class="feature-icon">🤖</div><h3>Multi-Modell Analyse</h3><p>3 ML-Modelle parallel mit Konsens-Voting für zuverlässige Erkennung.</p></div>
                 <div class="feature-card"><div class="feature-icon">🗺️</div><h3>Interaktive Karte</h3><p>OpenStreetMap mit Zeit- und Artenfilter. KML/KMZ-Export für Google Earth.</p></div>
                 <div class="feature-card"><div class="feature-icon">📴</div><h3>Offline-Modus</h3><p>Demo-Modus komplett ohne Internet. Perfekt für Feldarbeit im Wald.</p></div>
-                <div class="feature-card"><div class="feature-icon">📊</div><h3>Web-Dashboard</h3><p>4 Tabs: Live-Aufnahme, Karte, Historie, Einstellungen mit echtem Mikrofon.</p></div>
-                <div class="feature-card"><div class="feature-icon">🏆</div><h3>Achievements</h3><p>Gamification mit Punktesystem. Entdecke neue Arten und sammle Erfolge.</p></div>
+                <div class="feature-card"><div class="feature-icon">📊</div><h3>3D Spektrogramm</h3><p>Echtzeit-Wasserfall-Visualisierung mit Touch/Pinch-Steuerung.</p></div>
+                <div class="feature-card"><div class="feature-icon">🏆</div><h3>Session Management</h3><p>Sessions löschen, Reports, Aufnahme-Historie verwalten.</p></div>
                 <div class="feature-card"><div class="feature-icon">📍</div><h3>GPS-Tagging</h3><p>Automatische Standort-Verknüpfung bei jeder Erkennung.</p></div>
                 <div class="feature-card"><div class="feature-icon">🍓</div><h3>Raspberry Pi</h3><p>Läuft auf Pi 4 mit systemd-Service. Perfekt für Dauerbetrieb im Garten.</p></div>
                 <div class="feature-card"><div class="feature-icon">🐳</div><h3>Docker</h3><p>Ein-Klick-Deployment mit docker-compose. Für Server und Cloud.</p></div>
@@ -283,21 +288,22 @@ cd android
             <div class="architecture">┌─────────────────┐     ┌─────────────────────────────────────┐
 │   Mobile App    │     │         Backend (FastAPI)            │
 │   (Expo/RN)     │────▶│                                      │
-│                 │     │  ┌─────────┐  ┌──────────────────┐  │
-│  - Audio Capture│     │  │ BirdNET │  │  DimaBird        │  │
-│  - GPS Location │     │  │ (ONNX)  │  │  (HuggingFace)   │  │
-└─────────────────┘     │  └────┬────┘  └────────┬─────────┘  │
-                        │       └───────┬────────┘             │
-┌─────────────────┐     │               ▼                      │
-│  Web Dashboard  │────▶│       ┌───────────────┐              │
-│  (Browser)      │     │       │   Consensus   │              │
-│                 │     │       │    Engine     │              │
-│  - Live Tab     │     │       └───────┬───────┘              │
-│  - Karte Tab    │     │               ▼                      │
-│  - Historie     │     │       ┌───────────────┐              │
-│  - Settings     │     │       │  PostgreSQL   │              │
-└─────────────────┘     │       │   or SQLite   │              │
-                        └───────────────────────────────────────┘</div>
+│   v5.5.0        │     │  ┌─────────┐ ┌──────────┐ ┌───────┐ │
+│                 │     │  │ BirdNET │ │ DimaBird │ │ Perch │ │
+│  - Audio Capture│     │  │ (ONNX)  │ │(Hugging) │ │(TFHub)│ │
+│  - GPS Location │     │  └────┬────┘ └────┬─────┘ └───┬───┘ │
+│  - 3D Spektrogr.│     │       └───────────┴───────────┘     │
+└─────────────────┘     │               ▼                      │
+                        │       ┌───────────────┐              │
+┌─────────────────┐     │       │   Consensus   │              │
+│  Web Dashboard  │────▶│       │    Engine     │              │
+│  (Browser)      │     │       └───────┬───────┘              │
+│                 │     │               ▼                      │
+│  - Live Tab     │     │       ┌───────────────┐              │
+│  - Karte Tab    │     │       │  PostgreSQL   │              │
+│  - Historie     │     │       │   or SQLite   │              │
+│  - Settings     │     │       └───────────────┘              │
+└─────────────────┘     └───────────────────────────────────────┘</div>
             <h3>Projektstruktur</h3>
             <pre><code>Birds/
 ├── backend/          # FastAPI Server
@@ -312,6 +318,19 @@ cd android
 
         <section id="changelog">
             <h2>📋 Changelog</h2>
+            <h3>v5.5.0 (2024-12-05)</h3>
+            <ul>
+                <li>🐛 <strong>AbortController Fix</strong> für React Native Kompatibilität</li>
+                <li>📊 <strong>3D Spektrogramm</strong> mit Android/iOS Support (Touch/Pinch)</li>
+                <li>🗑️ <strong>Session Management</strong> - Sessions löschen, Reports</li>
+                <li>🤖 <strong>Model API Fix</strong> - Defensive Attribut-Zugriffe</li>
+                <li>🔄 <strong>Backend URL Race-Condition</strong> beim App-Start behoben</li>
+            </ul>
+            <h3>v5.4.0 (2024-12-03)</h3>
+            <ul>
+                <li>🌐 <strong>Background Recording</strong> - Aufnahme auch bei minimierter App</li>
+                <li>🗺️ <strong>MapView Stabilität</strong> verbessert</li>
+            </ul>
             <h3>v5.3.2 (2024-12-01)</h3>
             <ul>
                 <li>🐛 <strong>AbortSignal Fix</strong> für ältere Android-Versionen</li>
@@ -323,16 +342,6 @@ cd android
                 <li>✨ <strong>Interaktive Karte</strong> mit OpenStreetMap/Leaflet</li>
                 <li>🔍 <strong>Kartenfilter</strong> nach Zeit und Arten</li>
                 <li>🐦 <strong>45+ Vogelarten</strong> in der Bibliothek</li>
-            </ul>
-            <h3>v5.2.x (2024-11)</h3>
-            <ul>
-                <li>🤖 <strong>Google Perch Model</strong> integriert</li>
-                <li>🗺️ Map-Tab hinzugefügt</li>
-            </ul>
-            <h3>v5.1.x (2024-11)</h3>
-            <ul>
-                <li>🎯 <strong>Multi-Model Support</strong></li>
-                <li>🏆 Achievement-System</li>
             </ul>
         </section>
 
