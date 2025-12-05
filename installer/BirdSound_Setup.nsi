@@ -6,7 +6,7 @@
 
 ; --- Allgemeine Einstellungen ---
 !define PRODUCT_NAME "BirdSound"
-!define PRODUCT_VERSION "5.3.2"
+!define PRODUCT_VERSION "5.5.0"
 !define PRODUCT_PUBLISHER "BirdSound Project"
 !define PRODUCT_WEB_SITE "https://github.com/donapart/Birds"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
