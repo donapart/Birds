@@ -3,8 +3,8 @@
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, StatusBar, Platform, Alert, TextInput, Modal, Switch, Share, FlatList, Dimensions, AppState } from 'react-native';
-import MapView, { Marker, Callout } from 'react-native-maps';
 import { WebView } from 'react-native-webview';
+// MapView replaced with WebView + OpenStreetMap (no API key required)
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import * as FileSystem from 'expo-file-system';
@@ -478,6 +478,7 @@ export default function App() {
   const [showSessionReport, setShowSessionReport] = useState(null);
   const [filter, setFilter] = useState({ species: '' });
   const [searchQuery, setSearchQuery] = useState('');
+  const [mapError, setMapError] = useState(false);
   
   const recordingRef = useRef(null);
   const timerRef = useRef(null);
@@ -884,24 +885,71 @@ export default function App() {
       </ScrollView>)}
 
       {activeTab === 'map' && (<View style={z.mapC}>
-        {detWithLocation.length > 0 || location ? (
-          <MapView style={z.map} initialRegion={mapRegion} showsUserLocation={true} showsMyLocationButton={true} loadingEnabled={true} loadingIndicatorColor="#4ecdc4" loadingBackgroundColor="#0a0a15">
-            {detWithLocation.map(d => (
-              <Marker key={d.id} coordinate={{ latitude: d.location.lat, longitude: d.location.lng }} title={d.species} description={`${Math.round(d.confidence*100)}% • ${new Date(d.time).toLocaleTimeString()}`}>
-                <View style={z.mk}><Text style={z.mkI}>{BIRD_LIBRARY[d.species]?.icon || '🐦'}</Text></View>
-                <Callout onPress={() => setShowBirdDetail(d)}>
-                  <View style={z.co}><Text style={z.coT}>{d.species}</Text><Text style={z.coS}>{Math.round(d.confidence*100)}%</Text></View>
-                </Callout>
-              </Marker>
-            ))}
-          </MapView>
-        ) : (
-          <View style={z.mapPlaceholder}>
-            <Text style={z.mapPlaceholderIcon}>🗺️</Text>
-            <Text style={z.mapPlaceholderText}>Karte wird geladen...</Text>
-            <Text style={z.mapPlaceholderHint}>GPS aktivieren für Standort</Text>
-          </View>
-        )}
+        <WebView
+          style={z.map}
+          originWhitelist={['*']}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          source={{ html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { width: 100%; height: 100vh; background: #1a1a2e; }
+    .bird-marker { background: rgba(78, 205, 196, 0.9); border-radius: 50%; padding: 8px; font-size: 20px; text-align: center; border: 2px solid #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+    .leaflet-popup-content { text-align: center; }
+    .popup-title { font-weight: bold; color: #333; }
+    .popup-conf { color: #4ecdc4; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    const detections = ${JSON.stringify(detWithLocation.map(d => ({
+      lat: d.location?.lat || 0,
+      lng: d.location?.lng || 0,
+      species: d.species,
+      confidence: d.confidence,
+      time: d.time,
+      icon: '🐦'
+    })))};
+    const userLat = ${location?.latitude || 51.5};
+    const userLng = ${location?.longitude || 10.0};
+    
+    const map = L.map('map').setView([userLat, userLng], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+    
+    // User location marker
+    L.circleMarker([userLat, userLng], {
+      radius: 10, fillColor: '#4ecdc4', color: '#fff', weight: 2, fillOpacity: 0.8
+    }).addTo(map).bindPopup('📍 Dein Standort');
+    
+    // Detection markers
+    detections.forEach(d => {
+      if (d.lat && d.lng) {
+        const icon = L.divIcon({ className: '', html: '<div class="bird-marker">' + d.icon + '</div>', iconSize: [40, 40], iconAnchor: [20, 20] });
+        L.marker([d.lat, d.lng], { icon })
+          .addTo(map)
+          .bindPopup('<div class="popup-title">' + d.species + '</div><div class="popup-conf">' + Math.round(d.confidence * 100) + '%</div><div>' + new Date(d.time).toLocaleString() + '</div>');
+      }
+    });
+    
+    // Fit bounds if detections exist
+    if (detections.length > 0) {
+      const bounds = detections.filter(d => d.lat && d.lng).map(d => [d.lat, d.lng]);
+      if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  </script>
+</body>
+</html>
+          ` }}
+        />
         <View style={z.mapO}>
           <Text style={z.mapSt}>📍 {detWithLocation.length} Fundorte</Text>
           <TouchableOpacity style={z.mapB} onPress={exportKML}><Text style={z.mapBT}>🌍 KML Export</Text></TouchableOpacity>

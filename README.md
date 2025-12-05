@@ -1047,6 +1047,14 @@ MIT-Lizenz - siehe LICENSE-Datei
 
 ## Changelog
 
+### v5.5.0 (2024-12-05)
+- 🗺️ **Karten-Crashfix** - MapView ersetzt durch WebView + OpenStreetMap/Leaflet (kein Google API Key nötig)
+- 📊 **3D Spektrogramm Android-Fix** - Dual Event Listeners für bessere Kompatibilität
+- 🤖 **Modell-Anzeige Fix** - Backend zeigt jetzt korrekt alle 3 Modelle (DimaBird, BirdNET, Perch)
+- ⏱️ **AbortSignal.timeout() Fix** - Eigene `fetchWithTimeout()` Implementierung für React Native
+- 📱 **Stabilität** - Diverse Fixes für Android-Kompatibilität
+- 🚫 **react-native-maps entfernt** - Keine Google Play Services mehr erforderlich
+
 ### v5.3.2 (2024-12-01)
 - 🐛 **AbortSignal Fix** für ältere Android-Versionen
 - 🖥️ **Vollständiges Web-Dashboard** mit 4 Tabs (Live, Karte, Historie, Einstellungen)
