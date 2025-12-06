@@ -29,9 +29,12 @@
 
 | Platform | Download | Size | Notes |
 |----------|----------|------|-------|
-| **📱 Android APK** | [BirdSound_v5.5.0.apk](BirdSound-v5.5.0.apk) | ~90MB | Requires Android 6+ |
-| **🖥️ Windows** | [BirdSound_v5.5.0_Setup_win.exe](releases/) | ~2MB | Requires Python 3.11+ |
-| **🍎 iOS** | Expo Go App | - | Scan QR code from `npx expo start` |
+| **📱 Android APK** | [BirdSound-v5.5.0.apk](https://github.com/donapart/Birds/raw/main/BirdSound-v5.5.0.apk) | ~90MB | Android 6+ |
+| **🖥️ Windows Installer** | [BirdSound_5.5.0_Setup.exe](https://github.com/donapart/Birds/raw/main/installer/output/BirdSound_5.5.0_Setup.exe) | ~200KB | Python 3.11+ (auto-install) |
+| **🖥️ Windows Scripts** | [scripts/start_backend.bat](scripts/start_backend.bat) | - | Manual start |
+| **🍓 Raspberry Pi** | [scripts/raspberry_setup.sh](scripts/raspberry_setup.sh) | - | Debian/Ubuntu |
+| **🐳 Docker** | [docker-compose.yml](docker-compose.yml) | - | Docker Desktop |
+| **🍎 iOS** | Expo Go App | - | `npx expo start` |
 
 ### 📱 Android APK Download (QR-Code)
 
