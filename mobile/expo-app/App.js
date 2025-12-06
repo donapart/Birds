@@ -1,5 +1,5 @@
 /**
- * BirdSound v5.5.0 - Multi-Model, Session Reports, Advanced Settings, MAP VIEW, BACKGROUND RECORDING, 3D SPECTROGRAM
+ * BirdSound v5.5.1 - Multi-Model, Session Reports, Advanced Settings, MAP VIEW, BACKGROUND RECORDING, 3D SPECTROGRAM, AUTO-RECONNECT
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, StatusBar, Platform, Alert, TextInput, Modal, Switch, Share, FlatList, Dimensions, AppState } from 'react-native';
@@ -532,6 +532,20 @@ export default function App() {
 
   useEffect(() => { init(); return cleanup; }, []);
   useEffect(() => { const i = setInterval(checkNetwork, 10000); return () => clearInterval(i); }, []);
+  
+  // Auto-Reconnect: Prüfe Backend-Verbindung alle 15 Sekunden und reconnecte automatisch
+  useEffect(() => {
+    const reconnectInterval = setInterval(async () => {
+      if (!isConnected) {
+        console.log('Auto-reconnect: Checking backend...');
+        await checkBackend(settings.backendUrl);
+        if (!isConnected) {
+          await fetchModels(settings.backendUrl);
+        }
+      }
+    }, 15000);
+    return () => clearInterval(reconnectInterval);
+  }, [isConnected, settings.backendUrl]);
 
   const init = async () => {
     const savedUrl = await loadData();
@@ -590,10 +604,17 @@ export default function App() {
 
   const checkBackend = async (url) => {
     const backendUrl = url || settings.backendUrl;
+    const wasConnected = isConnected;
     try {
       const r = await fetchWithTimeout(`${backendUrl}/health`, { headers: { 'ngrok-skip-browser-warning': '1' } });
       const d = await r.json();
-      setIsConnected(d.status === 'healthy');
+      const nowConnected = d.status === 'healthy';
+      setIsConnected(nowConnected);
+      // Auto-Reconnect: Lade Modelle wenn Verbindung wiederhergestellt
+      if (!wasConnected && nowConnected) {
+        console.log('Backend reconnected! Loading models...');
+        await fetchModels(backendUrl);
+      }
     } catch (e) { setIsConnected(false); console.log('Backend check failed:', e.message); }
   };
 

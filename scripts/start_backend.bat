@@ -1,40 +1,52 @@
 @echo off
 REM ============================================================
-REM BirdSound Backend Startup Script (Windows)
+REM BirdSound Backend Startup Script (Windows) with Auto-Restart
 REM ============================================================
 REM Startet Backend + ngrok automatisch
-REM 
-REM Installation: 
-REM   1. Rechtsklick -> "Verknuepfung erstellen"
-REM   2. Verknuepfung nach shell:startup verschieben
-REM   Oder: PowerShell als Admin ausfuehren und install_service.ps1 nutzen
+REM Bei Absturz wird das Backend automatisch neu gestartet
 REM ============================================================
 
 title BirdSound Backend
 cd /d D:\Projekte\Birds\backend
 
+:start
 echo ============================================================
-echo   BirdSound Backend Startup
+echo   BirdSound Backend Startup (mit Auto-Restart)
 echo ============================================================
+echo.
+echo   [%TIME%] Starte Backend...
 echo.
 
 REM Pruefe ob Backend bereits laeuft
-netstat -ano | findstr ":8000" >nul
+netstat -ano 2>nul | findstr ":8000" | findstr "LISTENING" >nul
 if not errorlevel 1 (
     echo [INFO] Backend laeuft bereits auf Port 8000
     goto :check_ngrok
 )
 
+REM Starte Backend im Vordergrund (fuer Auto-Restart bei Absturz)
 echo [START] Backend wird gestartet...
-start "BirdSound Backend" /MIN cmd /c "D:\Projekte\Birds\backend\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+echo.
 
-REM Warte bis Backend antwortet
-echo [WAIT] Warte auf Backend (Modelle werden geladen, ca. 30 Sekunden)...
-:wait_backend
+REM Starte Python-Prozess und ueberwache ihn
+D:\Projekte\Birds\backend\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+REM Wenn wir hier ankommen, ist das Backend abgestuerzt
+echo.
+echo [WARNUNG] Backend ist abgestuerzt! Exit code: %ERRORLEVEL%
+echo [AUTO-RESTART] Neustart in 5 Sekunden...
+echo.
 timeout /t 5 /nobreak >nul
-curl -s http://localhost:8000/api/v1/models >nul 2>&1
-if errorlevel 1 goto :wait_backend
-echo [OK] Backend ist bereit!
+
+REM Stoppe alte Prozesse falls noch vorhanden
+taskkill /F /IM python.exe /FI "WINDOWTITLE eq BirdSound*" 2>nul
+for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr ":8000" ^| findstr "LISTENING"') do (
+    taskkill /F /PID %%a 2>nul
+)
+timeout /t 2 /nobreak >nul
+
+REM Starte neu
+goto :start
 
 :check_ngrok
 REM Starte ngrok falls nicht bereits laufend
@@ -47,7 +59,7 @@ if errorlevel 1 (
     echo [INFO] ngrok laeuft bereits
 )
 
-REM Zeige ngrok URL
+REM Zeige Status
 echo.
 echo ============================================================
 echo   BirdSound ist bereit!
@@ -58,6 +70,8 @@ echo   API:     http://localhost:8000/docs
 echo.
 curl -s http://127.0.0.1:4040/api/tunnels 2>nul | findstr "public_url"
 echo.
-echo   Druecke eine Taste zum Schliessen (Backend laeuft weiter)
+echo   Bei Absturz startet das Backend automatisch neu.
+echo   Druecke Ctrl+C zum Beenden.
 echo ============================================================
 pause >nul
+goto :start

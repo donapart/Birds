@@ -29,7 +29,7 @@
 
 | Platform | Download | Size | Notes |
 |----------|----------|------|-------|
-| **📱 Android APK** | [BirdSound-v5.5.0.apk](https://github.com/donapart/Birds/raw/main/BirdSound-v5.5.0.apk) | ~90MB | Android 6+ |
+| **📱 Android APK** | [BirdSound-v5.5.1.apk](https://github.com/donapart/Birds/raw/main/BirdSound-v5.5.1.apk) | ~90MB | Android 6+ |
 | **🖥️ Windows Installer** | [BirdSound_5.5.0_Setup.exe](https://github.com/donapart/Birds/raw/main/installer/output/BirdSound_5.5.0_Setup.exe) | ~200KB | Python 3.11+ (auto-install) |
 | **🖥️ Windows Scripts** | [scripts/start_backend.bat](scripts/start_backend.bat) | - | Manual start |
 | **🍓 Raspberry Pi** | [scripts/raspberry_setup.sh](scripts/raspberry_setup.sh) | - | Debian/Ubuntu |
@@ -40,9 +40,9 @@
 
 Scan the QR code or use the direct link to download the APK:
 
-[![QR Code APK Download](docs/qr-code-apk.png)](https://github.com/donapart/Birds/raw/main/BirdSound-v5.5.0.apk)
+[![QR Code APK Download](docs/qr-code-apk.png)](https://github.com/donapart/Birds/raw/main/BirdSound-v5.5.1.apk)
 
-**Direct Link:** [BirdSound-v5.5.0.apk](https://github.com/donapart/Birds/raw/main/BirdSound-v5.5.0.apk) (~90MB)
+**Direct Link:** [BirdSound-v5.5.1.apk](https://github.com/donapart/Birds/raw/main/BirdSound-v5.5.1.apk) (~90MB)
 
 ---
 
@@ -1035,6 +1035,12 @@ Keine Aktion erforderlich! Das System funktioniert mit SQLite.
 MIT-Lizenz - siehe LICENSE-Datei
 
 ## Changelog
+
+### v5.5.1 (2024-12-05)
+- 🔄 **Auto-Reconnect** - App erkennt automatisch wenn Backend wieder online ist (alle 15 Sekunden)
+- 🔁 **Auto-Restart Backend** - Backend-Skripte starten bei Absturz automatisch neu
+- 📜 **Deployment-Skripte** - Neue Skripte für Windows-Autostart und Service-Installation
+- 📖 **DEPLOYMENT.md** - Umfassende Dokumentation für 4 Deployment-Optionen
 
 ### v5.5.0 (2024-12-05)
 - 🗺️ **Karten-Crashfix** - MapView ersetzt durch WebView + OpenStreetMap/Leaflet (kein Google API Key nötig)
