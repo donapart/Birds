@@ -30,7 +30,7 @@
 | Platform | Download | Size | Notes |
 |----------|----------|------|-------|
 | **📱 Android APK** | [BirdSound-v5.6.0.apk](https://github.com/donapart/Birds/raw/main/BirdSound-v5.6.0.apk) | ~90MB | Android 6+ |
-| **🖥️ Windows Installer** | [BirdSound_5.5.0_Setup.exe](https://github.com/donapart/Birds/raw/main/installer/output/BirdSound_5.5.0_Setup.exe) | ~200KB | Python 3.11+ (auto-install) |
+| **🖥️ Windows Installer** | [BirdSound_5.6.0_Setup.exe](https://github.com/donapart/Birds/raw/main/installer/output/BirdSound_5.6.0_Setup.exe) | ~200KB | Python 3.11+ (auto-install) |
 | **🖥️ Windows Scripts** | [scripts/start_backend.bat](scripts/start_backend.bat) | - | Manual start |
 | **🍓 Raspberry Pi** | [scripts/raspberry_setup.sh](scripts/raspberry_setup.sh) | - | Debian/Ubuntu |
 | **🐳 Docker** | [docker-compose.yml](docker-compose.yml) | - | Docker Desktop |

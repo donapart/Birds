@@ -161,7 +161,7 @@ while($true) {
 
 ### 9. **App-seitige Auto-Reconnect**
 
-**Bereits implementiert in v5.5.1:**
+**Bereits implementiert in v5.6.0:**
 - ✅ App prüft alle 15 Sekunden ob Backend online ist
 - ✅ Lädt automatisch Modelle nach wenn Verbindung wiederhergestellt
 
