@@ -8,6 +8,107 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
+class AudioEnhancementSettings(BaseModel):
+    """Settings for audio preprocessing/enhancement."""
+    
+    # Preset selection (overrides individual settings if set)
+    preset: Optional[str] = Field(
+        None,
+        description="Preset name: none, light, moderate, aggressive, noisy_environment, wind_reduction"
+    )
+    
+    # Bandpass Filter
+    bandpass_enabled: bool = Field(
+        False,
+        description="Enable bandpass filter for bird frequencies"
+    )
+    bandpass_low_freq: int = Field(
+        1000,
+        ge=100,
+        le=5000,
+        description="Lower cutoff frequency in Hz"
+    )
+    bandpass_high_freq: int = Field(
+        8000,
+        ge=2000,
+        le=20000,
+        description="Upper cutoff frequency in Hz"
+    )
+    
+    # Noise Reduction
+    noise_reduction_enabled: bool = Field(
+        False,
+        description="Enable AI noise reduction"
+    )
+    noise_reduction_strength: float = Field(
+        1.0,
+        ge=0.0,
+        le=2.0,
+        description="Noise reduction strength (0-2)"
+    )
+    
+    # Auto-Gain
+    auto_gain_enabled: bool = Field(
+        False,
+        description="Enable automatic volume normalization"
+    )
+    auto_gain_target_db: float = Field(
+        -3.0,
+        ge=-20.0,
+        le=0.0,
+        description="Target peak level in dB"
+    )
+    
+    # Spectral Gate
+    spectral_gate_enabled: bool = Field(
+        False,
+        description="Enable spectral gating to remove quiet sounds"
+    )
+    spectral_gate_threshold_db: float = Field(
+        -40.0,
+        ge=-60.0,
+        le=-10.0,
+        description="Gate threshold in dB"
+    )
+    
+    # High-pass filter
+    highpass_enabled: bool = Field(
+        False,
+        description="Enable high-pass filter to remove low rumble"
+    )
+    highpass_freq: int = Field(
+        200,
+        ge=50,
+        le=500,
+        description="High-pass cutoff frequency in Hz"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "preset": "moderate",
+                "bandpass_enabled": True,
+                "bandpass_low_freq": 1000,
+                "bandpass_high_freq": 8000,
+                "noise_reduction_enabled": False,
+                "auto_gain_enabled": True,
+                "auto_gain_target_db": -3.0
+            }
+        }
+
+
+class AudioEnhancementResult(BaseModel):
+    """Result of audio enhancement processing."""
+    applied_enhancements: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Details of applied enhancements"
+    )
+    preset_used: Optional[str] = Field(
+        None,
+        description="Preset that was applied (if any)"
+    )
+
+
 class SpeciesPrediction(BaseModel):
     """Single species prediction from a model."""
     species_code: Optional[str] = Field(

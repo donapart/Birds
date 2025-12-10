@@ -13,9 +13,11 @@ from app.schemas.audio import AudioChunkRequest, AudioChunkBatchRequest, AudioFo
 from app.schemas.prediction import (
     PredictionResponse,
     BatchPredictionResponse,
+    AudioEnhancementSettings,
 )
 from app.services.prediction_service import PredictionService
 from app.services.model_registry import model_registry
+from app.services.audio_enhancement import audio_enhancer, EnhancementSettings
 from app.db.database import get_db
 from app.api.dependencies import get_api_key
 
@@ -125,10 +127,23 @@ async def predict_upload(
     latitude: Optional[float] = Form(default=None),
     longitude: Optional[float] = Form(default=None),
     model: Optional[str] = Form(default=None),
+    # Audio Enhancement Options (all optional, default=off)
+    enhancement_preset: Optional[str] = Form(default=None, description="Preset: none, light, moderate, aggressive, noisy_environment, wind_reduction"),
+    bandpass_enabled: bool = Form(default=False),
+    bandpass_low_freq: int = Form(default=1000),
+    bandpass_high_freq: int = Form(default=8000),
+    noise_reduction_enabled: bool = Form(default=False),
+    noise_reduction_strength: float = Form(default=1.0),
+    auto_gain_enabled: bool = Form(default=False),
+    auto_gain_target_db: float = Form(default=-3.0),
+    spectral_gate_enabled: bool = Form(default=False),
+    spectral_gate_threshold_db: float = Form(default=-40.0),
+    highpass_enabled: bool = Form(default=False),
+    highpass_freq: int = Form(default=200),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Upload audio file for prediction with GPS coordinates.
+    Upload audio file for prediction with GPS coordinates and audio enhancement.
     
     Accepts multipart form data with:
     - file: Audio file (m4a, wav, mp3)
@@ -136,22 +151,96 @@ async def predict_upload(
     - latitude/longitude: GPS coordinates
     - model: Optional specific model to use
     
+    Audio Enhancement Options (all optional, off by default):
+    - enhancement_preset: Use a preset (none, light, moderate, aggressive, noisy_environment, wind_reduction)
+    - bandpass_enabled: Filter to bird frequencies (1-8 kHz)
+    - noise_reduction_enabled: AI noise reduction
+    - auto_gain_enabled: Automatic volume normalization
+    - spectral_gate_enabled: Remove quiet background sounds
+    - highpass_enabled: Remove low-frequency rumble
+    
     Stores results with GPS and timestamp in database.
     """
     from datetime import timezone
+    import soundfile as sf
+    import numpy as np
+    import io
     
-    # Read and encode audio
+    # Read audio file
     audio_bytes = await file.read()
-    audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
     
-    # Determine format from filename
-    filename = file.filename or "audio.m4a"
-    if filename.endswith('.wav'):
+    # Decode audio to numpy array for enhancement
+    try:
+        audio_data, sample_rate = sf.read(io.BytesIO(audio_bytes))
+        if len(audio_data.shape) > 1:
+            audio_data = audio_data.mean(axis=1)  # Convert to mono
+        audio_data = audio_data.astype(np.float32)
+    except Exception as e:
+        logger.warning(f"Could not decode with soundfile: {e}, trying raw approach")
+        # Fallback: pass through without enhancement
+        audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
+        audio_data = None
+        sample_rate = 48000
+    
+    # Apply audio enhancement if audio was decoded
+    enhancement_result = {}
+    if audio_data is not None:
+        # Determine enhancement settings
+        if enhancement_preset:
+            presets = audio_enhancer.get_presets()
+            if enhancement_preset in presets:
+                enhancement_settings = presets[enhancement_preset]
+                enhancement_result["preset_used"] = enhancement_preset
+            else:
+                logger.warning(f"Unknown preset: {enhancement_preset}, using custom settings")
+                enhancement_settings = EnhancementSettings(
+                    bandpass_enabled=bandpass_enabled,
+                    bandpass_low_freq=bandpass_low_freq,
+                    bandpass_high_freq=bandpass_high_freq,
+                    noise_reduction_enabled=noise_reduction_enabled,
+                    noise_reduction_strength=noise_reduction_strength,
+                    auto_gain_enabled=auto_gain_enabled,
+                    auto_gain_target_db=auto_gain_target_db,
+                    spectral_gate_enabled=spectral_gate_enabled,
+                    spectral_gate_threshold_db=spectral_gate_threshold_db,
+                    highpass_enabled=highpass_enabled,
+                    highpass_freq=highpass_freq,
+                )
+        else:
+            enhancement_settings = EnhancementSettings(
+                bandpass_enabled=bandpass_enabled,
+                bandpass_low_freq=bandpass_low_freq,
+                bandpass_high_freq=bandpass_high_freq,
+                noise_reduction_enabled=noise_reduction_enabled,
+                noise_reduction_strength=noise_reduction_strength,
+                auto_gain_enabled=auto_gain_enabled,
+                auto_gain_target_db=auto_gain_target_db,
+                spectral_gate_enabled=spectral_gate_enabled,
+                spectral_gate_threshold_db=spectral_gate_threshold_db,
+                highpass_enabled=highpass_enabled,
+                highpass_freq=highpass_freq,
+            )
+        
+        # Apply enhancements
+        audio_data, applied = audio_enhancer.enhance(audio_data, sample_rate, enhancement_settings)
+        enhancement_result["applied_enhancements"] = applied
+        
+        # Re-encode to WAV format for model processing
+        wav_buffer = io.BytesIO()
+        sf.write(wav_buffer, audio_data, sample_rate, format='WAV')
+        wav_buffer.seek(0)
+        audio_base64 = base64.b64encode(wav_buffer.read()).decode('utf-8')
         audio_format = AudioFormat.WAV
-    elif filename.endswith('.mp3'):
-        audio_format = AudioFormat.MP3
     else:
-        audio_format = AudioFormat.M4A
+        # No enhancement possible, use original
+        audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
+        filename = file.filename or "audio.m4a"
+        if filename.endswith('.wav'):
+            audio_format = AudioFormat.WAV
+        elif filename.endswith('.mp3'):
+            audio_format = AudioFormat.MP3
+        else:
+            audio_format = AudioFormat.M4A
     
     # Create request
     request = AudioChunkRequest(
@@ -159,7 +248,7 @@ async def predict_upload(
         timestamp_utc=datetime.now(timezone.utc),
         audio_base64=audio_base64,
         audio_format=audio_format,
-        sample_rate=48000,
+        sample_rate=sample_rate,
         latitude=latitude,
         longitude=longitude,
         models=[model] if model else None
@@ -169,13 +258,14 @@ async def predict_upload(
         service = PredictionService(db=db)
         response = await service.process_audio_chunk(request, store_in_db=True)
         
-        # Return simplified response for mobile
+        # Return simplified response for mobile with enhancement info
         return {
             "recording_id": str(response.recording_id),
             "timestamp": response.timestamp_utc.isoformat(),
             "latitude": latitude,
             "longitude": longitude,
             "processing_time_ms": response.processing_time_ms,
+            "audio_enhancement": enhancement_result,
             "predictions": [
                 {
                     "species": p.species_common,
@@ -195,6 +285,31 @@ async def predict_upload(
     except Exception as e:
         logger.error(f"Upload prediction failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/audio-enhancement/presets")
+async def get_enhancement_presets():
+    """
+    Get available audio enhancement presets.
+    
+    Returns all predefined presets with their settings.
+    Use preset name in the 'enhancement_preset' parameter.
+    """
+    presets = audio_enhancer.get_presets()
+    return {
+        "presets": {
+            name: settings.to_dict()
+            for name, settings in presets.items()
+        },
+        "description": {
+            "none": "No enhancement (original audio)",
+            "light": "Subtle enhancement: auto-gain + highpass filter",
+            "moderate": "Balanced: bandpass filter + auto-gain",
+            "aggressive": "Strong: all filters + noise reduction",
+            "noisy_environment": "Heavy filtering for noisy recordings",
+            "wind_reduction": "Optimized for wind noise removal"
+        }
+    }
 
 
 @router.get("/models")

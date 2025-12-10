@@ -1,5 +1,5 @@
 /**
- * BirdSound v5.5.1 - Multi-Model, Session Reports, Advanced Settings, MAP VIEW, BACKGROUND RECORDING, 3D SPECTROGRAM, AUTO-RECONNECT
+ * BirdSound v5.6.0 - Multi-Model, Session Reports, Advanced Settings, MAP VIEW, BACKGROUND RECORDING, 3D SPECTROGRAM, AUTO-RECONNECT, AUDIO ENHANCEMENT
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, StatusBar, Platform, Alert, TextInput, Modal, Switch, Share, FlatList, Dimensions, AppState } from 'react-native';
@@ -457,6 +457,21 @@ export default function App() {
     backendUrl: URL, chunkDuration: 3, minConfidence: 0.1, enableGPS: true, offlineMode: true,
     selectedModel: null, consensusMethod: 'weighted_average', autoStopMinutes: 0,
     backgroundRecording: false,  // Neue Einstellung für Hintergrund-Aufnahme
+    // Audio Enhancement Settings (v5.6.0)
+    audioEnhancement: {
+      preset: null,  // none, light, moderate, aggressive, noisy_environment, wind_reduction
+      bandpassEnabled: false,
+      bandpassLowFreq: 1000,
+      bandpassHighFreq: 8000,
+      noiseReductionEnabled: false,
+      noiseReductionStrength: 1.0,
+      autoGainEnabled: false,
+      autoGainTargetDb: -3.0,
+      spectralGateEnabled: false,
+      spectralGateThresholdDb: -40.0,
+      highpassEnabled: false,
+      highpassFreq: 200,
+    },
   });
   const [availableModels, setAvailableModels] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -761,6 +776,25 @@ export default function App() {
       }
       if (settings.selectedModel) form.append('model', settings.selectedModel);
       
+      // Audio Enhancement Settings
+      const ae = settings.audioEnhancement || {};
+      if (ae.preset) {
+        form.append('enhancement_preset', ae.preset);
+      } else {
+        // Individual settings
+        if (ae.bandpassEnabled) form.append('bandpass_enabled', 'true');
+        if (ae.noiseReductionEnabled) form.append('noise_reduction_enabled', 'true');
+        if (ae.autoGainEnabled) form.append('auto_gain_enabled', 'true');
+        if (ae.spectralGateEnabled) form.append('spectral_gate_enabled', 'true');
+        if (ae.highpassEnabled) form.append('highpass_enabled', 'true');
+        if (ae.bandpassLowFreq) form.append('bandpass_low_freq', String(ae.bandpassLowFreq));
+        if (ae.bandpassHighFreq) form.append('bandpass_high_freq', String(ae.bandpassHighFreq));
+        if (ae.noiseReductionStrength) form.append('noise_reduction_strength', String(ae.noiseReductionStrength));
+        if (ae.autoGainTargetDb) form.append('auto_gain_target_db', String(ae.autoGainTargetDb));
+        if (ae.spectralGateThresholdDb) form.append('spectral_gate_threshold_db', String(ae.spectralGateThresholdDb));
+        if (ae.highpassFreq) form.append('highpass_freq', String(ae.highpassFreq));
+      }
+      
       const r = await fetch(`${settings.backendUrl}/api/v1/predict/upload`, { 
         method: 'POST', 
         headers: { 'ngrok-skip-browser-warning': '1' }, 
@@ -768,16 +802,16 @@ export default function App() {
       });
       const result = await r.json();
       if (sessionRef.current) sessionRef.current.totalAnalyzed++;
-      if (result.predictions?.length > 0) processDet(result.predictions, uri, result.consensus);
+      if (result.predictions?.length > 0) processDet(result.predictions, uri, result.consensus, result.audio_enhancement);
     } catch (e) { console.log('Analysis error:', e); }
   };
 
-  const processDet = (preds, uri, consensus) => {
+  const processDet = (preds, uri, consensus, audioEnhancement) => {
     const ts = new Date();
     const newDets = preds.filter(p => p.confidence >= settings.minConfidence).slice(0, 5).map(p => {
       const sp = p.common_name || p.species;
       const bird = BIRD_LIBRARY[sp] || {};
-      return { id: Date.now() + Math.random(), species: sp, scientific: p.scientific_name || '', confidence: p.confidence, time: ts.toISOString(), location: location ? { lat: location.latitude, lng: location.longitude } : null, audioUri: uri, feedback: null, model: p.model || 'unknown', consensus, ...bird };
+      return { id: Date.now() + Math.random(), species: sp, scientific: p.scientific_name || '', confidence: p.confidence, time: ts.toISOString(), location: location ? { lat: location.latitude, lng: location.longitude } : null, audioUri: uri, feedback: null, model: p.model || 'unknown', consensus, audioEnhancement, ...bird };
     });
     if (newDets.length > 0) {
       const updated = [...newDets, ...detections].slice(0, 1000);
@@ -1059,6 +1093,29 @@ export default function App() {
           <View style={z.sw}><Text style={z.swL}>📍 GPS</Text><Switch value={settings.enableGPS} onValueChange={v => setSettings({...settings, enableGPS: v})} /></View>
           <View style={z.sw}><Text style={z.swL}>🔒 Hintergrund-Aufnahme</Text><Switch value={settings.backgroundRecording} onValueChange={v => setSettings({...settings, backgroundRecording: v})} /></View>
           {settings.backgroundRecording && <Text style={z.hint}>Aufnahme läuft weiter bei Tastensperre oder wenn App minimiert ist. Erhöht Akkuverbrauch.</Text>}
+          
+          <Text style={[z.lbl, {marginTop: 20, fontSize: 16, color: '#4ecdc4'}]}>🎧 Audio-Verbesserung</Text>
+          <Text style={z.hint}>Filtert Hintergrundgeräusche und verbessert die Vogelstimmen-Erkennung</Text>
+          
+          <Text style={z.lbl}>Preset</Text>
+          <View style={z.cfR}>
+            {[['none','Aus'],['light','Leicht'],['moderate','Mittel'],['aggressive','Stark'],['noisy_environment','Lärm'],['wind_reduction','Wind']].map(([v,l]) => (
+              <TouchableOpacity key={v} style={[z.cfB, settings.audioEnhancement?.preset === v && z.cfA]} 
+                onPress={() => setSettings({...settings, audioEnhancement: {...(settings.audioEnhancement || {}), preset: v === 'none' ? null : v}})}>
+                <Text style={z.cfT}>{l}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          
+          {!settings.audioEnhancement?.preset && (<>
+            <Text style={[z.lbl, {marginTop: 10}]}>Individuelle Filter</Text>
+            <View style={z.sw}><Text style={z.swL}>🎚️ Bandpass (1-8kHz)</Text><Switch value={settings.audioEnhancement?.bandpassEnabled || false} onValueChange={v => setSettings({...settings, audioEnhancement: {...(settings.audioEnhancement || {}), bandpassEnabled: v}})} /></View>
+            <View style={z.sw}><Text style={z.swL}>🔇 Rauschunterdrückung</Text><Switch value={settings.audioEnhancement?.noiseReductionEnabled || false} onValueChange={v => setSettings({...settings, audioEnhancement: {...(settings.audioEnhancement || {}), noiseReductionEnabled: v}})} /></View>
+            <View style={z.sw}><Text style={z.swL}>🔊 Auto-Verstärkung</Text><Switch value={settings.audioEnhancement?.autoGainEnabled || false} onValueChange={v => setSettings({...settings, audioEnhancement: {...(settings.audioEnhancement || {}), autoGainEnabled: v}})} /></View>
+            <View style={z.sw}><Text style={z.swL}>🚪 Spectral Gate</Text><Switch value={settings.audioEnhancement?.spectralGateEnabled || false} onValueChange={v => setSettings({...settings, audioEnhancement: {...(settings.audioEnhancement || {}), spectralGateEnabled: v}})} /></View>
+            <View style={z.sw}><Text style={z.swL}>📢 Hochpass (200Hz)</Text><Switch value={settings.audioEnhancement?.highpassEnabled || false} onValueChange={v => setSettings({...settings, audioEnhancement: {...(settings.audioEnhancement || {}), highpassEnabled: v}})} /></View>
+          </>)}
+          
           <TouchableOpacity style={z.sv} onPress={() => { saveData('settings', settings); fetchModels(); setShowSettings(false); }}><Text style={z.svT}>Speichern</Text></TouchableOpacity>
         </ScrollView><TouchableOpacity style={z.cl} onPress={() => setShowSettings(false)}><Text style={z.clT}>Abbrechen</Text></TouchableOpacity></View></View>
       </Modal>
