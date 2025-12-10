@@ -52,11 +52,12 @@ Scan the QR code or use the direct link to download the APK:
 
 BirdSound is a production-ready bird sound recognition system that uses multiple ML models to identify bird species from audio recordings. It features automatic database fallback, cross-platform support, and a comprehensive REST API.
 
-### ✅ Current Status (v5.5.0)
+### ✅ Current Status (v5.6.0)
 
 - ✅ **DimaBird Model** (HuggingFace dima806/bird_sounds_classification)
 - ✅ **BirdNET V2.4** integrated (6,522 species worldwide)
 - ✅ **Google Perch** integrated (15,000+ species, TensorFlow Hub)
+- ✅ **Audio Enhancement** - Bandpass filter, noise reduction, auto-gain
 - ✅ **Background Recording** - continues when app minimized or screen locked
 - ✅ **3D Spectrogram** - Real-time waterfall diagram with Android/iOS support
 - ✅ **Session Management** - Delete sessions, detailed reports
@@ -65,7 +66,7 @@ BirdSound is a production-ready bird sound recognition system that uses multiple
 - ✅ **Full Web Dashboard** with tabs (Live, Map, History, Settings)
 - ✅ **KML Export** for Google Earth
 - ✅ **Automatic Database Fallback** (PostgreSQL → SQLite)
-- ✅ **Mobile App** Android v5.5.0 with Offline-Demo mode
+- ✅ **Mobile App** Android v5.6.0 with Offline-Demo mode
 - ✅ **Windows Installer** (Inno Setup)
 - ✅ **Raspberry Pi Scripts** for field deployment
 
@@ -155,7 +156,7 @@ cd android
 ┌─────────────────┐     ┌─────────────────────────────────────────┐
 │  Mobile App     │     │           Backend (FastAPI)             │
 │  (Expo/RN)      │     │                                         │
-│  v5.5.0         │────▶│  ┌─────────┐ ┌─────────┐ ┌─────────┐   │
+│  v5.6.0         │────▶│  ┌─────────┐ ┌─────────┐ ┌─────────┐   │
 │                 │     │  │ BirdNET │ │DimaBird │ │  Perch  │   │
 │  - Audio Capture│     │  │ (ONNX)  │ │(Hugging)│ │(TFHub)  │   │
 │  - GPS Location │     │  └────┬────┘ └────┬────┘ └────┬────┘   │
