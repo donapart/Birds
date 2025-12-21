@@ -33,8 +33,18 @@
 | **🖥️ Windows Installer** | [BirdSound_5.6.0_Setup.exe](https://github.com/donapart/Birds/raw/main/installer/output/BirdSound_5.6.0_Setup.exe) | ~200KB | Python 3.11+ (auto-install) |
 | **🖥️ Windows Scripts** | [scripts/start_backend.bat](scripts/start_backend.bat) | - | Manual start |
 | **🍓 Raspberry Pi** | [scripts/raspberry_setup.sh](scripts/raspberry_setup.sh) | - | Debian/Ubuntu |
-| **🐳 Docker** | [docker-compose.yml](docker-compose.yml) | - | Docker Desktop |
+| **🐳 Docker** | [docker-compose.yml](docker-compose.yml) | - | Docker Desktop, Port 8003 |
 | **🍎 iOS** | Expo Go App | - | `npx expo start` |
+
+### 📚 Documentation / Dokumentation
+
+| Document | Description |
+|----------|-------------|
+| [SETUP_COMPLETE.md](docs/SETUP_COMPLETE.md) | ✅ **Complete system documentation** - Setup, autostart, troubleshooting |
+| [VERSION_CHECK.md](docs/VERSION_CHECK.md) | 🔍 Version consistency check and known issues |
+| [API.md](API.md) | API endpoints and usage examples |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deployment options and configurations |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common problems and solutions |
 
 ### 📱 Android APK Download (QR-Code)
 

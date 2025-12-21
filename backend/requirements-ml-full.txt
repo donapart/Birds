@@ -1,0 +1,18 @@
+# ML Models - Full Stack Requirements
+# WICHTIG: Nur benötigt wenn USE_MODEL_STUBS=false
+
+# BirdNET Official Package (6,000+ species)
+birdnet>=0.2.0
+
+# Google Perch Model (15,000+ species)
+tensorflow>=2.13.0
+tensorflow-hub>=0.14.0
+
+# HuggingFace Transformers (DimaBird - 50 European species)
+transformers>=4.35.0
+torch>=2.0.0
+# torchaudio>=2.0.0  # Optional
+
+# ONNX Runtime (alternativ zu BirdNET official package)
+onnxruntime>=1.16.0
+# onnxruntime-gpu>=1.16.0  # Für GPU support

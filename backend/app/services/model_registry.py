@@ -125,9 +125,29 @@ class ModelRegistry:
         for model in models_to_load:
             if model.is_loaded:
                 self.models[model.model_name] = model
-                logger.info(f"Registered model: {model.model_name}")
+                logger.info(f"✓ Registered model: {model.model_name}")
             else:
-                logger.warning(f"Model {model.model_name} failed to load")
+                logger.error(f"✗ Model {model.model_name} failed to load")
+        
+        # Critical: Warn if NO models loaded
+        if len(self.models) == 0:
+            logger.error("=" * 60)
+            logger.error("CRITICAL: NO MODELS LOADED!")
+            logger.error("=" * 60)
+            if not settings.USE_MODEL_STUBS:
+                logger.error("Mögliche Ursachen:")
+                logger.error("  1. Fehlende Dependencies (transformers, torch, birdnet)")
+                logger.error("  2. Fehlende Model-Dateien")
+                logger.error("  3. ImportErrors oder andere Fehler beim Laden")
+                logger.error("")
+                logger.error("LÖSUNG:")
+                logger.error("  - Entwicklung: Setze USE_MODEL_STUBS=true in .env")
+                logger.error("  - Produktion: pip install birdnet (oder siehe REQUIREMENTS_ML.md)")
+                logger.error("=" * 60)
+            else:
+                logger.error("Stub-Modelle sollten immer funktionieren!")
+                logger.error("Dies deutet auf einen schwerwiegenden Fehler hin.")
+                logger.error("=" * 60)
 
     async def unload_models(self) -> None:
         """Unload all models."""

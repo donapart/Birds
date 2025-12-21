@@ -86,7 +86,8 @@ services:
       - AUDIO_STORAGE_PATH=/app/audio_storage
     volumes:
       - ./audio_storage:/app/audio_storage
-      - model_cache:/root/.cache  # Cache for downloaded models
+      - model_cache:/root/.cache  # Cache for downloaded models (HuggingFace, BirdNET)
+      - birdnet_cache:/root/.birdnet  # BirdNET models persistent cache
     ports:
       - "${API_PORT:-8003}:8000"
     healthcheck:
@@ -159,4 +160,6 @@ volumes:
   redis_data:
     driver: local
   model_cache:
+    driver: local
+  birdnet_cache:
     driver: local

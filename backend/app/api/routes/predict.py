@@ -331,11 +331,22 @@ async def list_models():
             "top_n": getattr(model, 'top_n', 5),
             "min_confidence": getattr(model, 'min_confidence', 0.1)
         })
-
-    return {
+    
+    result = {
         "models": models,
         "total": len(models)
     }
+    
+    # Add helpful error info if no models loaded
+    if len(models) == 0:
+        result["error"] = "Keine Modelle geladen"
+        result["help"] = {
+            "message": "Prüfe die Server-Logs und .env Konfiguration",
+            "quick_fix": "Setze USE_MODEL_STUBS=true in .env für Entwicklung",
+            "documentation": "Siehe REQUIREMENTS_ML.md für Production-Setup"
+        }
+
+    return result
 
 
 @router.get("/models/{model_name}")

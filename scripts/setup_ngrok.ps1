@@ -44,7 +44,7 @@ version: "2"
 authtoken: $AuthToken
 tunnels:
   birdsound:
-    addr: 8000
+    addr: 8003
     proto: http
 "@
 
