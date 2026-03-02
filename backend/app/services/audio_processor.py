@@ -68,7 +68,7 @@ class AudioProcessor:
             audio = self._decode_pcm16(raw_bytes, little_endian=False)
         elif audio_format == "float32":
             audio = np.frombuffer(raw_bytes, dtype=np.float32)
-        elif audio_format in ("wav", "ogg_opus", "mp3"):
+        elif audio_format in ("wav", "ogg_opus", "mp3", "m4a"):
             audio = self._decode_audio_file(raw_bytes, audio_format)
         else:
             raise ValueError(f"Unsupported audio format: {audio_format}")
@@ -89,8 +89,25 @@ class AudioProcessor:
 
         Note: This requires additional dependencies:
         - soundfile for WAV
-        - pydub + ffmpeg for OGG/MP3
+        - pydub + ffmpeg for OGG/MP3/M4A
         """
+        # For M4A, use pydub with ffmpeg directly (soundfile doesn't support M4A)
+        if format == "m4a":
+            try:
+                from pydub import AudioSegment
+                seg = AudioSegment.from_file(io.BytesIO(raw_bytes), format="m4a")
+                # Convert to mono
+                seg = seg.set_channels(1)
+                samples = np.array(seg.get_array_of_samples()).astype(np.float32)
+                samples = samples / 32768.0
+                return samples
+            except ImportError:
+                raise ImportError(
+                    "pydub is required for M4A support. "
+                    "Install: pip install pydub"
+                )
+        
+        # For other formats, try soundfile first (faster)
         try:
             import soundfile as sf
             audio, sr = sf.read(io.BytesIO(raw_bytes))
@@ -100,6 +117,7 @@ class AudioProcessor:
         except ImportError:
             logger.warning("soundfile not installed, trying pydub")
 
+        # Fallback to pydub for other formats
         try:
             from pydub import AudioSegment
             if format == "wav":

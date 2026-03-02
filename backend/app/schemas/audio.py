@@ -17,6 +17,7 @@ class AudioFormat(str, Enum):
     OGG_OPUS = "ogg_opus"  # Ogg Opus compressed
     WAV = "wav"            # WAV file
     MP3 = "mp3"            # MP3 (not recommended for analysis)
+    M4A = "m4a"            # M4A/AAC audio file
 
 
 class AudioChunkRequest(BaseModel):

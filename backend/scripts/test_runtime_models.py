@@ -71,7 +71,7 @@ async def test_models():
         
         # Run predictions
         logger.info("Running predictions...")
-        results = await registry.predict_all(audio)
+        results = await registry.predict_all(audio, sample_rate=48000)
         logger.info(f"✓ Got results from {len(results)} models")
         logger.info("")
         

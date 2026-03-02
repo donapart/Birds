@@ -14,7 +14,7 @@ async def test():
     
     # Predict
     try:
-        results = await model_registry.predict_all(audio, lat=52.52, lon=13.405)
+        results = await model_registry.predict_all(audio, sample_rate=48000, lat=52.52, lon=13.405)
         print(f"Prediction results: {len(results)} models")
         
         if results and results[0].predictions:

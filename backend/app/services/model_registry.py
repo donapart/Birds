@@ -166,6 +166,7 @@ class ModelRegistry:
     async def predict_all(
         self,
         audio: np.ndarray,
+        sample_rate: int = 48000,
         lat: Optional[float] = None,
         lon: Optional[float] = None,
         model_names: Optional[List[str]] = None
@@ -175,6 +176,7 @@ class ModelRegistry:
 
         Args:
             audio: Preprocessed audio array
+            sample_rate: Sample rate of the audio (default 48kHz)
             lat: Optional latitude
             lon: Optional longitude
             model_names: Specific models to use (None = all)
@@ -196,7 +198,7 @@ class ModelRegistry:
             return []
 
         # Run predictions concurrently
-        tasks = [model.predict(audio, lat, lon) for model in models]
+        tasks = [model.predict(audio, sample_rate, latitude=lat, longitude=lon) for model in models]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Filter out errors

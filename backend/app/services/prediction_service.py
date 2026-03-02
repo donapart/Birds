@@ -75,6 +75,7 @@ class PredictionService:
         # 2. Run all models
         model_outputs = await model_registry.predict_all(
             audio=audio,
+            sample_rate=48000,  # Audio has been resampled to 48kHz
             lat=request.latitude,
             lon=request.longitude,
             model_names=request.models
@@ -94,7 +95,7 @@ class PredictionService:
             ModelPrediction(
                 model_name=output.model_name,
                 model_version=output.model_version,
-                inference_time_ms=output.inference_time_ms,
+                inference_time_ms=int(output.processing_time_ms),
                 predictions=[
                     SpeciesPrediction(
                         species_code=p.species_code,
@@ -199,7 +200,7 @@ class PredictionService:
                         species_common=pred.species_common,
                         confidence=pred.confidence,
                         rank=pred.rank,
-                        inference_time_ms=output.inference_time_ms
+                        inference_time_ms=int(output.processing_time_ms)
                     )
                     self.db.add(prediction)
 
