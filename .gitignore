@@ -40,7 +40,8 @@ env/
 .env.*.local
 
 # Models (large files - download separately)
-models/
+/models/
+backend/models/
 *.onnx
 *.pt
 *.pth

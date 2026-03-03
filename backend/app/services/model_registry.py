@@ -56,9 +56,11 @@ class ModelRegistry:
             models_to_load = []
             
             # 1. DimaBird (HuggingFace) - always available
+            # DimaBird uses 16kHz internally (Wav2Vec2 requirement)
+            # Do NOT override with AUDIO_SAMPLE_RATE (48kHz) - the model resamples internally
             models_to_load.append(
                 DimaBirdRuntimeModel(
-                    sample_rate=settings.AUDIO_SAMPLE_RATE
+                    sample_rate=16000
                 )
             )
             

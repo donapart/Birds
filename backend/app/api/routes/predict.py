@@ -259,6 +259,19 @@ async def predict_upload(
         response = await service.process_audio_chunk(request, store_in_db=True)
         
         # Return simplified response for mobile with enhancement info
+        all_predictions = [
+            {
+                "species": p.species_common,
+                "scientific_name": p.species_scientific,
+                "confidence": p.confidence,
+                "model": mp.model_name
+            }
+            for mp in response.model_predictions
+            for p in mp.predictions
+        ]
+        # Sort by confidence descending so best prediction comes first
+        all_predictions.sort(key=lambda x: x["confidence"], reverse=True)
+        
         return {
             "recording_id": str(response.recording_id),
             "timestamp": response.timestamp_utc.isoformat(),
@@ -266,16 +279,7 @@ async def predict_upload(
             "longitude": longitude,
             "processing_time_ms": response.processing_time_ms,
             "audio_enhancement": enhancement_result,
-            "predictions": [
-                {
-                    "species": p.species_common,
-                    "scientific_name": p.species_scientific,
-                    "confidence": p.confidence,
-                    "model": mp.model_name
-                }
-                for mp in response.model_predictions
-                for p in mp.predictions
-            ],
+            "predictions": all_predictions,
             "consensus": {
                 "species": response.consensus.species_common,
                 "confidence": response.consensus.confidence,
