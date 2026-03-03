@@ -2,7 +2,7 @@
   "expo": {
     "name": "BirdSound",
     "slug": "birdsound",
-    "version": "1.2.1",
+    "version": "1.3.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -23,7 +23,7 @@
     },
     "android": {
       "package": "com.birdsound.app",
-      "versionCode": 57,
+      "versionCode": 58,
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
