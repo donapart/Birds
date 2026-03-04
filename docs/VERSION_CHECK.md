@@ -1,6 +1,6 @@
-# Version Check - BirdSound 5.8.0
+# Version Check - BirdSound 5.9.2
 
-**Stand: 3. März 2026**
+**Stand: 4. März 2026**
 
 ## ✅ Versions-Status
 
@@ -14,25 +14,27 @@
 ### Mobile Apps
 | Plattform | Version | versionCode | Status |
 |-----------|---------|-------------|--------|
-| `mobile/expo-app/app.json` | 1.3.0 | 58 | ✅ |
-| `mobile/expo-app/package.json` | 5.8.0 | - | ✅ |
-| `mobile/expo-app/App.js` | v5.8.0 | - | ✅ |
-| `mobile/expo-app-v52/app.json` | 1.3.0 | 580 | ✅ |
-| `mobile/expo-app-v52/package.json` | 5.8.0 | - | ✅ |
+| `mobile/expo-app/app.json` | 1.5.0 | 62 | ✅ |
+| `mobile/expo-app/package.json` | 5.9.2 | - | ✅ |
+| `mobile/expo-app/App.js` | v5.9.2 | - | ✅ |
+| `mobile/expo-app-v52/app.json` | 1.3.0 | 580 | ⬜ (Legacy) |
+| `mobile/expo-app-v52/package.json` | 5.8.0 | - | ⬜ (Legacy) |
 
 ### Installer
 | Datei | Version | Status |
 |-------|---------|--------|
-| `installer/BirdSound_Setup.iss` | 5.8.0 | ✅ |
-| `installer/BirdSound_Setup.nsi` | 5.8.0 | ✅ |
-| `installer/birdsound.iss` | 5.8.0 | ✅ |
+| `installer/BirdSound_Setup.iss` | 5.9.2 | ✅ |
+| `installer/BirdSound_Setup.nsi` | 5.9.2 | ✅ |
+| `installer/birdsound.iss` | 5.9.2 | ✅ |
 
 ### Dokumentation
 | Datei | Version | Status |
 |-------|---------|--------|
-| `docs/CHANGELOG_v5.8.md` | 5.8.0 | ✅ NEU |
-| `docs/VERSION_CHECK.md` | 5.8.0 | ✅ Aktualisiert |
-| `README.md` | 5.8.0 | ✅ |
+| `docs/CHANGELOG_v5.9.md` | 5.9.2 | ✅ NEU |
+| `docs/CHANGELOG_v5.8.md` | 5.8.0 | ✅ |
+| `docs/VERSION_CHECK.md` | 5.9.2 | ✅ Aktualisiert |
+| `README.md` | 5.9.2 | ✅ |
+| `docs/index.html` | 5.9.2 | ✅ (GitHub Pages) |
 
 ---
 
@@ -156,10 +158,13 @@ volumes:
 - [x] Alle 3 Modelle geladen (API GET /models)
 - [x] Vogelarten korrekt erkannt (7/7 Testaufnahmen)
 - [x] Predictions nach Konfidenz sortiert
-- [x] Version 5.8.0 überall konsistent
+- [x] Version 5.9.2 überall konsistent
 - [x] .env konfiguriert (USE_MODEL_STUBS=false)
 - [x] Dokumentation aktualisiert
-- [x] CHANGELOG_v5.8.md erstellt
+- [x] CHANGELOG_v5.9.md erstellt
+- [x] 160+ Arten in BirdLibrary
+- [x] 200+ BirdNET-Codes in SpeciesResolver
+- [x] GitHub Pages aktualisiert
 
 ---
 
@@ -167,7 +172,10 @@ volumes:
 
 | Version | Datum | Hauptänderungen |
 |---------|-------|-----------------|
-| **5.8.0** | **03.03.2026** | **ML-Pipeline komplett repariert: BirdNET, DimaBird, Perch** |
+| **5.9.2** | **04.03.2026** | **160+ Arten, Smart-Filter für exotische Vögel** |
+| 5.9.1 | 04.03.2026 | BirdNET-Code-Filter, Modal-Fixes, Share-Funktion |
+| 5.9.0 | 04.03.2026 | Wissenschaftliche Reports, SpeciesResolver, ScientificReport |
+| 5.8.0 | 03.03.2026 | ML-Pipeline komplett repariert: BirdNET, DimaBird, Perch |
 | 5.7.0 | 01.03.2026 | Bug Fixes: M4A-Format, Model Prediction Signatur |
 | 5.6.0 | 21.12.2025 | Audio Enhancement, ngrok Autostart, Dokumentation |
 | 5.5.1 | - | Auto-Reconnect und Auto-Restart |
@@ -177,13 +185,16 @@ volumes:
 
 ## 🎯 Zusammenfassung
 
-**Status: ✅ PRODUKTIV - Vogelerkennung funktioniert!**
+**Status: ✅ PRODUKTIV - BirdSound v5.9.2**
 
-Alle Komponenten sind auf Version 5.8.0 und funktional:
+Alle Komponenten sind auf Version 5.9.2 und funktional:
 - Backend läuft in Docker auf Port 8003
 - **3 ML-Modelle geladen und VERIFIZIERT mit echten Vogelaufnahmen**
-- Northern Cardinal erkannt mit 99.3% Konfidenz
-- Great Horned Owl erkannt mit 99.8% Konfidenz
+- **160+ mitteleuropäische Vogelarten** in der Bibliothek
+- **200+ BirdNET-Code-Mappings** für zuverlässige Namenauflösung
+- **Smart-Filter**: Bekannte Arten immer anzeigen + exotische Vögel ab 50% Konfidenz
+- **Wissenschaftliche Feldberichte** als HTML-Export
+- **Teilen-Funktion** für Beobachtungen
 - 7/7 Testaufnahmen korrekt identifiziert
 
-**Das System erkennt jetzt zuverlässig Vögel!**
+**Das System erkennt jetzt zuverlässig 160+ Vogelarten!**

@@ -887,7 +887,7 @@ export default function App() {
   const exportJSON = async () => {
     try {
       const p = `${FileSystem.documentDirectory}birdsound_export.json`;
-      await FileSystem.writeAsStringAsync(p, JSON.stringify({ meta: { generator: 'BirdSound v5.9.0', developer: 'Dano Schönwald', exportDate: new Date().toISOString() }, stats: userStats, detections: detections.map(d => ({ species: d.species, scientific: d.scientific, englishName: d.englishName, confidence: d.confidence, time: d.time, location: d.location, model: d.model })), sessions: sessionHistory.map(s => ({ id: s.id, startTime: s.startTime, endTime: s.endTime, duration: s.duration, speciesCount: s.speciesCount, totalDetections: s.detections?.length || 0, totalAnalyzed: s.totalAnalyzed })) }, null, 2));
+      await FileSystem.writeAsStringAsync(p, JSON.stringify({ meta: { generator: 'BirdSound v5.9.2', developer: 'Dano Schönwald', exportDate: new Date().toISOString() }, stats: userStats, detections: detections.map(d => ({ species: d.species, scientific: d.scientific, englishName: d.englishName, confidence: d.confidence, time: d.time, location: d.location, model: d.model })), sessions: sessionHistory.map(s => ({ id: s.id, startTime: s.startTime, endTime: s.endTime, duration: s.duration, speciesCount: s.speciesCount, totalDetections: s.detections?.length || 0, totalAnalyzed: s.totalAnalyzed })) }, null, 2));
       await Sharing.shareAsync(p, { mimeType: 'application/json', dialogTitle: 'JSON exportieren' });
     } catch(e) { Alert.alert('Export-Fehler', 'JSON-Export fehlgeschlagen: ' + e.message); }
   };
@@ -910,7 +910,7 @@ export default function App() {
         await Sharing.shareAsync(p, { mimeType: 'application/json', dialogTitle: 'Session JSON exportieren' });
       } else {
         // HTML Feldbericht (druckbar)
-        const html = generateFieldReport(session, { appVersion: '5.9.0', observerName: 'Dano Schönwald' });
+        const html = generateFieldReport(session, { appVersion: '5.9.2', observerName: 'Dano Schönwald' });
         const p = `${FileSystem.documentDirectory}feldbericht_${session.id}.html`;
         await FileSystem.writeAsStringAsync(p, html);
         await Sharing.shareAsync(p, { mimeType: 'text/html', dialogTitle: 'Feldbericht exportieren' });

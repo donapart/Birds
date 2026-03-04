@@ -29,8 +29,8 @@
 
 | Platform | Download | Size | Notes |
 |----------|----------|------|-------|
-| **📱 Android APK** | [BirdSound-v5.8.0.apk](https://github.com/donapart/Birds/releases/download/v5.8.0-release/BirdSound-v5.8.0.apk) | ~85MB | Android 6+ |
-| **🖥️ Windows Installer** | [BirdSound_v5.8.0_Setup_win.exe](https://github.com/donapart/Birds/releases/download/v5.8.0-release/BirdSound_v5.8.0_Setup_win.exe) | ~2MB | Python 3.11+ (auto-install) |
+| **📱 Android APK** | [BirdSound-v5.9.2.apk](https://github.com/donapart/Birds/releases/download/v5.9.2-release/BirdSound-v5.9.2.apk) | ~85MB | Android 6+ |
+| **🖥️ Windows Installer** | [BirdSound_v5.9.2_Setup_win.exe](https://github.com/donapart/Birds/releases/download/v5.9.2-release/BirdSound_v5.9.2_Setup_win.exe) | ~2MB | Python 3.11+ (auto-install) |
 | **🖥️ Windows Scripts** | [scripts/start_backend.bat](scripts/start_backend.bat) | - | Manual start |
 | **🍓 Raspberry Pi** | [scripts/raspberry_setup.sh](scripts/raspberry_setup.sh) | - | Debian/Ubuntu |
 | **🐳 Docker** | [docker-compose.yml](docker-compose.yml) | - | Docker Desktop, Port 8003 |
@@ -50,9 +50,9 @@
 
 Scan the QR code or use the direct link to download the APK:
 
-[![QR Code APK Download](docs/qr-code-apk.png)](https://github.com/donapart/Birds/releases/download/v5.8.0-release/BirdSound-v5.8.0.apk)
+[![QR Code APK Download](docs/qr-code-apk.png)](https://github.com/donapart/Birds/releases/download/v5.9.2-release/BirdSound-v5.9.2.apk)
 
-**Direct Link:** [BirdSound-v5.8.0.apk](https://github.com/donapart/Birds/releases/download/v5.8.0-release/BirdSound-v5.8.0.apk) (~85MB)
+**Direct Link:** [BirdSound-v5.9.2.apk](https://github.com/donapart/Birds/releases/download/v5.9.2-release/BirdSound-v5.9.2.apk) (~85MB)
 
 ---
 
@@ -62,7 +62,7 @@ Scan the QR code or use the direct link to download the APK:
 
 BirdSound is a production-ready bird sound recognition system that uses multiple ML models to identify bird species from audio recordings. It features automatic database fallback, cross-platform support, and a comprehensive REST API.
 
-### ✅ Current Status (v5.8.0)
+### ✅ Current Status (v5.9.2)
 
 - ✅ **DimaBird Model** (HuggingFace dima806/bird_sounds_classification)
 - ✅ **BirdNET V2.4** integrated (6,522 species worldwide)
@@ -72,11 +72,13 @@ BirdSound is a production-ready bird sound recognition system that uses multiple
 - ✅ **3D Spectrogram** - Real-time waterfall diagram with Android/iOS support
 - ✅ **Session Management** - Delete sessions, detailed reports
 - ✅ **Interactive Map** with OpenStreetMap (filter by time, species)
-- ✅ **45+ Bird Species Library** with detailed info, habitat, voice data
+- ✅ **160+ Bird Species Library** with detailed info, habitat, voice data
+- ✅ **Scientific Field Reports** with Shannon/Simpson diversity indices
 - ✅ **Full Web Dashboard** with tabs (Live, Map, History, Settings)
-- ✅ **KML Export** for Google Earth
+- ✅ **KML/JSON/HTML Export** for Google Earth and printing
+- ✅ **Share Function** for session reports
 - ✅ **Automatic Database Fallback** (PostgreSQL → SQLite)
-- ✅ **Mobile App** Android v5.8.0 with Offline-Demo mode
+- ✅ **Mobile App** Android v5.9.2 with Offline-Demo mode
 - ✅ **Windows Installer** (Inno Setup)
 - ✅ **Raspberry Pi Scripts** for field deployment
 
@@ -166,7 +168,7 @@ cd android
 ┌─────────────────┐     ┌─────────────────────────────────────────┐
 │  Mobile App     │     │           Backend (FastAPI)             │
 │  (Expo/RN)      │     │                                         │
-│  v5.8.0         │────▶│  ┌─────────┐ ┌─────────┐ ┌─────────┐   │
+│  v5.9.2         │────▶│  ┌─────────┐ ┌─────────┐ ┌─────────┐   │
 │                 │     │  │ BirdNET │ │DimaBird │ │  Perch  │   │
 │  - Audio Capture│     │  │ (ONNX)  │ │(Hugging)│ │(TFHub)  │   │
 │  - GPS Location │     │  └────┬────┘ └────┬────┘ └────┬────┘   │
@@ -1046,6 +1048,16 @@ Keine Aktion erforderlich! Das System funktioniert mit SQLite.
 MIT-Lizenz - siehe LICENSE-Datei
 
 ## Changelog
+
+### v5.9.2 (2026-03-04)
+- 🐦 **160+ Vogelarten** in der Bibliothek (vorher 32)
+- 🧠 **Smarter Filter** — Library-Arten immer, unbekannte bei hoher Konfidenz
+- 📊 **~200+ BirdNET-Codes** für alle neuen Arten
+- 🧬 **Wissenschaftliche Feldberichte** mit Shannon/Simpson-Diversitätsindex
+- 📤 **Share-Funktion** für Session-Berichte
+- 🐦 **Neozoen**: Halsbandsittich, Alexandersittich
+- 📱 **Android APK** v5.9.2 auf GitHub Release
+- 🔬 **Entwickler**: Dano Schönwald
 
 ### v5.8.0 (2025-03-04)
 - 🎵 **Entwickler**: Dano Schönwald

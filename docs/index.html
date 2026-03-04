@@ -90,11 +90,11 @@
     <div class="container content">
         <header>
             <div class="logo">🐦</div>
-            <h1>BirdSound <span class="version-badge">v5.8.0</span></h1>
+            <h1>BirdSound <span class="version-badge">v5.9.2</span></h1>
             <p class="subtitle">Multi-Modell ML-System zur Echtzeit-Vogelstimmen-Erkennung</p>
             <div class="downloads">
-                <a href="https://github.com/donapart/Birds/releases/download/v5.8.0-release/BirdSound-v5.8.0.apk" class="download-btn">📱 Android APK</a>
-                <a href="https://github.com/donapart/Birds/releases/download/v5.8.0-release/BirdSound_v5.8.0_Setup_win.exe" class="download-btn secondary">🖥️ Windows</a>
+                <a href="https://github.com/donapart/Birds/releases/download/v5.9.2-release/BirdSound-v5.9.2.apk" class="download-btn">📱 Android APK</a>
+                <a href="https://github.com/donapart/Birds/releases/download/v5.9.2-release/BirdSound_v5.9.2_Setup_win.exe" class="download-btn secondary">🖥️ Windows</a>
                 <a href="https://github.com/donapart/Birds/blob/main/scripts/raspberry_setup.sh" class="download-btn raspberry">🍓 Raspberry Pi</a>
                 <a href="https://github.com/donapart/Birds/blob/main/docker-compose.yml" class="download-btn docker">🐳 Docker</a>
             </div>
@@ -102,7 +102,7 @@
             <div style="margin-top: 1.5rem; text-align: center;">
                 <p style="color: #888; margin-bottom: 0.5rem;">📲 Scan für APK-Download:</p>
                 <img src="qr-code-apk.png" alt="QR Code APK Download" width="200" height="200" style="border-radius: 12px; background: white; padding: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-                <p style="color: #666; font-size: 0.75rem; margin-top: 0.5rem;">BirdSound v5.8.0 (~85MB)</p>
+                <p style="color: #666; font-size: 0.75rem; margin-top: 0.5rem;">BirdSound v5.9.2 (~85MB)</p>
             </div>
         </header>
         
@@ -290,7 +290,7 @@ cd android
             <div class="architecture">┌─────────────────┐     ┌─────────────────────────────────────┐
 │   Mobile App    │     │         Backend (FastAPI)            │
 │   (Expo/RN)     │────▶│                                      │
-│   v5.8.0        │     │  ┌─────────┐ ┌──────────┐ ┌───────┐ │
+│   v5.9.2        │     │  ┌─────────┐ ┌──────────┐ ┌───────┐ │
 │                 │     │  │ BirdNET │ │ DimaBird │ │ Perch │ │
 │  - Audio Capture│     │  │ (ONNX)  │ │(Hugging) │ │(TFHub)│ │
 │  - GPS Location │     │  └────┬────┘ └────┬─────┘ └───┬───┘ │
@@ -320,6 +320,16 @@ cd android
 
         <section id="changelog">
             <h2>📋 Changelog</h2>
+            <h3>v5.9.2 (2026-03)</h3>
+            <ul>
+                <li>🐦 <strong>160+ Vogelarten</strong> in der Bibliothek (vorher 32)</li>
+                <li>🧠 <strong>Smarter Filter</strong> — Library-Arten immer, unbekannte bei hoher Konfidenz</li>
+                <li>📊 <strong>~200+ BirdNET-Codes</strong> für alle neuen Arten</li>
+                <li>🧬 <strong>Wissenschaftliche Feldberichte</strong> mit Shannon/Simpson-Diversitätsindex</li>
+                <li>📤 <strong>Share-Funktion</strong> für Session-Berichte</li>
+                <li>🦜 <strong>Neozoen</strong>: Halsbandsittich, Alexandersittich</li>
+                <li>👨‍💻 <strong>Entwickler</strong> — Dano Schönwald</li>
+            </ul>
             <h3>v5.8.0 (2026-03)</h3>
             <ul>
                 <li>🎧 <strong>Audio-Enhancement</strong> - Bandpass, Rauschunterdrückung, Auto-Verstärkung, Spectral Gate, Presets</li>

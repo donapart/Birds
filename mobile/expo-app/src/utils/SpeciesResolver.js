@@ -4,7 +4,7 @@
  * Löst englische Artnamen, BirdNET-Codes und wissenschaftliche Namen
  * in deutsche Trivialnamen auf. Filtert nicht-europäische Arten.
  * 
- * BirdSound v5.9.0 — Dano Schönwald
+ * BirdSound v5.9.2 — Dano Schönwald
  */
 import { BIRD_LIBRARY } from '../data/BirdLibrary';
 

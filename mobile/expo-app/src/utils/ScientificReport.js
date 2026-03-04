@@ -7,7 +7,7 @@
  * Format: DIN A4, druckoptimiert mit @media print CSS
  * Enthält: Messprotokoll, Artenliste, Statistik, Zeitanalyse
  * 
- * BirdSound v5.9.0 — Dano Schönwald
+ * BirdSound v5.9.2 — Dano Schönwald
  */
 
 // ══════════════════════════════════════════════════════════════
@@ -127,7 +127,7 @@ const buildTimeIntervals = (detections, startTime) => {
  */
 export const generateFieldReport = (session, options = {}) => {
   const {
-    appVersion = '5.9.0',
+    appVersion = '5.9.2',
     observerName = 'Automatische Erfassung',
     notes = '',
   } = options;
@@ -519,7 +519,7 @@ export const generateSessionJSON = (session) => {
   return JSON.stringify({
     meta: {
       reportType: 'ornithological_field_survey',
-      generator: 'BirdSound v5.9.0',
+      generator: 'BirdSound v5.9.2',
       developer: 'Dano Schönwald',
       exportDate: new Date().toISOString(),
     },
