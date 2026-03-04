@@ -29,8 +29,8 @@
 
 | Platform | Download | Size | Notes |
 |----------|----------|------|-------|
-| **📱 Android APK** | [BirdSound-v5.6.0.apk](https://github.com/donapart/Birds/raw/main/BirdSound-v5.6.0.apk) | ~90MB | Android 6+ |
-| **🖥️ Windows Installer** | [BirdSound_5.6.0_Setup.exe](https://github.com/donapart/Birds/raw/main/installer/output/BirdSound_5.6.0_Setup.exe) | ~200KB | Python 3.11+ (auto-install) |
+| **📱 Android APK** | [BirdSound-v5.8.0.apk](https://github.com/donapart/Birds/releases/download/v5.8.0-release/BirdSound-v5.8.0.apk) | ~85MB | Android 6+ |
+| **🖥️ Windows Installer** | [BirdSound_v5.8.0_Setup_win.exe](https://github.com/donapart/Birds/releases/download/v5.8.0-release/BirdSound_v5.8.0_Setup_win.exe) | ~2MB | Python 3.11+ (auto-install) |
 | **🖥️ Windows Scripts** | [scripts/start_backend.bat](scripts/start_backend.bat) | - | Manual start |
 | **🍓 Raspberry Pi** | [scripts/raspberry_setup.sh](scripts/raspberry_setup.sh) | - | Debian/Ubuntu |
 | **🐳 Docker** | [docker-compose.yml](docker-compose.yml) | - | Docker Desktop, Port 8003 |
@@ -50,9 +50,9 @@
 
 Scan the QR code or use the direct link to download the APK:
 
-[![QR Code APK Download](docs/qr-code-apk.png)](https://github.com/donapart/Birds/raw/main/BirdSound-v5.6.0.apk)
+[![QR Code APK Download](docs/qr-code-apk.png)](https://github.com/donapart/Birds/releases/download/v5.8.0-release/BirdSound-v5.8.0.apk)
 
-**Direct Link:** [BirdSound-v5.6.0.apk](https://github.com/donapart/Birds/raw/main/BirdSound-v5.6.0.apk) (~90MB)
+**Direct Link:** [BirdSound-v5.8.0.apk](https://github.com/donapart/Birds/releases/download/v5.8.0-release/BirdSound-v5.8.0.apk) (~85MB)
 
 ---
 
@@ -62,7 +62,7 @@ Scan the QR code or use the direct link to download the APK:
 
 BirdSound is a production-ready bird sound recognition system that uses multiple ML models to identify bird species from audio recordings. It features automatic database fallback, cross-platform support, and a comprehensive REST API.
 
-### ✅ Current Status (v5.6.0)
+### ✅ Current Status (v5.8.0)
 
 - ✅ **DimaBird Model** (HuggingFace dima806/bird_sounds_classification)
 - ✅ **BirdNET V2.4** integrated (6,522 species worldwide)
@@ -76,7 +76,7 @@ BirdSound is a production-ready bird sound recognition system that uses multiple
 - ✅ **Full Web Dashboard** with tabs (Live, Map, History, Settings)
 - ✅ **KML Export** for Google Earth
 - ✅ **Automatic Database Fallback** (PostgreSQL → SQLite)
-- ✅ **Mobile App** Android v5.6.0 with Offline-Demo mode
+- ✅ **Mobile App** Android v5.8.0 with Offline-Demo mode
 - ✅ **Windows Installer** (Inno Setup)
 - ✅ **Raspberry Pi Scripts** for field deployment
 
@@ -166,7 +166,7 @@ cd android
 ┌─────────────────┐     ┌─────────────────────────────────────────┐
 │  Mobile App     │     │           Backend (FastAPI)             │
 │  (Expo/RN)      │     │                                         │
-│  v5.6.0         │────▶│  ┌─────────┐ ┌─────────┐ ┌─────────┐   │
+│  v5.8.0         │────▶│  ┌─────────┐ ┌─────────┐ ┌─────────┐   │
 │                 │     │  │ BirdNET │ │DimaBird │ │  Perch  │   │
 │  - Audio Capture│     │  │ (ONNX)  │ │(Hugging)│ │(TFHub)  │   │
 │  - GPS Location │     │  └────┬────┘ └────┬────┘ └────┬────┘   │
@@ -1046,6 +1046,13 @@ Keine Aktion erforderlich! Das System funktioniert mit SQLite.
 MIT-Lizenz - siehe LICENSE-Datei
 
 ## Changelog
+
+### v5.8.0 (2025-03-04)
+- 🎵 **Entwickler**: Dano Schönwald
+- 📱 **Android APK** auf GitHub Release verfügbar
+- 🖥️ **Windows Installer** (Inno Setup) auf GitHub Release
+- 🔄 **GitHub.io Seite** aktualisiert mit QR-Code & Download-Links
+- 📦 **Alle Plattformen** verifiziert (Docker, Raspberry Pi, Render)
 
 ### v5.6.0 (2024-12-05)
 - 🔊 **Audio Enhancement** - Vogelstimmen werden vor Erkennung verstärkt
