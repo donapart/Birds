@@ -28,57 +28,73 @@ const buildMaps = () => {
 
 const { byEnglish, byScientific, byId } = buildMaps();
 
-// BirdNET eBird-Codes → Deutsche Trivialnamen (häufige mitteleuropäische Arten)
+// BirdNET eBird-Codes → Deutsche Trivialnamen (nur Arten aus BIRD_LIBRARY)
+// WICHTIG: Nur Codes für Arten die in unserer Bibliothek sind!
 const BIRDNET_CODES = {
-  'eurbla': 'Amsel', 'eurbla1': 'Amsel',
-  'eurgre1': 'Grünfink', 'eutspa': 'Haussperling', 'trespa': 'Feldsperling',
-  'eursta': 'Star', 'eursta1': 'Star',
-  'houfin': 'Buchfink', 'comcha1': 'Buchfink',
-  'blutit1': 'Blaumeise', 'blutit2': 'Blaumeise',
-  'gretit1': 'Kohlmeise', 'gretit2': 'Kohlmeise',
-  'eurrob1': 'Rotkehlchen', 'eurrob': 'Rotkehlchen',
-  'eurmag1': 'Elster', 'eurjay': 'Eichelhäher', 'eurjay1': 'Eichelhäher',
-  'comwoo1': 'Ringeltaube', 'comwpi1': 'Ringeltaube',
-  'eurwre1': 'Zaunkönig', 'eurwre': 'Zaunkönig',
-  'grewoo1': 'Buntspecht', 'grswoo1': 'Buntspecht',
-  'eugnig1': 'Mauersegler', 'comswi1': 'Mauersegler',
-  'blkcro1': 'Rabenkrähe', 'carcro1': 'Rabenkrähe', 'hoocro1': 'Rabenkrähe',
-  'eurnut1': 'Kleiber', 'euanut1': 'Kleiber',
-  'eurgol1': 'Stieglitz', 'goldfi5': 'Stieglitz',
-  'eurgrf': 'Grünspecht', 'eurgrf1': 'Grünspecht',
-  'comred1': 'Birkenzeisig',
-  'songthr1': 'Singdrossel', 'sonthr1': 'Singdrossel',
-  'hawfin1': 'Kernbeißer', 'hawfin': 'Kernbeißer',
-  'eugspa1': 'Heckenbraunelle', 
-  'gartre1': 'Gartenrotschwanz',
-  'comred': 'Hausrotschwanz',
-  'comlin1': 'Bluthänfling', 'eurlin1': 'Bluthänfling',
-  'skylar1': 'Feldlerche', 'eursla1': 'Feldlerche',
-  'eursis1': 'Erlenzeisig',
-  'comcuc1': 'Kuckuck', 'comcuc': 'Kuckuck',
-  'eurblk1': 'Mönchsgrasmücke',
-  'blacap1': 'Mönchsgrasmücke',
-  'garwar1': 'Gartengrasmücke',
-  'comwhi1': 'Dorngrasmücke',
-  'wilwar1': 'Fitis',
-  'chitchaff1': 'Zilpzalp', 'eurchf1': 'Zilpzalp', 'comchi1': 'Zilpzalp',
-  'comswi2': 'Mauersegler',
-  'barnow1': 'Schleiereule',
-  'tawowl1': 'Waldkauz', 'eurtwl1': 'Waldkauz',
-  'eueowl1': 'Uhu',
-  'combuz1': 'Mäusebussard', 'combuz': 'Mäusebussard',
-  'eursho1': 'Sperber',
-  'comkes1': 'Turmfalke', 'eurkes1': 'Turmfalke',
-  'whiwag1': 'Bachstelze', 'whtwal1': 'Bachstelze',
-  'greher1': 'Graureiher',
-  'comcoo1': 'Blässhuhn',
-  'eurtea1': 'Krickente',
-  'mallar1': 'Stockente', 'mallard': 'Stockente',
-  'gragor1': 'Graugans', 'gragoo1': 'Graugans',
-  'comcra1': 'Wachtelkönig',
-  'nigale1': 'Nachtigall', 'comnig1': 'Nachtigall',
-  'eugswa1': 'Rauchschwalbe', 'barswa1': 'Rauchschwalbe',
-  'houmr1': 'Mehlschwalbe', 'comhsm1': 'Mehlschwalbe',
+  // Amsel (Turdus merula)
+  'eurbla': 'Amsel', 'eurbla1': 'Amsel', 'eurblk': 'Amsel', 'blkbir1': 'Amsel', 'blkbir2': 'Amsel', 'combla': 'Amsel',
+  // Singdrossel (Turdus philomelos)
+  'sonthr': 'Singdrossel', 'sonthr1': 'Singdrossel', 'songthr1': 'Singdrossel', 'sonthr2': 'Singdrossel',
+  // Kohlmeise (Parus major)
+  'gretit': 'Kohlmeise', 'gretit1': 'Kohlmeise', 'gretit2': 'Kohlmeise', 'gretit3': 'Kohlmeise',
+  // Blaumeise (Cyanistes caeruleus)
+  'blutit': 'Blaumeise', 'blutit1': 'Blaumeise', 'blutit2': 'Blaumeise', 'blutit3': 'Blaumeise', 'eurblt': 'Blaumeise', 'eurblt1': 'Blaumeise',
+  // Tannenmeise (Periparus ater)
+  'coltit': 'Tannenmeise', 'coltit1': 'Tannenmeise', 'eurcti': 'Tannenmeise',
+  // Buchfink (Fringilla coelebs)
+  'comcha': 'Buchfink', 'comcha1': 'Buchfink', 'houfin': 'Buchfink', 'eurchf': 'Buchfink',
+  // Grünfink (Chloris chloris)
+  'eurgre': 'Grünfink', 'eurgre1': 'Grünfink', 'eurgrf2': 'Grünfink', 'grefin1': 'Grünfink', 'grefin': 'Grünfink',
+  // Stieglitz (Carduelis carduelis)
+  'eurgol': 'Stieglitz', 'eurgol1': 'Stieglitz', 'goldfi5': 'Stieglitz', 'goldfinch': 'Stieglitz',
+  // Haussperling (Passer domesticus)
+  'houspa': 'Haussperling', 'houspa1': 'Haussperling', 'eutspa': 'Haussperling', 'hoospa': 'Haussperling',
+  // Feldsperling (Passer montanus)
+  'trespa': 'Feldsperling', 'trespa1': 'Feldsperling', 'euatsp': 'Feldsperling',
+  // Rotkehlchen (Erithacus rubecula)
+  'eurrob': 'Rotkehlchen', 'eurrob1': 'Rotkehlchen', 'eurrob2': 'Rotkehlchen',
+  // Nachtigall (Luscinia megarhynchos)
+  'nigale': 'Nachtigall', 'nigale1': 'Nachtigall', 'comnig': 'Nachtigall', 'comnig1': 'Nachtigall',
+  // Ringeltaube (Columba palumbus)
+  'comwoo': 'Ringeltaube', 'comwoo1': 'Ringeltaube', 'comwpi': 'Ringeltaube', 'comwpi1': 'Ringeltaube', 'woopio1': 'Ringeltaube',
+  // Türkentaube (Streptopelia decaocto)
+  'eutdov': 'Türkentaube', 'eutdov1': 'Türkentaube', 'eurtdv': 'Türkentaube', 'coldo2': 'Türkentaube', 'coldov': 'Türkentaube',
+  // Elster (Pica pica)
+  'eurmag': 'Elster', 'eurmag1': 'Elster', 'blbmag1': 'Elster',
+  // Rabenkrähe (Corvus corone)
+  'carcro': 'Rabenkrähe', 'carcro1': 'Rabenkrähe', 'carcrow': 'Rabenkrähe', 'hoocro': 'Rabenkrähe', 'hoocro1': 'Rabenkrähe', 'blkcro1': 'Rabenkrähe',
+  // Eichelhäher (Garrulus glandarius)
+  'eurjay': 'Eichelhäher', 'eurjay1': 'Eichelhäher', 'eurjay2': 'Eichelhäher',
+  // Star (Sturnus vulgaris)
+  'eursta': 'Star', 'eursta1': 'Star', 'comsta': 'Star', 'comsta1': 'Star',
+  // Buntspecht (Dendrocopos major)
+  'grswoo': 'Buntspecht', 'grswoo1': 'Buntspecht', 'grtwoo': 'Buntspecht', 'grewoo1': 'Buntspecht',
+  // Grünspecht (Picus viridis)
+  'eurgrf': 'Grünspecht', 'eurgrf1': 'Grünspecht', 'grnwoo': 'Grünspecht',
+  // Stockente (Anas platyrhynchos)
+  'mallar': 'Stockente', 'mallar1': 'Stockente', 'mallard': 'Stockente', 'mallrd': 'Stockente',
+  // Graureiher (Ardea cinerea)
+  'greher': 'Graureiher', 'greher1': 'Graureiher', 'gryher1': 'Graureiher',
+  // Mäusebussard (Buteo buteo)
+  'combuz': 'Mäusebussard', 'combuz1': 'Mäusebussard', 'eurbuz': 'Mäusebussard',
+  // Turmfalke (Falco tinnunculus)
+  'comkes': 'Turmfalke', 'comkes1': 'Turmfalke', 'eurkes': 'Turmfalke', 'eurkes1': 'Turmfalke',
+  // Waldkauz (Strix aluco)
+  'tawowl': 'Waldkauz', 'tawowl1': 'Waldkauz', 'eurtwl': 'Waldkauz', 'eurtwl1': 'Waldkauz',
+  // Uhu (Bubo bubo)
+  'eueowl': 'Uhu', 'eueowl1': 'Uhu', 'eaowl1': 'Uhu',
+  // Zaunkönig (Troglodytes troglodytes)
+  'eurwre': 'Zaunkönig', 'eurwre1': 'Zaunkönig', 'wren1': 'Zaunkönig', 'wren': 'Zaunkönig', 'winwre': 'Zaunkönig', 'winwre3': 'Zaunkönig',
+  // Kleiber (Sitta europaea)
+  'eurnut': 'Kleiber', 'eurnut1': 'Kleiber', 'euanut': 'Kleiber', 'euanut1': 'Kleiber', 'wbnutha1': 'Kleiber',
+  // Zilpzalp (Phylloscopus collybita)
+  'comchi': 'Zilpzalp', 'comchi1': 'Zilpzalp', 'eurchf1': 'Zilpzalp', 'chfwar1': 'Zilpzalp', 'chitchaff': 'Zilpzalp',
+  // Fitis (Phylloscopus trochilus)
+  'wilwar': 'Fitis', 'wilwar1': 'Fitis', 'wilwar2': 'Fitis',
+  // Kuckuck (Cuculus canorus)
+  'comcuc': 'Kuckuck', 'comcuc1': 'Kuckuck', 'eurcuc': 'Kuckuck',
+  // Mauersegler (Apus apus)
+  'comswi': 'Mauersegler', 'comswi1': 'Mauersegler', 'comswi2': 'Mauersegler', 'eugnig': 'Mauersegler', 'eugnig1': 'Mauersegler',
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -119,6 +135,14 @@ const EXOTIC_KEYWORDS = [
   'javan', 'sulawesi', 'madagascar', 'malagasy', 'reunion',
   'indian', 'sri lanka', 'chinese', 'japanese', 'taiwanese',
   'band-tailed', 'tawny-breasted', 'chestnut-winged',
+  // Weitere nicht-europäische Marker
+  'nothura', 'fish crow', 'fish eagle', 'crow-tropical',
+  'mockingbird', 'cardinal', 'blue jay', 'catbird', 'towhee', 'junco',
+  'vireo', 'thrasher', 'wren-tropical', 'grackle', 'oriole-tropical',
+  'chickadee', 'titmouse', 'nuthatch-tropical', 'sapsucker',
+  'flicker-tropical', 'pewee', 'phoebe', 'empidonax',
+  'south american', 'north american', 'central american', 'neotropical',
+  'white-bellied', 'rufous-bellied', 'buff-bellied', 'yellow-bellied',
 ];
 
 /**

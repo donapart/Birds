@@ -841,9 +841,11 @@ export default function App() {
           audioEnhancement,
           ...bird,
           icon: resolved.icon || bird.icon || '🐦',
+          _inLibrary: resolved.inLibrary,
         };
       })
-      .filter(d => isIndependentDetection(d.species, ts, lastDetectionTimesRef.current, 30));
+      .filter(d => isIndependentDetection(d.species, ts, lastDetectionTimesRef.current, 30))
+      .filter(d => d._inLibrary); // NUR bekannte Arten aus BIRD_LIBRARY anzeigen
     
     // Update temporal dedup timestamps
     newDets.forEach(d => { lastDetectionTimesRef.current[d.species] = d.time; });
@@ -1127,15 +1129,17 @@ export default function App() {
         </>)}</ScrollView><TouchableOpacity style={z.cl} onPress={() => setShowBirdDetail(null)}><Text style={z.clT}>Schließen</Text></TouchableOpacity></View></View>
       </Modal>
 
-      <Modal visible={!!showSessionReport} transparent animationType="slide">
-        <View style={z.mo}><View style={z.moL}><ScrollView>{showSessionReport && (<>
+      <Modal visible={!!showSessionReport} transparent animationType="slide" onRequestClose={() => setShowSessionReport(null)}>
+        <View style={z.mo}>
+          <View style={[z.moL, {maxHeight: '95%', paddingBottom: 0}]}>
+            <ScrollView style={{flex: 1}} contentContainerStyle={{padding: 4, paddingBottom: 16}} showsVerticalScrollIndicator={true} bounces={true} nestedScrollEnabled={true}>{showSessionReport && (<>
           <Text style={z.moT}>📊 Ornithologischer Feldbericht</Text>
           <View style={z.rpH}><Text style={z.rpD}>{new Date(showSessionReport.startTime).toLocaleDateString('de-DE')}</Text><Text style={z.rpT}>{fmt(showSessionReport.duration || 0)}</Text></View>
-          <View style={z.rpS}>
-            <View style={z.rpSi}><Text style={z.rpSV}>{showSessionReport.detections?.length || 0}</Text><Text style={z.rpSL}>Erkennungen</Text></View>
-            <View style={z.rpSi}><Text style={z.rpSV}>{Object.keys(showSessionReport.speciesCount || {}).length}</Text><Text style={z.rpSL}>Arten</Text></View>
-            <View style={z.rpSi}><Text style={z.rpSV}>{showSessionReport.totalAnalyzed || 0}</Text><Text style={z.rpSL}>Chunks</Text></View>
-            <View style={z.rpSi}><Text style={z.rpSV}>{showSessionReport.detections?.length ? Math.round(showSessionReport.detections.reduce((s,d)=>s+(d.confidence||0),0)/showSessionReport.detections.length*100) : 0}%</Text><Text style={z.rpSL}>Ø Konfidenz</Text></View>
+          <View style={[z.rpS, {flexWrap: 'wrap'}]}>
+            <View style={[z.rpSi, {minWidth: '22%'}]}><Text style={z.rpSV}>{showSessionReport.detections?.length || 0}</Text><Text style={z.rpSL}>Erkennungen</Text></View>
+            <View style={[z.rpSi, {minWidth: '22%'}]}><Text style={z.rpSV}>{Object.keys(showSessionReport.speciesCount || {}).length}</Text><Text style={z.rpSL}>Arten</Text></View>
+            <View style={[z.rpSi, {minWidth: '22%'}]}><Text style={z.rpSV}>{showSessionReport.totalAnalyzed || 0}</Text><Text style={z.rpSL}>Chunks</Text></View>
+            <View style={[z.rpSi, {minWidth: '22%'}]}><Text style={z.rpSV}>{showSessionReport.detections?.length ? Math.round(showSessionReport.detections.reduce((s,d)=>s+(d.confidence||0),0)/showSessionReport.detections.length*100) : 0}%</Text><Text style={z.rpSL}>Ø Konfidenz</Text></View>
           </View>
           <Text style={z.dSc}>🦅 Artenliste (Deutsch / Lateinisch)</Text>
           {Object.entries(showSessionReport.speciesCount || {}).sort((a,b)=>b[1]-a[1]).slice(0,15).map(([sp,ct],i) => {
@@ -1164,7 +1168,7 @@ export default function App() {
             <View style={z.bioI}><Text style={z.bioL}>Evenness</Text><Text style={z.bioV}>{(() => { const S = Object.keys(showSessionReport.speciesCount||{}).length; return S > 1 ? (calcShannon(showSessionReport.speciesCount)/Math.log(S)).toFixed(2) : '1.00'; })()}</Text></View>
             <View style={z.bioI}><Text style={z.bioL}>Arten (S)</Text><Text style={z.bioV}>{Object.keys(showSessionReport.speciesCount || {}).length}</Text></View>
           </View>
-          <Text style={z.dSc}>📤 Exportieren</Text>
+          <Text style={z.dSc}>📤 Export & Teilen</Text>
           <View style={z.sBtns}>
             <TouchableOpacity style={[z.sv,{backgroundColor:'#2d6a4f'}]} onPress={() => exportSessionReport(showSessionReport, 'html')}><Text style={[z.svT,{color:'#fff'}]}>📄 Feldbericht</Text></TouchableOpacity>
           </View>
@@ -1172,10 +1176,28 @@ export default function App() {
             <TouchableOpacity style={[z.sv,{backgroundColor:'#1a472a'}]} onPress={() => exportSessionReport(showSessionReport, 'kml')}><Text style={[z.svT,{color:'#fff'}]}>🌍 KML</Text></TouchableOpacity>
             <TouchableOpacity style={[z.sv,{backgroundColor:'#1a472a'}]} onPress={() => exportSessionReport(showSessionReport, 'json')}><Text style={[z.svT,{color:'#fff'}]}>📋 JSON</Text></TouchableOpacity>
           </View>
+          <View style={[z.sBtns, {marginTop: 4}]}>
+            <TouchableOpacity style={[z.sv,{backgroundColor:'#2196F3'}]} onPress={async () => {
+              try {
+                const s = showSessionReport;
+                const n = Object.keys(s.speciesCount||{}).length;
+                const d = s.detections?.length || 0;
+                const arten = Object.entries(s.speciesCount||{}).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([sp,ct]) => {
+                  const sci = BIRD_LIBRARY[sp]?.scientificName || '';
+                  return `  • ${sp}${sci ? ` (${sci})` : ''}: ${ct}x`;
+                }).join('\n');
+                const txt = `🐦 BirdSound Feldbericht\n📅 ${new Date(s.startTime).toLocaleDateString('de-DE')} | ⏱️ ${fmt(s.duration||0)}\n\n📊 ${d} Erkennungen, ${n} Arten\n📈 Shannon H': ${calcShannon(s.speciesCount).toFixed(2)} | Simpson: ${calcSimpson(s.speciesCount).toFixed(2)}\n\n🦅 Top-Arten:\n${arten}\n\n— BirdSound v5.9 | Dano Schönwald`;
+                await Share.share({ message: txt, title: 'BirdSound Feldbericht' });
+              } catch(e) { Alert.alert('Fehler', 'Teilen fehlgeschlagen: ' + e.message); }
+            }}><Text style={[z.svT,{color:'#fff'}]}>📤 Teilen</Text></TouchableOpacity>
+          </View>
           <View style={[z.sBtns, {marginTop: 8}]}>
             <TouchableOpacity style={z.sDel} onPress={() => deleteSession(showSessionReport)}><Text style={z.sDelT}>{(showSessionReport.detections?.length || 0) === 0 ? '🗑️ Verwerfen' : '🗑️ Löschen'}</Text></TouchableOpacity>
           </View>
-        </>)}</ScrollView><TouchableOpacity style={z.cl} onPress={() => setShowSessionReport(null)}><Text style={z.clT}>Schließen</Text></TouchableOpacity></View></View>
+        </>)}</ScrollView>
+            <TouchableOpacity style={[z.cl, {marginTop: 0, borderRadius: 0, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, padding: 14, backgroundColor: '#4ecdc4'}]} onPress={() => setShowSessionReport(null)}><Text style={[z.clT, {color: '#000', fontSize: 14, fontWeight: '700'}]}>✕ Schließen</Text></TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
       <Modal visible={showSettings} transparent animationType="fade">
