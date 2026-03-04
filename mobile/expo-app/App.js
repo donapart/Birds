@@ -1,5 +1,5 @@
 /**
- * BirdSound v5.9.0 - Wissenschaftliche Feldberichte, Artennamen DE/LAT, Erkennungsfilter, Export-Fix
+ * BirdSound v5.9.2 - 160+ Arten, smarter Filter, BirdNET-Codes erweitert
  * Entwickler: Dano Schönwald
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -845,7 +845,13 @@ export default function App() {
         };
       })
       .filter(d => isIndependentDetection(d.species, ts, lastDetectionTimesRef.current, 30))
-      .filter(d => d._inLibrary); // NUR bekannte Arten aus BIRD_LIBRARY anzeigen
+      .filter(d => {
+        // Smarter Filter: Library-Arten immer zeigen
+        if (d._inLibrary) return true;
+        // Unbekannte Arten: nur bei hoher Konfidenz UND plausiblem Namen (kein BirdNET-Code)
+        if (d.confidence >= 0.5 && d.species && d.species.includes(' ')) return true;
+        return false;
+      });
     
     // Update temporal dedup timestamps
     newDets.forEach(d => { lastDetectionTimesRef.current[d.species] = d.time; });
@@ -949,7 +955,7 @@ export default function App() {
     <View style={z.c}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0a15" />
       <View style={{ height: sbh, backgroundColor: '#0a0a15' }} />
-      <View style={z.h}><View><Text style={z.t}>🐦 BirdSound v5.9</Text><Text style={z.st}>{rank.icon} {rank.name} • {points}P</Text></View><View style={z.hr}><View style={[z.bg, isConnected ? z.bgG : z.bgR]}><Text style={z.bgT}>{isConnected ? '🟢' : '🔴'}{offlineQueue.length > 0 ? ` (${offlineQueue.length})` : ''}</Text></View><TouchableOpacity onPress={() => setShowSettings(true)}><Text style={z.ic}>⚙️</Text></TouchableOpacity></View></View>
+      <View style={z.h}><View><Text style={z.t}>🐦 BirdSound v5.9.2</Text><Text style={z.st}>{rank.icon} {rank.name} • {points}P</Text></View><View style={z.hr}><View style={[z.bg, isConnected ? z.bgG : z.bgR]}><Text style={z.bgT}>{isConnected ? '🟢' : '🔴'}{offlineQueue.length > 0 ? ` (${offlineQueue.length})` : ''}</Text></View><TouchableOpacity onPress={() => setShowSettings(true)}><Text style={z.ic}>⚙️</Text></TouchableOpacity></View></View>
       <View style={z.tb}>{[['live','🎙️'],['map','🗺️'],['list','📋'],['library','📚'],['sessions','📊'],['achieve','🏆']].map(([id,ic]) => (<TouchableOpacity key={id} style={[z.ta, activeTab===id && z.taA]} onPress={() => setActiveTab(id)}><Text style={z.taI}>{ic}</Text></TouchableOpacity>))}</View>
 
       {activeTab === 'live' && (<ScrollView style={z.ct}>
@@ -1186,7 +1192,7 @@ export default function App() {
                   const sci = BIRD_LIBRARY[sp]?.scientificName || '';
                   return `  • ${sp}${sci ? ` (${sci})` : ''}: ${ct}x`;
                 }).join('\n');
-                const txt = `🐦 BirdSound Feldbericht\n📅 ${new Date(s.startTime).toLocaleDateString('de-DE')} | ⏱️ ${fmt(s.duration||0)}\n\n📊 ${d} Erkennungen, ${n} Arten\n📈 Shannon H': ${calcShannon(s.speciesCount).toFixed(2)} | Simpson: ${calcSimpson(s.speciesCount).toFixed(2)}\n\n🦅 Top-Arten:\n${arten}\n\n— BirdSound v5.9 | Dano Schönwald`;
+                const txt = `🐦 BirdSound Feldbericht\n📅 ${new Date(s.startTime).toLocaleDateString('de-DE')} | ⏱️ ${fmt(s.duration||0)}\n\n📊 ${d} Erkennungen, ${n} Arten\n📈 Shannon H': ${calcShannon(s.speciesCount).toFixed(2)} | Simpson: ${calcSimpson(s.speciesCount).toFixed(2)}\n\n🦅 Top-Arten:\n${arten}\n\n— BirdSound v5.9.2 | Dano Schönwald`;
                 await Share.share({ message: txt, title: 'BirdSound Feldbericht' });
               } catch(e) { Alert.alert('Fehler', 'Teilen fehlgeschlagen: ' + e.message); }
             }}><Text style={[z.svT,{color:'#fff'}]}>📤 Teilen</Text></TouchableOpacity>

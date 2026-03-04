@@ -95,6 +95,186 @@ const BIRDNET_CODES = {
   'comcuc': 'Kuckuck', 'comcuc1': 'Kuckuck', 'eurcuc': 'Kuckuck',
   // Mauersegler (Apus apus)
   'comswi': 'Mauersegler', 'comswi1': 'Mauersegler', 'comswi2': 'Mauersegler', 'eugnig': 'Mauersegler', 'eugnig1': 'Mauersegler',
+
+  // ══════════════════════════════════════════════════════════════
+  // ERWEITERTE BirdNET-Codes für ~130 weitere europäische Arten
+  // ══════════════════════════════════════════════════════════════
+
+  // Drosseln
+  'fieldf': 'Wacholderdrossel', 'fieldf1': 'Wacholderdrossel', 'fiefare': 'Wacholderdrossel', 'fiefare1': 'Wacholderdrossel',
+  'misthr': 'Misteldrossel', 'misthr1': 'Misteldrossel', 'mistle': 'Misteldrossel',
+  'rinouz': 'Ringdrossel', 'rinouz1': 'Ringdrossel', 'rinouzel': 'Ringdrossel',
+  'redwin': 'Rotdrossel', 'redwin1': 'Rotdrossel', 'redwing': 'Rotdrossel',
+
+  // Meisen (erweitert)
+  'martit': 'Sumpfmeise', 'martit1': 'Sumpfmeise', 'marsti': 'Sumpfmeise',
+  'wiltit': 'Weidenmeise', 'wiltit1': 'Weidenmeise', 'willow': 'Weidenmeise',
+  'cretit': 'Haubenmeise', 'cretit1': 'Haubenmeise', 'eucrtt': 'Haubenmeise',
+  'lotit1': 'Schwanzmeise', 'lottit': 'Schwanzmeise', 'lottit1': 'Schwanzmeise',
+  'beared': 'Bartmeise', 'bearee': 'Bartmeise', 'bearee1': 'Bartmeise',
+
+  // Finken (erweitert)
+  'brambl': 'Bergfink', 'brambl1': 'Bergfink', 'brabling': 'Bergfink',
+  'hawfin': 'Kernbeißer', 'hawfin1': 'Kernbeißer', 'hawfinch': 'Kernbeißer',
+  'comlin': 'Bluthänfling', 'comlin1': 'Bluthänfling', 'linnet': 'Bluthänfling',
+  'comred': 'Birkenzeisig', 'comred1': 'Birkenzeisig', 'redpol': 'Birkenzeisig', 'lesser': 'Birkenzeisig',
+  'eursis': 'Erlenzeisig', 'eursis1': 'Erlenzeisig', 'siskin': 'Erlenzeisig',
+  'eurser': 'Girlitz', 'eurser1': 'Girlitz', 'serin1': 'Girlitz',
+  'eurbul': 'Gimpel', 'eurbul1': 'Gimpel', 'bulfinch': 'Gimpel', 'bullfi': 'Gimpel',
+  'redcro': 'Fichtenkreuzschnabel', 'redcro1': 'Fichtenkreuzschnabel', 'crsbil': 'Fichtenkreuzschnabel',
+
+  // Grasmücken & Laubsänger (erweitert)
+  'eurbla2': 'Mönchsgrasmücke', 'eurblc': 'Mönchsgrasmücke', 'eurblc1': 'Mönchsgrasmücke', 'blacp1': 'Mönchsgrasmücke', 'blacap': 'Mönchsgrasmücke',
+  'garwar': 'Gartengrasmücke', 'garwar1': 'Gartengrasmücke',
+  'comwhi': 'Dorngrasmücke', 'comwhi1': 'Dorngrasmücke', 'comwht': 'Dorngrasmücke',
+  'leswhi': 'Klappergrasmücke', 'leswhi1': 'Klappergrasmücke', 'leswht': 'Klappergrasmücke',
+  'barwar': 'Sperbergrasmücke', 'barwar1': 'Sperbergrasmücke',
+  'woowar': 'Waldlaubsänger', 'woowar1': 'Waldlaubsänger', 'woodwa': 'Waldlaubsänger',
+
+  // Rohrsänger & Spötter
+  'eurrew': 'Teichrohrsänger', 'eurrew1': 'Teichrohrsänger', 'reed1': 'Teichrohrsänger',
+  'marwar': 'Sumpfrohrsänger', 'marwar1': 'Sumpfrohrsänger',
+  'grerwa': 'Drosselrohrsänger', 'grerwa1': 'Drosselrohrsänger', 'grtrwa': 'Drosselrohrsänger',
+  'ictwar': 'Gelbspötter', 'ictwar1': 'Gelbspötter',
+
+  // Goldhähnchen
+  'goldcr': 'Wintergoldhähnchen', 'goldcr1': 'Wintergoldhähnchen',
+  'firecr': 'Sommergoldhähnchen', 'firecr1': 'Sommergoldhähnchen',
+
+  // Schwalben
+  'barswa': 'Rauchschwalbe', 'barswa1': 'Rauchschwalbe', 'barnswl': 'Rauchschwalbe',
+  'comhom': 'Mehlschwalbe', 'comhom1': 'Mehlschwalbe', 'houma1': 'Mehlschwalbe',
+  'sanmaa': 'Uferschwalbe', 'sanmaa1': 'Uferschwalbe', 'sanmar': 'Uferschwalbe', 'sanma1': 'Uferschwalbe',
+
+  // Stelzen & Pieper
+  'whtwag': 'Bachstelze', 'whtwag1': 'Bachstelze', 'whiwag': 'Bachstelze', 'piedalb': 'Bachstelze',
+  'grywag': 'Gebirgsstelze', 'grywag1': 'Gebirgsstelze', 'greywag': 'Gebirgsstelze',
+  'weswag': 'Schafstelze', 'weswag1': 'Schafstelze', 'yelwag': 'Schafstelze',
+  'meapip': 'Wiesenpieper', 'meapip1': 'Wiesenpieper',
+  'trepip': 'Baumpieper', 'trepip1': 'Baumpieper',
+
+  // Schnäpper & Rotschwänze
+  'blared': 'Hausrotschwanz', 'blared1': 'Hausrotschwanz', 'blkred': 'Hausrotschwanz',
+  'comred2': 'Gartenrotschwanz', 'comred3': 'Gartenrotschwanz', 'comredst': 'Gartenrotschwanz',
+  'eurpif': 'Trauerschnäpper', 'eurpif1': 'Trauerschnäpper', 'piefly': 'Trauerschnäpper',
+  'spofly': 'Grauschnäpper', 'spofly1': 'Grauschnäpper',
+  'norwhe': 'Steinschmätzer', 'norwhe1': 'Steinschmätzer', 'wheat1': 'Steinschmätzer',
+  'whinch': 'Braunkehlchen', 'whinch1': 'Braunkehlchen',
+  'eursto': 'Schwarzkehlchen', 'eursto1': 'Schwarzkehlchen', 'stonec': 'Schwarzkehlchen',
+
+  // Heckenbraunelle
+  'dunnoc': 'Heckenbraunelle', 'dunnoc1': 'Heckenbraunelle',
+
+  // Ammern
+  'yellow2': 'Goldammer', 'yelham': 'Goldammer', 'yelham1': 'Goldammer', 'yellowh': 'Goldammer',
+  'comreb': 'Rohrammer', 'comreb1': 'Rohrammer', 'reebun': 'Rohrammer',
+  'corbun': 'Grauammer', 'corbun1': 'Grauammer',
+  'ortbun': 'Ortolan', 'ortbun1': 'Ortolan',
+  'rocbun': 'Zippammer', 'rocbun1': 'Zippammer',
+
+  // Rabenvögel (erweitert)
+  'wesjac': 'Dohle', 'wesjac1': 'Dohle', 'eurjac': 'Dohle', 'jackdaw': 'Dohle',
+  'rook1': 'Saatkrähe', 'rook': 'Saatkrähe',
+  'hoocrow': 'Nebelkrähe',
+  'comrav': 'Kolkrabe', 'comrav1': 'Kolkrabe', 'norraven': 'Kolkrabe',
+  'sponut': 'Tannenhäher', 'sponut1': 'Tannenhäher',
+
+  // Spechte (erweitert)
+  'blawoo': 'Schwarzspecht', 'blawoo1': 'Schwarzspecht', 'blkwoo': 'Schwarzspecht',
+  'midswo': 'Mittelspecht', 'midswo1': 'Mittelspecht', 'midwoo': 'Mittelspecht',
+  'lesswo': 'Kleinspecht', 'lesswo1': 'Kleinspecht', 'leswoo': 'Kleinspecht',
+  'grywoo': 'Grauspecht', 'grywoo1': 'Grauspecht', 'gryhew': 'Grauspecht',
+  'eurwry': 'Wendehals', 'eurwry1': 'Wendehals', 'wrynec': 'Wendehals',
+
+  // Eulen (erweitert)
+  'brnowl': 'Schleiereule', 'brnowl1': 'Schleiereule', 'barnow': 'Schleiereule', 'barnow1': 'Schleiereule',
+  'litowl': 'Steinkauz', 'litowl1': 'Steinkauz',
+  'loeowl': 'Waldohreule', 'loeowl1': 'Waldohreule', 'loneow': 'Waldohreule',
+  'sheowl': 'Sumpfohreule', 'sheowl1': 'Sumpfohreule',
+  'eupowl': 'Sperlingskauz', 'eupowl1': 'Sperlingskauz',
+  'borowl': 'Raufußkauz', 'borowl1': 'Raufußkauz', 'tengma': 'Raufußkauz',
+
+  // Greifvögel (erweitert)
+  'eurspa': 'Sperber', 'eurspa1': 'Sperber', 'spahaw': 'Sperber',
+  'norgos': 'Habicht', 'norgos1': 'Habicht', 'goshawk': 'Habicht',
+  'redkit': 'Rotmilan', 'redkit1': 'Rotmilan',
+  'blakit': 'Schwarzmilan', 'blakit1': 'Schwarzmilan', 'blkkit': 'Schwarzmilan',
+  'eurhnb': 'Wespenbussard', 'eurhnb1': 'Wespenbussard', 'honbuz': 'Wespenbussard',
+  'perfal': 'Wanderfalke', 'perfal1': 'Wanderfalke', 'perefa': 'Wanderfalke',
+  'eurhob': 'Baumfalke', 'eurhob1': 'Baumfalke',
+  'osprey': 'Fischadler', 'osprey1': 'Fischadler',
+  'whteag': 'Seeadler', 'whteag1': 'Seeadler', 'whteia': 'Seeadler',
+
+  // Wasservögel (erweitert)
+  'eurcoo': 'Blässhuhn', 'eurcoo1': 'Blässhuhn', 'coot1': 'Blässhuhn',
+  'commoo': 'Teichhuhn', 'commoo1': 'Teichhuhn', 'moorhe': 'Teichhuhn',
+  'watrai': 'Wasserralle', 'watrai1': 'Wasserralle',
+  'spocra': 'Tüpfelsumpfhuhn', 'spocra1': 'Tüpfelsumpfhuhn',
+  'corncr': 'Wachtelkönig', 'corncr1': 'Wachtelkönig',
+  'grcgre': 'Haubentaucher', 'grcgre1': 'Haubentaucher',
+  'litgre': 'Zwergtaucher', 'litgre1': 'Zwergtaucher',
+  'gragoo': 'Graugans', 'gragoo1': 'Graugans', 'greygo': 'Graugans', 'grylgo': 'Graugans',
+  'cangoo': 'Kanadagans', 'cangoo1': 'Kanadagans',
+  'egygoo': 'Nilgans', 'egygoo1': 'Nilgans',
+  'mutswa': 'Höckerschwan', 'mutswa1': 'Höckerschwan',
+  'eurtea': 'Krickente', 'eurtea1': 'Krickente', 'comtea': 'Krickente',
+  'tufduc': 'Reiherente', 'tufduc1': 'Reiherente',
+  'compoc': 'Tafelente', 'compoc1': 'Tafelente',
+  'gadwal': 'Schnatterente', 'gadwal1': 'Schnatterente',
+  'norsho': 'Löffelente', 'norsho1': 'Löffelente',
+  'commer': 'Gänsesäger', 'commer1': 'Gänsesäger', 'goosander': 'Gänsesäger',
+  'grecor': 'Kormoran', 'grecor1': 'Kormoran', 'grcorm': 'Kormoran',
+
+  // Reiher & Störche (erweitert)
+  'grtegr': 'Silberreiher', 'grtegr1': 'Silberreiher', 'greegr': 'Silberreiher',
+  'whisto': 'Weißstorch', 'whisto1': 'Weißstorch',
+  'blasto': 'Schwarzstorch', 'blasto1': 'Schwarzstorch',
+
+  // Watvögel / Limikolen
+  'norlap': 'Kiebitz', 'norlap1': 'Kiebitz', 'lapwing': 'Kiebitz',
+  'comsni': 'Bekassine', 'comsni1': 'Bekassine',
+  'eurwoo': 'Waldschnepfe', 'eurwoo1': 'Waldschnepfe', 'woodco': 'Waldschnepfe',
+  'litrin': 'Flussregenpfeifer', 'litrin1': 'Flussregenpfeifer',
+  'comsan': 'Flussuferläufer', 'comsan1': 'Flussuferläufer',
+
+  // Möwen & Seeschwalben
+  'bkhgul': 'Lachmöwe', 'bkhgul1': 'Lachmöwe', 'blhgul': 'Lachmöwe',
+  'hergul': 'Silbermöwe', 'hergul1': 'Silbermöwe',
+  'casgul': 'Steppenmöwe', 'casgul1': 'Steppenmöwe',
+  'mewgul': 'Sturmmöwe', 'mewgul1': 'Sturmmöwe', 'comgul': 'Sturmmöwe',
+  'comter': 'Flussseeschwalbe', 'comter1': 'Flussseeschwalbe',
+
+  // Tauben (erweitert)
+  'stcdov': 'Hohltaube', 'stcdov1': 'Hohltaube', 'stodov': 'Hohltaube',
+  'rocpig': 'Straßentaube', 'rocpig1': 'Straßentaube', 'rocdov': 'Straßentaube', 'pigeon': 'Straßentaube',
+  'turtur': 'Turteltaube', 'turtdo': 'Turteltaube', 'eurtur': 'Turteltaube', 'eurtdv1': 'Turteltaube',
+
+  // Hühnervögel
+  'comphe': 'Fasan', 'comphe1': 'Fasan', 'pheasant': 'Fasan',
+  'grypar': 'Rebhuhn', 'grypar1': 'Rebhuhn',
+  'comqua': 'Wachtel', 'comqua1': 'Wachtel',
+
+  // Neozoen / Papageien
+  'rorpar': 'Halsbandsittich', 'rorpar1': 'Halsbandsittich', 'rinpar': 'Halsbandsittich',
+  'alepar': 'Alexandersittich', 'alepar1': 'Alexandersittich',
+
+  // Spezialisten & Sondervögel
+  'comkin': 'Eisvogel', 'comkin1': 'Eisvogel', 'kingfi': 'Eisvogel',
+  'eurbee': 'Bienenfresser', 'eurbee1': 'Bienenfresser', 'beaeat': 'Bienenfresser',
+  'eurhoo': 'Wiedehopf', 'eurhoo1': 'Wiedehopf', 'hoopoe': 'Wiedehopf',
+  'eurgoo': 'Pirol', 'eurgoo1': 'Pirol', 'golori': 'Pirol', 'golori1': 'Pirol',
+  'rebshr': 'Neuntöter', 'rebshr1': 'Neuntöter',
+  'greshr': 'Raubwürger', 'greshr1': 'Raubwürger', 'grgshr': 'Raubwürger',
+  'whtdip': 'Wasseramsel', 'whtdip1': 'Wasseramsel', 'dipper': 'Wasseramsel',
+  'eurtrc': 'Baumläufer', 'eurtrc1': 'Baumläufer',
+  'shttre': 'Gartenbaumläufer', 'shttre1': 'Gartenbaumläufer',
+  'eursky': 'Feldlerche', 'eursky1': 'Feldlerche', 'skylar': 'Feldlerche',
+  'crela1': 'Haubenlerche', 'crelar': 'Haubenlerche',
+  'woodla': 'Heidelerche', 'woodla1': 'Heidelerche',
+  'comcra': 'Kranich', 'comcra1': 'Kranich', 'crane1': 'Kranich',
+
+  // Goldammer (yellow2 war vorher Fehlzuordnung)
+  'yellowhammer': 'Goldammer',
 };
 
 // ══════════════════════════════════════════════════════════════
