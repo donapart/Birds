@@ -1,5 +1,6 @@
 /**
  * BirdSound v5.8.0 - AbortSignal Fix, Full Web Dashboard, ML Fix
+ * Entwickler: Dano Schönwald
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, StatusBar, Platform, Alert, TextInput, Modal, Switch, Share, FlatList, Dimensions } from 'react-native';
@@ -427,6 +428,7 @@ if(markers.length>1){var g=L.featureGroup(markers.map(m=>L.marker([m.lat,m.lng])
           <View style={z.sw}><Text style={z.swL}>📴 Offline</Text><Switch value={settings.offlineMode} onValueChange={v => setSettings({...settings, offlineMode: v})} /></View>
           <View style={z.sw}><Text style={z.swL}>📍 GPS</Text><Switch value={settings.enableGPS} onValueChange={v => setSettings({...settings, enableGPS: v})} /></View>
           <TouchableOpacity style={z.sv} onPress={() => { saveData('settings', settings); fetchModels(); setShowSettings(false); }}><Text style={z.svT}>Speichern</Text></TouchableOpacity>
+          <Text style={{color: '#666', fontSize: 10, textAlign: 'center', marginTop: 16, marginBottom: 8}}>Entwickelt von Dano Schönwald</Text>
         </ScrollView><TouchableOpacity style={z.cl} onPress={() => setShowSettings(false)}><Text style={z.clT}>Abbrechen</Text></TouchableOpacity></View></View>
       </Modal>
     </View>

@@ -1108,6 +1108,10 @@ MIT-Lizenz - siehe LICENSE-Datei
 - [OpenStreetMap](https://www.openstreetmap.org/) für die freien Kartendaten
 - [Leaflet](https://leafletjs.com/) für die JavaScript-Kartenbibliothek
 
+## Entwickler
+
+**Dano Schönwald** – Konzept, Entwicklung & Wartung
+
 ## Support
 
 - GitHub Issues: <https://github.com/donapart/Birds/issues>

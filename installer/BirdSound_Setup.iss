@@ -6,7 +6,7 @@
 
 #define MyAppName "BirdSound"
 #define MyAppVersion "5.8.0"
-#define MyAppPublisher "BirdSound Project"
+#define MyAppPublisher "Dano Schönwald"
 #define MyAppURL "https://github.com/donapart/Birds"
 #define MyAppExeName "start_birdsound.bat"
 

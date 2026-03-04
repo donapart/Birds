@@ -1,5 +1,6 @@
 /**
  * BirdSound v5.8.0 - Multi-Model, Session Reports, Advanced Settings, MAP VIEW, BACKGROUND RECORDING, 3D SPECTROGRAM, AUTO-RECONNECT, AUDIO ENHANCEMENT, ML FIX
+ * Entwickler: Dano Schönwald
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, StatusBar, Platform, Alert, TextInput, Modal, Switch, Share, FlatList, Dimensions, AppState } from 'react-native';
@@ -1117,6 +1118,7 @@ export default function App() {
           </>)}
           
           <TouchableOpacity style={z.sv} onPress={() => { saveData('settings', settings); fetchModels(); setShowSettings(false); }}><Text style={z.svT}>Speichern</Text></TouchableOpacity>
+          <Text style={{color: '#666', fontSize: 10, textAlign: 'center', marginTop: 16, marginBottom: 8}}>Entwickelt von Dano Schönwald</Text>
         </ScrollView><TouchableOpacity style={z.cl} onPress={() => setShowSettings(false)}><Text style={z.clT}>Abbrechen</Text></TouchableOpacity></View></View>
       </Modal>
     </View>

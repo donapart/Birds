@@ -90,11 +90,11 @@
     <div class="container content">
         <header>
             <div class="logo">🐦</div>
-            <h1>BirdSound <span class="version-badge">v5.6.0</span></h1>
+            <h1>BirdSound <span class="version-badge">v5.8.0</span></h1>
             <p class="subtitle">Multi-Modell ML-System zur Echtzeit-Vogelstimmen-Erkennung</p>
             <div class="downloads">
-                <a href="https://github.com/donapart/Birds/raw/main/BirdSound-v5.6.0.apk" class="download-btn">📱 Android APK</a>
-                <a href="https://github.com/donapart/Birds/raw/main/installer/output/BirdSound_5.6.0_Setup.exe" class="download-btn secondary">🖥️ Windows</a>
+                <a href="https://github.com/donapart/Birds/releases/latest/download/BirdSound-v5.8.0.apk" class="download-btn">📱 Android APK</a>
+                <a href="https://github.com/donapart/Birds/releases/latest/download/BirdSound_5.8.0_Setup.exe" class="download-btn secondary">🖥️ Windows</a>
                 <a href="https://github.com/donapart/Birds/blob/main/scripts/raspberry_setup.sh" class="download-btn raspberry">🍓 Raspberry Pi</a>
                 <a href="https://github.com/donapart/Birds/blob/main/docker-compose.yml" class="download-btn docker">🐳 Docker</a>
             </div>
@@ -102,7 +102,7 @@
             <div style="margin-top: 1.5rem; text-align: center;">
                 <p style="color: #888; margin-bottom: 0.5rem;">📲 Scan für APK-Download:</p>
                 <img src="qr-code-apk.png" alt="QR Code APK Download" width="200" height="200" style="border-radius: 12px; background: white; padding: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-                <p style="color: #666; font-size: 0.75rem; margin-top: 0.5rem;">BirdSound v5.6.0 (~90MB)</p>
+                <p style="color: #666; font-size: 0.75rem; margin-top: 0.5rem;">BirdSound v5.8.0 (~85MB)</p>
             </div>
         </header>
         
@@ -290,7 +290,7 @@ cd android
             <div class="architecture">┌─────────────────┐     ┌─────────────────────────────────────┐
 │   Mobile App    │     │         Backend (FastAPI)            │
 │   (Expo/RN)     │────▶│                                      │
-│   v5.6.0        │     │  ┌─────────┐ ┌──────────┐ ┌───────┐ │
+│   v5.8.0        │     │  ┌─────────┐ ┌──────────┐ ┌───────┐ │
 │                 │     │  │ BirdNET │ │ DimaBird │ │ Perch │ │
 │  - Audio Capture│     │  │ (ONNX)  │ │(Hugging) │ │(TFHub)│ │
 │  - GPS Location │     │  └────┬────┘ └────┬─────┘ └───┬───┘ │
@@ -320,6 +320,15 @@ cd android
 
         <section id="changelog">
             <h2>📋 Changelog</h2>
+            <h3>v5.8.0 (2026-03)</h3>
+            <ul>
+                <li>🎧 <strong>Audio-Enhancement</strong> - Bandpass, Rauschunterdrückung, Auto-Verstärkung, Spectral Gate, Presets</li>
+                <li>🔒 <strong>Hintergrund-Aufnahme</strong> - Aufnahme bei Tastensperre/minimierter App</li>
+                <li>📊 <strong>3D Spektrogramm</strong> - Wasserfall-Visualisierung mit Touch/Pinch</li>
+                <li>🔄 <strong>Auto-Reconnect</strong> - Automatische Backend-Verbindung bei Netzwerkwechsel</li>
+                <li>🗺️ <strong>Erweiterte Karte</strong> - Zeitfilter, Artenfilter, KML-Export</li>
+                <li>👤 <strong>Entwickler</strong> - Dano Schönwald</li>
+            </ul>
             <h3>v5.5.0 (2024-12-05)</h3>
             <ul>
                 <li>🗺️ <strong>Karten-Crashfix</strong> - MapView ersetzt durch WebView + OpenStreetMap/Leaflet (kein Google API Key nötig)</li>
@@ -365,7 +374,7 @@ cd android
             <p style="margin-top: 1rem;">
                 MIT License · Powered by <a href="https://birdnet.cornell.edu/">BirdNET</a>, <a href="https://huggingface.co/">HuggingFace</a> & <a href="https://tfhub.dev/google/bird-vocalization-classifier">Google Perch</a>
             </p>
-            <p style="margin-top: 0.5rem; font-size: 0.8rem;">© 2024-2025 BirdSound Project</p>
+            <p style="margin-top: 0.5rem; font-size: 0.8rem;">Entwickelt von Dano Schönwald · © 2025-2026 BirdSound Project</p>
         </footer>
     </div>
 

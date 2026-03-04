@@ -7,7 +7,7 @@
 ; --- Allgemeine Einstellungen ---
 !define PRODUCT_NAME "BirdSound"
 !define PRODUCT_VERSION "5.8.0"
-!define PRODUCT_PUBLISHER "BirdSound Project"
+!define PRODUCT_PUBLISHER "Dano Schönwald"
 !define PRODUCT_WEB_SITE "https://github.com/donapart/Birds"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !define PRODUCT_UNINST_ROOT_KEY "HKLM"
