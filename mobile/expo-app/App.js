@@ -1,5 +1,5 @@
 /**
- * BirdSound v5.8.0 - Multi-Model, Session Reports, Advanced Settings, MAP VIEW, BACKGROUND RECORDING, 3D SPECTROGRAM, AUTO-RECONNECT, AUDIO ENHANCEMENT, ML FIX
+ * BirdSound v5.9.0 - Wissenschaftliche Feldberichte, Artennamen DE/LAT, Erkennungsfilter, Export-Fix
  * Entwickler: Dano Schönwald
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -17,6 +17,8 @@ import * as TaskManager from 'expo-task-manager';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { BIRD_LIBRARY } from './src/data/BirdLibrary';
 import { ACHIEVEMENTS, calculateUnlockedAchievements, calculateTotalPoints, getRank } from './src/data/Achievements';
+import { resolveSpecies, isPlausibleEuropean, isIndependentDetection } from './src/utils/SpeciesResolver';
+import { generateFieldReport, generateSessionKML, generateSessionJSON } from './src/utils/ScientificReport';
 
 const URL = 'https://available-nonsegmentary-arlene.ngrok-free.dev';
 const BACKGROUND_LOCATION_TASK = 'background-location-task';
@@ -455,7 +457,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
 
 export default function App() {
   const [settings, setSettings] = useState({
-    backendUrl: URL, chunkDuration: 3, minConfidence: 0.1, enableGPS: true, offlineMode: true,
+    backendUrl: URL, chunkDuration: 3, minConfidence: 0.3, enableGPS: true, offlineMode: true,
     selectedModel: null, consensusMethod: 'weighted_average', autoStopMinutes: 0,
     backgroundRecording: false,  // Neue Einstellung für Hintergrund-Aufnahme
     // Audio Enhancement Settings (v5.6.0)
@@ -503,6 +505,7 @@ export default function App() {
   const sessionRef = useRef(null);
   const appStateRef = useRef(AppState.currentState);
   const spectrogramRef = useRef(null);
+  const lastDetectionTimesRef = useRef({}); // Temporal dedup: { species: lastTimestamp }
 
   // Sende Audio-Level an 3D-Spektrogramm WebView
   const updateSpectrogram = useCallback((level) => {
@@ -809,11 +812,42 @@ export default function App() {
 
   const processDet = (preds, uri, consensus, audioEnhancement) => {
     const ts = new Date();
-    const newDets = preds.filter(p => p.confidence >= settings.minConfidence).slice(0, 5).map(p => {
-      const sp = p.common_name || p.species;
-      const bird = BIRD_LIBRARY[sp] || {};
-      return { id: Date.now() + Math.random(), species: sp, scientific: p.scientific_name || '', confidence: p.confidence, time: ts.toISOString(), location: location ? { lat: location.latitude, lng: location.longitude } : null, audioUri: uri, feedback: null, model: p.model || 'unknown', consensus, audioEnhancement, ...bird };
-    });
+    const newDets = preds
+      .filter(p => p.confidence >= settings.minConfidence)
+      .filter(p => isPlausibleEuropean(p.common_name || p.species))
+      .slice(0, 5)
+      .map(p => {
+        const rawName = p.common_name || p.species;
+        const resolved = resolveSpecies(rawName, p.scientific_name);
+        const sp = resolved.german;
+        const bird = BIRD_LIBRARY[sp] || {};
+        return {
+          id: Date.now() + Math.random(),
+          species: sp,
+          scientific: resolved.scientific,
+          scientificName: resolved.scientific,
+          englishName: resolved.english,
+          germanName: resolved.german,
+          rawApiName: rawName,
+          family: resolved.family || bird.family || '',
+          order: resolved.order || bird.order || '',
+          confidence: p.confidence,
+          time: ts.toISOString(),
+          location: location ? { lat: location.latitude, lng: location.longitude } : null,
+          audioUri: uri,
+          feedback: null,
+          model: p.model || 'unknown',
+          consensus,
+          audioEnhancement,
+          ...bird,
+          icon: resolved.icon || bird.icon || '🐦',
+        };
+      })
+      .filter(d => isIndependentDetection(d.species, ts, lastDetectionTimesRef.current, 30));
+    
+    // Update temporal dedup timestamps
+    newDets.forEach(d => { lastDetectionTimesRef.current[d.species] = d.time; });
+    
     if (newDets.length > 0) {
       const updated = [...newDets, ...detections].slice(0, 1000);
       setDetections(updated); saveData('detections', updated);
@@ -831,19 +865,49 @@ export default function App() {
   const queueOffline = async (uri) => { const q = [...offlineQueue, { uri, time: new Date().toISOString(), location }]; setOfflineQueue(q); saveData('offlineQueue', q); };
   const syncQueue = async () => { for (const item of offlineQueue) { try { await analyzeChunk(item.uri); } catch (e) {} } setOfflineQueue([]); saveData('offlineQueue', []); };
   const submitFeedback = (id, correct) => { const u = detections.map(d => d.id === id ? { ...d, feedback: correct } : d); setDetections(u); saveData('detections', u); const s = { ...userStats, totalFeedback: userStats.totalFeedback + 1 }; setUserStats(s); saveData('userStats', s); };
-  const shareDetection = async (d) => { await Share.share({ message: `🐦 ${d.species} erkannt! ${Math.round(d.confidence*100)}% #BirdSound` }); };
-  const exportKML = async () => { const dets = detections.filter(d => d.location); if (!dets.length) { Alert.alert('Keine GPS-Daten'); return; } const kml = `<?xml version="1.0"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>BirdSound</name>${dets.map(d => `<Placemark><name>${d.species}</name><Point><coordinates>${d.location.lng},${d.location.lat}</coordinates></Point></Placemark>`).join('')}</Document></kml>`; const p = `${FileSystem.documentDirectory}birds.kml`; await FileSystem.writeAsStringAsync(p, kml); await Sharing.shareAsync(p); };
-  const exportJSON = async () => { const p = `${FileSystem.documentDirectory}birds.json`; await FileSystem.writeAsStringAsync(p, JSON.stringify({ stats: userStats, detections, sessions: sessionHistory })); await Sharing.shareAsync(p); };
+  const shareDetection = async (d) => { try { await Share.share({ message: `🐦 ${d.species} (${d.scientific || ''}) erkannt! ${Math.round(d.confidence*100)}% #BirdSound` }); } catch(e) { Alert.alert('Fehler', 'Teilen fehlgeschlagen: ' + e.message); } };
+  const exportKML = async () => {
+    try {
+      const dets = detections.filter(d => d.location);
+      if (!dets.length) { Alert.alert('Keine GPS-Daten', 'Aktiviere GPS in den Einstellungen für KML-Export.'); return; }
+      const kml = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>BirdSound Erkennungen</name><description>Exportiert am ${new Date().toLocaleDateString('de-DE')}</description>${dets.map(d => `<Placemark><name>${d.species}${d.scientific ? ` (${d.scientific})` : ''}</name><description>Konfidenz: ${Math.round(d.confidence*100)}%, Modell: ${d.model||'?'}, Zeit: ${new Date(d.time).toLocaleTimeString('de-DE')}</description><TimeStamp><when>${d.time}</when></TimeStamp><Point><coordinates>${d.location.lng},${d.location.lat},0</coordinates></Point></Placemark>`).join('')}</Document></kml>`;
+      const p = `${FileSystem.documentDirectory}birdsound_export.kml`;
+      await FileSystem.writeAsStringAsync(p, kml);
+      await Sharing.shareAsync(p, { mimeType: 'application/vnd.google-earth.kml+xml', dialogTitle: 'KML exportieren' });
+    } catch(e) { Alert.alert('Export-Fehler', 'KML-Export fehlgeschlagen: ' + e.message); }
+  };
+  const exportJSON = async () => {
+    try {
+      const p = `${FileSystem.documentDirectory}birdsound_export.json`;
+      await FileSystem.writeAsStringAsync(p, JSON.stringify({ meta: { generator: 'BirdSound v5.9.0', developer: 'Dano Schönwald', exportDate: new Date().toISOString() }, stats: userStats, detections: detections.map(d => ({ species: d.species, scientific: d.scientific, englishName: d.englishName, confidence: d.confidence, time: d.time, location: d.location, model: d.model })), sessions: sessionHistory.map(s => ({ id: s.id, startTime: s.startTime, endTime: s.endTime, duration: s.duration, speciesCount: s.speciesCount, totalDetections: s.detections?.length || 0, totalAnalyzed: s.totalAnalyzed })) }, null, 2));
+      await Sharing.shareAsync(p, { mimeType: 'application/json', dialogTitle: 'JSON exportieren' });
+    } catch(e) { Alert.alert('Export-Fehler', 'JSON-Export fehlgeschlagen: ' + e.message); }
+  };
   
   const calcShannon = (c) => { const v = Object.values(c || {}); if (!v.length) return 0; const t = v.reduce((a,b)=>a+b,0); return -v.reduce((s,n) => { const p=n/t; return s+(p>0?p*Math.log(p):0); },0); };
   const calcSimpson = (c) => { const v = Object.values(c || {}); if (!v.length) return 0; const t = v.reduce((a,b)=>a+b,0); return 1-(v.reduce((s,n)=>s+(n*(n-1)),0)/(t*(t-1)||1)); };
   
-  const exportSessionReport = async (session) => {
-    const d = Math.floor(session.duration || 0);
-    const sp = Object.entries(session.speciesCount || {}).sort((a,b)=>b[1]-a[1]);
-    const report = `🐦 BIRDSOUND SESSION\n\n📅 ${new Date(session.startTime).toLocaleDateString('de-DE')}\n⏱️ ${Math.floor(d/60)}:${(d%60).toString().padStart(2,'0')}\n🤖 ${session.modelUsed}\n\n📊 ${session.detections?.length || 0} Erkennungen, ${sp.length} Arten\n\n🦅 TOP ARTEN:\n${sp.slice(0,10).map((s,i)=>`${i+1}. ${s[0]} (${s[1]}x)`).join('\n')}\n\n📈 Shannon: ${calcShannon(session.speciesCount).toFixed(2)} | Simpson: ${calcSimpson(session.speciesCount).toFixed(2)}`;
-    const p = `${FileSystem.documentDirectory}session_${session.id}.txt`;
-    await FileSystem.writeAsStringAsync(p, report); await Sharing.shareAsync(p);
+  const exportSessionReport = async (session, format = 'html') => {
+    try {
+      if (format === 'kml') {
+        const kml = generateSessionKML(session);
+        if (!kml) { Alert.alert('Keine GPS-Daten', 'Session enthält keine Standortdaten.'); return; }
+        const p = `${FileSystem.documentDirectory}session_${session.id}.kml`;
+        await FileSystem.writeAsStringAsync(p, kml);
+        await Sharing.shareAsync(p, { mimeType: 'application/vnd.google-earth.kml+xml', dialogTitle: 'Session KML exportieren' });
+      } else if (format === 'json') {
+        const json = generateSessionJSON(session);
+        const p = `${FileSystem.documentDirectory}session_${session.id}.json`;
+        await FileSystem.writeAsStringAsync(p, json);
+        await Sharing.shareAsync(p, { mimeType: 'application/json', dialogTitle: 'Session JSON exportieren' });
+      } else {
+        // HTML Feldbericht (druckbar)
+        const html = generateFieldReport(session, { appVersion: '5.9.0', observerName: 'Dano Schönwald' });
+        const p = `${FileSystem.documentDirectory}feldbericht_${session.id}.html`;
+        await FileSystem.writeAsStringAsync(p, html);
+        await Sharing.shareAsync(p, { mimeType: 'text/html', dialogTitle: 'Feldbericht exportieren' });
+      }
+    } catch(e) { Alert.alert('Export-Fehler', 'Export fehlgeschlagen: ' + e.message); }
   };
 
   const deleteSession = (session) => {
@@ -1065,14 +1129,52 @@ export default function App() {
 
       <Modal visible={!!showSessionReport} transparent animationType="slide">
         <View style={z.mo}><View style={z.moL}><ScrollView>{showSessionReport && (<>
-          <Text style={z.moT}>📊 Session-Bericht</Text>
+          <Text style={z.moT}>📊 Ornithologischer Feldbericht</Text>
           <View style={z.rpH}><Text style={z.rpD}>{new Date(showSessionReport.startTime).toLocaleDateString('de-DE')}</Text><Text style={z.rpT}>{fmt(showSessionReport.duration || 0)}</Text></View>
-          <View style={z.rpS}><View style={z.rpSi}><Text style={z.rpSV}>{showSessionReport.detections?.length || 0}</Text><Text style={z.rpSL}>Erkennungen</Text></View><View style={z.rpSi}><Text style={z.rpSV}>{Object.keys(showSessionReport.speciesCount || {}).length}</Text><Text style={z.rpSL}>Arten</Text></View><View style={z.rpSi}><Text style={z.rpSV}>{showSessionReport.totalAnalyzed || 0}</Text><Text style={z.rpSL}>Chunks</Text></View></View>
-          <Text style={z.dSc}>🦅 Arten-Ranking</Text>
-          {Object.entries(showSessionReport.speciesCount || {}).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([sp,ct],i) => (<View key={sp} style={z.spR}><Text style={z.spN}>{i+1}.</Text><Text style={z.spI}>{BIRD_LIBRARY[sp]?.icon || '🐦'}</Text><Text style={z.spNm}>{sp}</Text><Text style={z.spC}>{ct}x</Text></View>))}
-          <Text style={z.dSc}>📈 Biodiversität</Text>
-          <View style={z.bio}><View style={z.bioI}><Text style={z.bioL}>Shannon</Text><Text style={z.bioV}>{calcShannon(showSessionReport.speciesCount).toFixed(2)}</Text></View><View style={z.bioI}><Text style={z.bioL}>Simpson</Text><Text style={z.bioV}>{calcSimpson(showSessionReport.speciesCount).toFixed(2)}</Text></View></View>
-          <View style={z.sBtns}><TouchableOpacity style={z.sv} onPress={() => exportSessionReport(showSessionReport)}><Text style={z.svT}>📤 Exportieren</Text></TouchableOpacity><TouchableOpacity style={z.sDel} onPress={() => deleteSession(showSessionReport)}><Text style={z.sDelT}>{(showSessionReport.detections?.length || 0) === 0 ? '🗑️ Verwerfen' : '🗑️ Löschen'}</Text></TouchableOpacity></View>
+          <View style={z.rpS}>
+            <View style={z.rpSi}><Text style={z.rpSV}>{showSessionReport.detections?.length || 0}</Text><Text style={z.rpSL}>Erkennungen</Text></View>
+            <View style={z.rpSi}><Text style={z.rpSV}>{Object.keys(showSessionReport.speciesCount || {}).length}</Text><Text style={z.rpSL}>Arten</Text></View>
+            <View style={z.rpSi}><Text style={z.rpSV}>{showSessionReport.totalAnalyzed || 0}</Text><Text style={z.rpSL}>Chunks</Text></View>
+            <View style={z.rpSi}><Text style={z.rpSV}>{showSessionReport.detections?.length ? Math.round(showSessionReport.detections.reduce((s,d)=>s+(d.confidence||0),0)/showSessionReport.detections.length*100) : 0}%</Text><Text style={z.rpSL}>Ø Konfidenz</Text></View>
+          </View>
+          <Text style={z.dSc}>🦅 Artenliste (Deutsch / Lateinisch)</Text>
+          {Object.entries(showSessionReport.speciesCount || {}).sort((a,b)=>b[1]-a[1]).slice(0,15).map(([sp,ct],i) => {
+            const dets = (showSessionReport.detections || []).filter(d => d.species === sp);
+            const maxConf = dets.length ? Math.max(...dets.map(d=>d.confidence||0)) : 0;
+            const sci = dets[0]?.scientific || dets[0]?.scientificName || BIRD_LIBRARY[sp]?.scientificName || '';
+            return (<View key={sp} style={z.spR}>
+              <Text style={z.spN}>{i+1}.</Text>
+              <Text style={z.spI}>{BIRD_LIBRARY[sp]?.icon || '🐦'}</Text>
+              <View style={{flex:1}}>
+                <Text style={z.spNm}>{sp}</Text>
+                {sci ? <Text style={{color:'#888',fontSize:9,fontStyle:'italic'}}>{sci}</Text> : null}
+              </View>
+              <View style={{alignItems:'flex-end'}}>
+                <Text style={z.spC}>{ct}x</Text>
+                <Text style={{color:'#4ecdc4',fontSize:8}}>{Math.round(maxConf*100)}%</Text>
+              </View>
+            </View>);
+          })}
+          <Text style={z.dSc}>📊 Statistische Auswertung</Text>
+          <View style={z.bio}>
+            <View style={z.bioI}><Text style={z.bioL}>Shannon H'</Text><Text style={z.bioV}>{calcShannon(showSessionReport.speciesCount).toFixed(2)}</Text></View>
+            <View style={z.bioI}><Text style={z.bioL}>Simpson 1-D</Text><Text style={z.bioV}>{calcSimpson(showSessionReport.speciesCount).toFixed(2)}</Text></View>
+          </View>
+          <View style={z.bio}>
+            <View style={z.bioI}><Text style={z.bioL}>Evenness</Text><Text style={z.bioV}>{(() => { const S = Object.keys(showSessionReport.speciesCount||{}).length; return S > 1 ? (calcShannon(showSessionReport.speciesCount)/Math.log(S)).toFixed(2) : '1.00'; })()}</Text></View>
+            <View style={z.bioI}><Text style={z.bioL}>Arten (S)</Text><Text style={z.bioV}>{Object.keys(showSessionReport.speciesCount || {}).length}</Text></View>
+          </View>
+          <Text style={z.dSc}>📤 Exportieren</Text>
+          <View style={z.sBtns}>
+            <TouchableOpacity style={[z.sv,{backgroundColor:'#2d6a4f'}]} onPress={() => exportSessionReport(showSessionReport, 'html')}><Text style={[z.svT,{color:'#fff'}]}>📄 Feldbericht</Text></TouchableOpacity>
+          </View>
+          <View style={[z.sBtns, {marginTop: 4}]}>
+            <TouchableOpacity style={[z.sv,{backgroundColor:'#1a472a'}]} onPress={() => exportSessionReport(showSessionReport, 'kml')}><Text style={[z.svT,{color:'#fff'}]}>🌍 KML</Text></TouchableOpacity>
+            <TouchableOpacity style={[z.sv,{backgroundColor:'#1a472a'}]} onPress={() => exportSessionReport(showSessionReport, 'json')}><Text style={[z.svT,{color:'#fff'}]}>📋 JSON</Text></TouchableOpacity>
+          </View>
+          <View style={[z.sBtns, {marginTop: 8}]}>
+            <TouchableOpacity style={z.sDel} onPress={() => deleteSession(showSessionReport)}><Text style={z.sDelT}>{(showSessionReport.detections?.length || 0) === 0 ? '🗑️ Verwerfen' : '🗑️ Löschen'}</Text></TouchableOpacity>
+          </View>
         </>)}</ScrollView><TouchableOpacity style={z.cl} onPress={() => setShowSessionReport(null)}><Text style={z.clT}>Schließen</Text></TouchableOpacity></View></View>
       </Modal>
 
