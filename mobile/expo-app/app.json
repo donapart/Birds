@@ -19,7 +19,12 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "BirdSound benötigt Mikrofonzugriff für die Vogelstimmen-Aufnahme.",
         "NSLocationWhenInUseUsageDescription": "BirdSound nutzt den Standort für die Geo-Filterung der Vogelarten.",
-        "UIBackgroundModes": ["audio", "location", "fetch", "processing"]
+        "UIBackgroundModes": [
+          "audio",
+          "location",
+          "fetch",
+          "processing"
+        ]
       }
     },
     "android": {
@@ -63,7 +68,8 @@
           "isAndroidBackgroundLocationEnabled": true,
           "isIosBackgroundLocationEnabled": true
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "extra": {
       "eas": {

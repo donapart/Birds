@@ -90,7 +90,7 @@
     <div class="container content">
         <header>
             <div class="logo">🐦</div>
-            <h1>BirdSound <span class="version-badge">v5.11.0</span></h1>
+            <h1>BirdSound <span class="version-badge">v5.12.0</span></h1>
             <p class="subtitle">Multi-Modell ML-System zur Echtzeit-Vogelstimmen-Erkennung</p>
             <div class="downloads">
                 <a href="https://github.com/donapart/Birds/releases/latest" class="download-btn">📱 Android APK</a>
@@ -102,7 +102,7 @@
             <div style="margin-top: 1.5rem; text-align: center;">
                 <p style="color: #888; margin-bottom: 0.5rem;">📲 Scan für APK-Download:</p>
                 <img src="qr-code-apk.png" alt="QR Code APK Download" width="200" height="200" style="border-radius: 12px; background: white; padding: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-                <p style="color: #666; font-size: 0.75rem; margin-top: 0.5rem;">BirdSound v5.11.0 (~85MB)</p>
+                <p style="color: #666; font-size: 0.75rem; margin-top: 0.5rem;">BirdSound v5.12.0 (~85MB)</p>
             </div>
         </header>
         
@@ -290,7 +290,7 @@ cd android
             <div class="architecture">┌─────────────────┐     ┌─────────────────────────────────────┐
 │   Mobile App    │     │         Backend (FastAPI)            │
 │   (Expo/RN)     │────▶│                                      │
-│   v5.11.0       │     │  ┌─────────┐ ┌──────────┐ ┌───────┐ │
+│   v5.12.0       │     │  ┌─────────┐ ┌──────────┐ ┌───────┐ │
 │                 │     │  │ BirdNET │ │ DimaBird │ │ Perch │ │
 │  - Audio Capture│     │  │ (ONNX)  │ │(Hugging) │ │(TFHub)│ │
 │  - GPS Location │     │  └────┬────┘ └────┬─────┘ └───┬───┘ │
@@ -320,6 +320,13 @@ cd android
 
         <section id="changelog">
             <h2>📋 Changelog</h2>
+            <h3>v5.12.0 (2025-12)</h3>
+            <ul>
+                <li>🌓 <strong>Theme-Umschalter</strong> — Auto/Dark/Light, persistiert in Settings</li>
+                <li>💾 <strong>ZIP-Datensicherung</strong> — Erkennungen, Sessions und Settings als ZIP exportieren (via JSZip + expo-sharing)</li>
+                <li>🛡️ <strong>Sentry Crash-Reporting</strong> — Opt-in via <code>app.json → extra.sentryDsn</code></li>
+                <li>🔔 <strong>Push-Benachrichtigungen Scaffold</strong> — Expo-Push-Token-Registrierung, neuer Backend-Endpoint <code>/api/v1/push/register</code></li>
+            </ul>
             <h3>v5.11.0 (2025-11)</h3>
             <ul>
                 <li>💾 <strong>Filter-Persistenz</strong> — Karten-Einstellungen (Layer, Heatmap, Zeit, Konfidenz, Art) bleiben über App-Neustarts erhalten</li>

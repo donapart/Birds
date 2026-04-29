@@ -1,8 +1,8 @@
 {
-  "version": "5.11.0",
-  "versionCode": 66,
+  "version": "5.12.0",
+  "versionCode": 67,
   "downloadUrl": "https://github.com/donapart/Birds/releases/latest",
-  "releaseNotes": "v5.11.0 — Neue Funktionen: Filter-Persistenz (Karten-Einstellungen bleiben erhalten), Pull-to-Refresh in Liste & Sessions, Audio-Replay direkt aus Liste und Session-Detail (▶️), CSV-Export (Excel/DE-kompatibel) für Erkennungen und Sessions, GPS-Genauigkeit (±Xm) wird gespeichert und angezeigt, Fuzzy-Suche in der Vogelbibliothek (tolerant bei Tippfehlern, sucht in DE/EN/Latein/Familie).",
+  "releaseNotes": "v5.12.0 — Dark/Light/Auto Theme-Umschalter, ZIP-Datensicherung (Erkennungen + Sessions + Settings exportieren), Sentry Crash-Reporting (Opt-in via Konfiguration), Push-Benachrichtigungen Scaffold (Expo Push Token Registrierung), Backend-Endpoint /api/v1/push/register.",
   "mandatory": false
 }
 
