@@ -90,7 +90,7 @@
     <div class="container content">
         <header>
             <div class="logo">🐦</div>
-            <h1>BirdSound <span class="version-badge">v5.12.0</span></h1>
+            <h1>BirdSound <span class="version-badge">v5.13.0</span></h1>
             <p class="subtitle">Multi-Modell ML-System zur Echtzeit-Vogelstimmen-Erkennung</p>
             <div class="downloads">
                 <a href="https://github.com/donapart/Birds/releases/latest" class="download-btn">📱 Android APK</a>
@@ -102,7 +102,7 @@
             <div style="margin-top: 1.5rem; text-align: center;">
                 <p style="color: #888; margin-bottom: 0.5rem;">📲 Scan für APK-Download:</p>
                 <img src="qr-code-apk.png" alt="QR Code APK Download" width="200" height="200" style="border-radius: 12px; background: white; padding: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-                <p style="color: #666; font-size: 0.75rem; margin-top: 0.5rem;">BirdSound v5.12.0 (~85MB)</p>
+                <p style="color: #666; font-size: 0.75rem; margin-top: 0.5rem;">BirdSound v5.13.0 (~89MB)</p>
             </div>
         </header>
         
@@ -290,7 +290,7 @@ cd android
             <div class="architecture">┌─────────────────┐     ┌─────────────────────────────────────┐
 │   Mobile App    │     │         Backend (FastAPI)            │
 │   (Expo/RN)     │────▶│                                      │
-│   v5.12.0       │     │  ┌─────────┐ ┌──────────┐ ┌───────┐ │
+│   v5.13.0       │     │  ┌─────────┐ ┌──────────┐ ┌───────┐ │
 │                 │     │  │ BirdNET │ │ DimaBird │ │ Perch │ │
 │  - Audio Capture│     │  │ (ONNX)  │ │(Hugging) │ │(TFHub)│ │
 │  - GPS Location │     │  └────┬────┘ └────┬─────┘ └───┬───┘ │
@@ -320,6 +320,15 @@ cd android
 
         <section id="changelog">
             <h2>📋 Changelog</h2>
+            <h3>v5.13.0 (2025-12)</h3>
+            <ul>
+                <li>📬 <strong>Push-Benachrichtigungen end-to-end</strong> — Expo Push API Sender im Backend (<code>POST /api/v1/push/send</code>) + opt-in Trigger bei jeder hochkonfidenten Erkennung (mit Cooldown)</li>
+                <li>🛡️ <strong>Sentry vollständig aktiviert</strong> — <code>Sentry.wrap(App)</code> + Expo Config-Plugin für native Symbolisierung</li>
+                <li>🧪 <strong>Backend-Tests für /push</strong> — 7/7 grün (Token-Registry, Validierung, Send mit Mock)</li>
+                <li>📖 <strong>In-App Changelog-Modal</strong> — automatisch beim ersten Start nach Update</li>
+                <li>🍏 <strong>iOS / EAS Submit vorbereitet</strong> — <code>eas.json</code> erweitert, App-Store-Submit-Profil als Vorlage</li>
+                <li>🔒 <strong>npm audit Cleanup</strong> — 20 → 15 moderate (0 critical / 0 high)</li>
+            </ul>
             <h3>v5.12.0 (2025-12)</h3>
             <ul>
                 <li>🌓 <strong>Theme-Umschalter</strong> — Auto/Dark/Light, persistiert in Settings</li>

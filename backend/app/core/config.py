@@ -108,6 +108,11 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 60
     RATE_LIMIT_PER_HOUR: int = 1000
 
+    # Push Notifications (Expo)
+    PUSH_NOTIFY_ON_DETECTION: bool = False  # Opt-in: send push on high-confidence detection
+    PUSH_NOTIFY_MIN_CONFIDENCE: float = 0.85
+    PUSH_NOTIFY_COOLDOWN_SEC: int = 300  # Per species cooldown to avoid spam
+
     @model_validator(mode="after")
     def _validate_security(self) -> "Settings":
         """Reject insecure defaults when not running in DEBUG mode."""

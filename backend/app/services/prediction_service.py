@@ -1,9 +1,10 @@
 """
 Prediction service orchestrating audio processing and model inference.
 """
+import asyncio
 import logging
 import time
-from typing import List, Optional
+from typing import Dict, List, Optional
 from uuid import UUID
 import uuid
 
@@ -23,6 +24,9 @@ from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+# Per-species cooldown tracker for push notifications
+_PUSH_LAST_SENT: Dict[str, float] = {}
 
 
 class PredictionService:
@@ -134,12 +138,46 @@ class PredictionService:
         if store_in_db and self.db is not None:
             await self._store_prediction(request, response, model_outputs)
 
+        # 6. Optional: fire-and-forget push notification on high-confidence detection
+        if (
+            settings.PUSH_NOTIFY_ON_DETECTION
+            and consensus.confidence >= settings.PUSH_NOTIFY_MIN_CONFIDENCE
+            and consensus.species_common
+            and consensus.species_common != "No bird sound detected"
+        ):
+            asyncio.create_task(self._maybe_notify_push(consensus))
+
         logger.info(
             f"Processed audio: {consensus.species_common} "
             f"({consensus.confidence:.2f}) in {processing_time_ms}ms"
         )
 
         return response
+
+    async def _maybe_notify_push(self, consensus: ConsensusPrediction) -> None:
+        """Send a push notification (debounced per species)."""
+        try:
+            species = consensus.species_common or "Unknown"
+            now = time.time()
+            last = _PUSH_LAST_SENT.get(species, 0.0)
+            if now - last < settings.PUSH_NOTIFY_COOLDOWN_SEC:
+                return
+            _PUSH_LAST_SENT[species] = now
+
+            from app.api.routes.push import send_expo_push  # late import to avoid cycles
+
+            await send_expo_push(
+                title=f"🐦 {species}",
+                body=f"Erkannt mit {consensus.confidence * 100:.0f}% Konfidenz",
+                data={
+                    "type": "detection",
+                    "species_code": consensus.species_code,
+                    "species_common": species,
+                    "confidence": consensus.confidence,
+                },
+            )
+        except Exception as exc:  # noqa: BLE001 - best-effort background task
+            logger.debug("Push notification skipped: %s", exc)
 
     def _create_empty_response(self, request: AudioChunkRequest) -> PredictionResponse:
         """Create empty response for silent audio."""

@@ -54,7 +54,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   }
 });
 
-export default function App() {
+function App() {
   const [settings, setSettings] = useState({
     backendUrl: URL, chunkDuration: 3, minConfidence: 0.3, enableGPS: true, offlineMode: true,
     selectedModel: null, consensusMethod: 'weighted_average', autoStopMinutes: 0,
@@ -1342,3 +1342,7 @@ function makeStyles(p) { return StyleSheet.create({
   mapChipT: { color: p.text, fontSize: 11 },
   mapChipTA: { color: '#000', fontWeight: '700' },
 }); }
+
+// v5.13.0: Sentry-Wrap fuer automatische Touch-/Performance-Instrumentierung
+export default SENTRY_DSN ? Sentry.wrap(App) : App;
+

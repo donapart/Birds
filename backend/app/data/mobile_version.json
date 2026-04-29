@@ -1,8 +1,9 @@
 {
-  "version": "5.12.0",
-  "versionCode": 67,
+  "version": "5.13.0",
+  "versionCode": 68,
   "downloadUrl": "https://github.com/donapart/Birds/releases/latest",
-  "releaseNotes": "v5.12.0 — Dark/Light/Auto Theme-Umschalter, ZIP-Datensicherung (Erkennungen + Sessions + Settings exportieren), Sentry Crash-Reporting (Opt-in via Konfiguration), Push-Benachrichtigungen Scaffold (Expo Push Token Registrierung), Backend-Endpoint /api/v1/push/register.",
+  "releaseNotes": "v5.13.0 — Push-Benachrichtigungen end-to-end (Expo Push API Sender + opt-in Trigger bei Erkennung), Sentry vollständig aktiviert (Sentry.wrap + Expo-Plugin), Backend-Tests für /push (7/7 grün), In-App Changelog-Modal beim Update, iOS/EAS-Submit-Profil vorbereitet, npm audit Cleanup (20→15 moderate).",
   "mandatory": false
 }
+
 
