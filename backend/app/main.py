@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from app.api.routes import predict, health, recordings, websocket, export, analysis, species, i18n, metrics
-from app.api.routes import xeno_canto, export_geo
+from app.api.routes import xeno_canto, export_geo, mobile
 from app.core.config import get_settings
 from app.db.database import init_db
 from app.services.model_registry import model_registry
@@ -109,6 +109,7 @@ app.include_router(i18n.router, prefix="/api/v1", tags=["i18n"])
 app.include_router(metrics.router, tags=["Metrics"])
 app.include_router(websocket.router, tags=["WebSocket"])
 app.include_router(xeno_canto.router, prefix="/api/v1", tags=["Xeno-canto"])
+app.include_router(mobile.router, prefix="/api/v1", tags=["Mobile"])
 
 
 # Static files for frontend

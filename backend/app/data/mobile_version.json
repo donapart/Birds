@@ -1,0 +1,8 @@
+{
+  "version": "5.11.0",
+  "versionCode": 66,
+  "downloadUrl": "https://github.com/donapart/Birds/releases/latest",
+  "releaseNotes": "v5.11.0 — Neue Funktionen: Filter-Persistenz (Karten-Einstellungen bleiben erhalten), Pull-to-Refresh in Liste & Sessions, Audio-Replay direkt aus Liste und Session-Detail (▶️), CSV-Export (Excel/DE-kompatibel) für Erkennungen und Sessions, GPS-Genauigkeit (±Xm) wird gespeichert und angezeigt, Fuzzy-Suche in der Vogelbibliothek (tolerant bei Tippfehlern, sucht in DE/EN/Latein/Familie).",
+  "mandatory": false
+}
+

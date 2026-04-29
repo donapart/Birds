@@ -4,7 +4,7 @@
  * Löst englische Artnamen, BirdNET-Codes und wissenschaftliche Namen
  * in deutsche Trivialnamen auf. Filtert nicht-europäische Arten.
  * 
- * BirdSound v5.9.2 — Dano Schönwald
+ * BirdSound v5.10.0 — Dano Schönwald
  */
 import { BIRD_LIBRARY } from '../data/BirdLibrary';
 
@@ -428,7 +428,74 @@ export const resolveSpecies = (rawName, rawScientific) => {
     };
   }
   
-  // 6. Fallback: Name nicht auflösbar
+  // 6. Format-Split-Fallback: BirdNET liefert oft "Scientificus name_English Name"
+  //    oder "ScientificName_EnglishName". Wir splitten am ersten "_" und versuchen
+  //    beide Hälften unabhängig aufzulösen.
+  if (rawName && rawName.indexOf('_') !== -1) {
+    const parts = rawName.split('_');
+    if (parts.length >= 2) {
+      const sciGuess = parts[0].trim();
+      const engGuess = parts.slice(1).join(' ').trim();
+      // 6a. Wissenschaftlich auflösen
+      if (sciGuess && byScientific[sciGuess.toLowerCase()]) {
+        const de = byScientific[sciGuess.toLowerCase()];
+        const b = BIRD_LIBRARY[de] || {};
+        return {
+          german: de,
+          scientific: b.scientificName || sciGuess,
+          english: engGuess || b.englishName || '',
+          family: b.family || '',
+          order: b.order || '',
+          icon: b.icon || '🐦',
+          inLibrary: !!BIRD_LIBRARY[de],
+        };
+      }
+      // 6b. Englisch auflösen
+      if (engGuess && byEnglish[engGuess.toLowerCase()]) {
+        const de = byEnglish[engGuess.toLowerCase()];
+        const b = BIRD_LIBRARY[de] || {};
+        return {
+          german: de,
+          scientific: b.scientificName || sciGuess || '',
+          english: engGuess,
+          family: b.family || '',
+          order: b.order || '',
+          icon: b.icon || '🐦',
+          inLibrary: !!BIRD_LIBRARY[de],
+        };
+      }
+      // 6c. Komprimierter Code aus Wissenschaft+Englisch (z.B. "turdusmerula")
+      const compactCode = (sciGuess + engGuess).toLowerCase().replace(/[\s_-]/g, '');
+      if (BIRDNET_CODES[compactCode]) {
+        const de = BIRDNET_CODES[compactCode];
+        const b = BIRD_LIBRARY[de] || {};
+        return {
+          german: de,
+          scientific: b.scientificName || sciGuess || '',
+          english: engGuess || b.englishName || '',
+          family: b.family || '',
+          order: b.order || '',
+          icon: b.icon || '🐦',
+          inLibrary: !!BIRD_LIBRARY[de],
+        };
+      }
+      // 6d. Wenigstens englischen Namen anstelle des Codes zurückgeben,
+      //     damit die UI nicht "Sci_English" anzeigt.
+      if (engGuess) {
+        return {
+          german: engGuess,
+          scientific: rawScientific || sciGuess || '',
+          english: engGuess,
+          family: '',
+          order: '',
+          icon: '🐦',
+          inLibrary: false,
+        };
+      }
+    }
+  }
+
+  // 7. Fallback: Name nicht auflösbar
   return {
     german: rawName,
     scientific: rawScientific || '',

@@ -1,10 +1,39 @@
 """
 Application configuration using Pydantic Settings.
 """
+import logging
 from functools import lru_cache
 from typing import List, Optional
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
+
+logger = logging.getLogger(__name__)
+
+_INSECURE_API_KEY_DEFAULTS = {"changeme-in-production", "changeme", ""}
+
+
+def _read_version() -> str:
+    """Read application version from a single source-of-truth VERSION file.
+
+    Falls back to a hard-coded value if the file is missing (e.g. in tests).
+    """
+    from pathlib import Path
+
+    candidates = [
+        Path(__file__).resolve().parents[2] / "VERSION",  # backend/VERSION
+        Path(__file__).resolve().parents[3] / "VERSION",  # repo root
+    ]
+    for path in candidates:
+        try:
+            if path.is_file():
+                return path.read_text(encoding="utf-8").strip() or "0.0.0"
+        except OSError:
+            continue
+    return "0.0.0"
+
+
+_APP_VERSION = _read_version()
 
 
 class Settings(BaseSettings):
@@ -12,7 +41,7 @@ class Settings(BaseSettings):
 
     # Application
     APP_NAME: str = "BirdSound API"
-    APP_VERSION: str = "5.9.0"
+    APP_VERSION: str = _APP_VERSION
     DEBUG: bool = False
 
     # ML Model loading
@@ -69,15 +98,48 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6379/1"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
 
-    # CORS
+    # CORS - in production, set explicit origins (comma-separated env var CORS_ORIGINS)
     CORS_ORIGINS: List[str] = ["*"]
 
-    # API Security
+    # API Security - MUST be overridden via env var API_KEYS in production
     API_KEYS: List[str] = ["changeme-in-production"]  # Comma-separated keys
 
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 60
     RATE_LIMIT_PER_HOUR: int = 1000
+
+    @model_validator(mode="after")
+    def _validate_security(self) -> "Settings":
+        """Reject insecure defaults when not running in DEBUG mode."""
+        insecure_keys = [k for k in self.API_KEYS if k.strip().lower() in _INSECURE_API_KEY_DEFAULTS]
+        wildcard_with_credentials = "*" in self.CORS_ORIGINS
+
+        if self.DEBUG:
+            if insecure_keys:
+                logger.warning(
+                    "Using insecure default API key(s) in DEBUG mode. Set API_KEYS env var before deploying."
+                )
+            if wildcard_with_credentials:
+                logger.warning(
+                    "CORS_ORIGINS='*' in DEBUG mode. Restrict to explicit origins before deploying."
+                )
+            return self
+
+        problems: List[str] = []
+        if insecure_keys:
+            problems.append(
+                "API_KEYS contains insecure default values; set the API_KEYS env var to a list of secrets."
+            )
+        if wildcard_with_credentials:
+            problems.append(
+                "CORS_ORIGINS='*' is not allowed in production; set explicit origins via the CORS_ORIGINS env var."
+            )
+        if problems:
+            raise ValueError(
+                "Insecure configuration detected (set DEBUG=true to bypass for local dev):\n - "
+                + "\n - ".join(problems)
+            )
+        return self
 
     class Config:
         env_file = ".env"

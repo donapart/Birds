@@ -1,9 +1,12 @@
 /**
- * BirdSound v5.9.2 - 160+ Arten, smarter Filter, BirdNET-Codes erweitert
+ * BirdSound - 160+ Arten, smarter Filter, BirdNET-Codes erweitert
  * Entwickler: Dano Schönwald
+ *
+ * Version: see app.json / package.json (single source of truth).
+ * Read at runtime via Constants.expoConfig.version.
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, StatusBar, Platform, Alert, TextInput, Modal, Switch, Share, FlatList, Dimensions, AppState } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, StatusBar, Platform, Alert, TextInput, Modal, Switch, Share, FlatList, Dimensions, AppState, Linking, RefreshControl } from 'react-native';
 import { WebView } from 'react-native-webview';
 // MapView replaced with WebView + OpenStreetMap (no API key required)
 import { Audio } from 'expo-av';
@@ -19,425 +22,21 @@ import { BIRD_LIBRARY } from './src/data/BirdLibrary';
 import { ACHIEVEMENTS, calculateUnlockedAchievements, calculateTotalPoints, getRank } from './src/data/Achievements';
 import { resolveSpecies, isPlausibleEuropean, isIndependentDetection } from './src/utils/SpeciesResolver';
 import { generateFieldReport, generateSessionKML, generateSessionJSON } from './src/utils/ScientificReport';
+import { SPECTROGRAM_HTML } from './src/components/SpectrogramHTML';
 
-const URL = 'https://available-nonsegmentary-arlene.ngrok-free.dev';
+// API-URL via app.json -> expo.extra.apiUrl (override per build/env if needed)
+const URL =
+  (Constants.expoConfig && Constants.expoConfig.extra && Constants.expoConfig.extra.apiUrl) ||
+  (Constants.manifest && Constants.manifest.extra && Constants.manifest.extra.apiUrl) ||
+  'https://available-nonsegmentary-arlene.ngrok-free.dev';
+
+// App-Version aus app.json/package.json (single source of truth)
+const APP_VERSION =
+  (Constants.expoConfig && Constants.expoConfig.version) ||
+  (Constants.manifest && Constants.manifest.version) ||
+  '0.0.0';
+
 const BACKGROUND_LOCATION_TASK = 'background-location-task';
-
-// 3D Spektrogramm (Wasserfall-Diagramm) HTML/WebGL
-const SPECTROGRAM_HTML = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #1a1a2e; overflow: hidden; touch-action: none; }
-    canvas { display: block; width: 100%; height: 100%; }
-    #info { position: absolute; bottom: 8px; left: 8px; color: #4ecdc4; font-family: monospace; font-size: 10px; opacity: 0.8; }
-    #freq { position: absolute; top: 8px; right: 8px; color: #fff; font-family: monospace; font-size: 11px; text-align: right; line-height: 1.6; }
-    #axes { position: absolute; bottom: 8px; right: 8px; color: #888; font-family: monospace; font-size: 9px; }
-  </style>
-</head>
-<body>
-  <canvas id="canvas"></canvas>
-  <div id="info">3D Spektrogramm</div>
-  <div id="freq">
-    <div style="color:#00ff00">8kHz</div>
-    <div style="color:#80ff00">4kHz</div>
-    <div style="color:#ffff00">2kHz</div>
-    <div style="color:#ff8000">1kHz</div>
-  </div>
-  <script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const info = document.getElementById('info');
-    
-    // Konfiguration - Waterfall Chart Style
-    const CONFIG = {
-      bands: 128,          // Mehr Frequenzbänder für feinere Auflösung
-      history: 100,        // Längere Zeithistorie (Tiefe)
-      perspective: 800,    // Perspektive-Distanz
-      rotationX: 0.65,     // X-Rotation (Neigung) - flacher Blickwinkel
-      rotationY: -0.35,    // Y-Rotation - leicht gedreht
-      smoothing: 0.6,      // Glättung
-      heightScale: 200,    // Höhenskalierung der Balken
-      baseHeight: 0,       // Basishöhe
-      gridLines: true,     // Gitterlinien anzeigen
-    };
-    
-    // Datenstrukturen
-    let spectrogramData = [];
-    let currentBands = new Array(CONFIG.bands).fill(0);
-    let animationId = null;
-    
-    // Canvas-Größe
-    function resize() {
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
-      ctx.scale(dpr, dpr);
-    }
-    window.addEventListener('resize', resize);
-    resize();
-    
-    // Waterfall-Farbpalette: Rot -> Orange -> Gelb -> Grün (wie in den Screenshots)
-    function getWaterfallColor(value) {
-      const v = Math.min(1, Math.max(0, value));
-      let r, g, b;
-      
-      if (v < 0.25) {
-        // Rot zu Orange
-        const t = v / 0.25;
-        r = 255;
-        g = Math.floor(80 * t);
-        b = 0;
-      } else if (v < 0.5) {
-        // Orange zu Gelb
-        const t = (v - 0.25) / 0.25;
-        r = 255;
-        g = 80 + Math.floor(175 * t);
-        b = 0;
-      } else if (v < 0.75) {
-        // Gelb zu Hellgrün
-        const t = (v - 0.5) / 0.25;
-        r = 255 - Math.floor(155 * t);
-        g = 255;
-        b = 0;
-      } else {
-        // Hellgrün zu Grün
-        const t = (v - 0.75) / 0.25;
-        r = 100 - Math.floor(100 * t);
-        g = 255;
-        b = Math.floor(50 * t);
-      }
-      
-      return { r, g, b };
-    }
-    
-    // 3D Projektion - isometrische Perspektive wie Waterfall Chart
-    function project3D(x, y, z) {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      const centerX = w * 0.5;
-      const centerY = h * 0.75;
-      
-      // Rotation anwenden
-      const cosX = Math.cos(CONFIG.rotationX);
-      const sinX = Math.sin(CONFIG.rotationX);
-      const cosY = Math.cos(CONFIG.rotationY);
-      const sinY = Math.sin(CONFIG.rotationY);
-      
-      // Y-Achsen-Rotation
-      const x1 = x * cosY - z * sinY;
-      const z1 = x * sinY + z * cosY;
-      
-      // X-Achsen-Rotation
-      const y1 = y * cosX - z1 * sinX;
-      const z2 = y * sinX + z1 * cosX;
-      
-      // Perspektivische Projektion
-      const scale = CONFIG.perspective / (CONFIG.perspective + z2);
-      
-      return {
-        x: centerX + x1 * scale,
-        y: centerY - y1 * scale,
-        z: z2,
-        scale: scale
-      };
-    }
-    
-    // Zeichne Gitterlinien auf der Grundfläche
-    function drawGrid() {
-      const w = window.innerWidth;
-      const gridWidth = w * 0.8;
-      const gridDepth = w * 0.6;
-      const gridLines = 10;
-      
-      ctx.strokeStyle = 'rgba(100, 100, 120, 0.4)';
-      ctx.lineWidth = 1;
-      
-      // Horizontale Linien (Frequenz)
-      for (let i = 0; i <= gridLines; i++) {
-        const x = -gridWidth/2 + (i / gridLines) * gridWidth;
-        const p1 = project3D(x, 0, 0);
-        const p2 = project3D(x, 0, gridDepth);
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.stroke();
-      }
-      
-      // Vertikale Linien (Zeit)
-      for (let i = 0; i <= gridLines; i++) {
-        const z = (i / gridLines) * gridDepth;
-        const p1 = project3D(-gridWidth/2, 0, z);
-        const p2 = project3D(gridWidth/2, 0, z);
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.stroke();
-      }
-      
-      // Achsenbeschriftung
-      ctx.fillStyle = '#888';
-      ctx.font = '10px monospace';
-      
-      // Frequenz-Achse
-      const freqLabels = ['1kHz', '2kHz', '4kHz', '8kHz'];
-      freqLabels.forEach((label, i) => {
-        const x = -gridWidth/2 + ((i + 1) / 5) * gridWidth;
-        const p = project3D(x, 0, gridDepth + 20);
-        ctx.fillText(label, p.x - 15, p.y + 15);
-      });
-    }
-    
-    // Zeichne Achsen
-    function drawAxes() {
-      const w = window.innerWidth;
-      const axisLen = w * 0.1;
-      
-      // Y-Achse (Amplitude)
-      ctx.strokeStyle = '#666';
-      ctx.lineWidth = 1;
-      
-      const origin = project3D(-w * 0.4, 0, 0);
-      const yTop = project3D(-w * 0.4, CONFIG.heightScale * 1.2, 0);
-      
-      ctx.beginPath();
-      ctx.moveTo(origin.x, origin.y);
-      ctx.lineTo(yTop.x, yTop.y);
-      ctx.stroke();
-      
-      // Y-Achsen-Striche
-      for (let i = 1; i <= 4; i++) {
-        const y = (i / 4) * CONFIG.heightScale * 1.2;
-        const p = project3D(-w * 0.4, y, 0);
-        ctx.beginPath();
-        ctx.moveTo(p.x - 5, p.y);
-        ctx.lineTo(p.x + 5, p.y);
-        ctx.stroke();
-      }
-    }
-    
-    // Hauptzeichenfunktion - Waterfall 3D
-    function draw() {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      
-      // Hintergrund
-      ctx.fillStyle = '#1a1a2e';
-      ctx.fillRect(0, 0, w, h);
-      
-      // Gitter und Achsen
-      if (CONFIG.gridLines) {
-        drawGrid();
-        drawAxes();
-      }
-      
-      const gridWidth = w * 0.8;
-      const gridDepth = w * 0.6;
-      const bandWidth = gridWidth / CONFIG.bands;
-      const rowDepth = gridDepth / CONFIG.history;
-      
-      // Spektrogramm von hinten nach vorne zeichnen (Painter's Algorithm)
-      for (let z = spectrogramData.length - 1; z >= 0; z--) {
-        const row = spectrogramData[z];
-        if (!row) continue;
-        
-        const zPos = z * rowDepth;
-        const nextZPos = (z + 1) * rowDepth;
-        
-        for (let x = 0; x < row.length - 1; x++) {
-          const value = row[x] || 0;
-          const nextValue = row[x + 1] || 0;
-          const nextRowValue = (spectrogramData[z + 1] && spectrogramData[z + 1][x]) || 0;
-          const nextRowNextValue = (spectrogramData[z + 1] && spectrogramData[z + 1][x + 1]) || 0;
-          
-          const xPos = -gridWidth/2 + x * bandWidth;
-          const nextXPos = -gridWidth/2 + (x + 1) * bandWidth;
-          
-          const height = value * CONFIG.heightScale;
-          const nextHeight = nextValue * CONFIG.heightScale;
-          const backHeight = nextRowValue * CONFIG.heightScale;
-          const backNextHeight = nextRowNextValue * CONFIG.heightScale;
-          
-          // 4 Eckpunkte der Oberfläche
-          const p1 = project3D(xPos, height, zPos);
-          const p2 = project3D(nextXPos, nextHeight, zPos);
-          const p3 = project3D(nextXPos, backNextHeight, nextZPos);
-          const p4 = project3D(xPos, backHeight, nextZPos);
-          
-          // Durchschnittswert für Farbe
-          const avgValue = (value + nextValue + nextRowValue + nextRowNextValue) / 4;
-          
-          if (avgValue > 0.01) {
-            const color = getWaterfallColor(avgValue);
-            
-            // Schattierung basierend auf Tiefe
-            const depthFade = 1 - (z / CONFIG.history) * 0.5;
-            const r = Math.floor(color.r * depthFade);
-            const g = Math.floor(color.g * depthFade);
-            const b = Math.floor(color.b * depthFade);
-            
-            // Fläche zeichnen
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.lineTo(p3.x, p3.y);
-            ctx.lineTo(p4.x, p4.y);
-            ctx.closePath();
-            
-            ctx.fillStyle = \`rgb(\${r},\${g},\${b})\`;
-            ctx.fill();
-            
-            // Leichte Konturlinie für 3D-Effekt
-            if (avgValue > 0.1) {
-              ctx.strokeStyle = \`rgba(\${Math.min(255, r + 30)},\${Math.min(255, g + 30)},\${b},0.3)\`;
-              ctx.lineWidth = 0.5;
-              ctx.stroke();
-            }
-          }
-          
-          // Vertikale Balken von der Grundfläche - nur für stärkere Signale
-          if (value > 0.15 && z < 3) {
-            const base = project3D(xPos + bandWidth/2, 0, zPos);
-            const top = project3D(xPos + bandWidth/2, height, zPos);
-            
-            const color = getWaterfallColor(value);
-            ctx.strokeStyle = \`rgba(\${color.r},\${color.g},\${color.b},0.6)\`;
-            ctx.lineWidth = Math.max(1, bandWidth * p1.scale * 0.5);
-            ctx.beginPath();
-            ctx.moveTo(base.x, base.y);
-            ctx.lineTo(top.x, top.y);
-            ctx.stroke();
-          }
-        }
-      }
-      
-      // Info aktualisieren
-      const maxBand = currentBands.indexOf(Math.max(...currentBands));
-      const dominantFreq = Math.round((maxBand / CONFIG.bands) * 8000);
-      const maxVal = Math.max(...currentBands);
-      if (dominantFreq > 200 && maxVal > 0.05) {
-        info.textContent = \`🎵 \${dominantFreq} Hz • Level: \${Math.round(maxVal * 100)}%\`;
-      } else {
-        info.textContent = '3D Spektrogramm';
-      }
-    }
-    
-    // Animation
-    function animate() {
-      draw();
-      animationId = requestAnimationFrame(animate);
-    }
-    animate();
-    
-    // Audio-Daten vom React Native empfangen
-    function updateSpectrum(data) {
-      if (!data || !data.length) return;
-      
-      // Smooth interpolation
-      for (let i = 0; i < CONFIG.bands; i++) {
-        const srcIdx = Math.floor(i * data.length / CONFIG.bands);
-        const value = data[srcIdx] || 0;
-        currentBands[i] = currentBands[i] * CONFIG.smoothing + value * (1 - CONFIG.smoothing);
-      }
-      
-      // Add to history
-      spectrogramData.unshift([...currentBands]);
-      if (spectrogramData.length > CONFIG.history) {
-        spectrogramData.pop();
-      }
-    }
-    
-    // Simulierte Frequenzdaten basierend auf Audio-Level
-    function updateFromLevel(level) {
-      const normalizedLevel = Math.min(1, level / 100);
-      const bands = new Array(CONFIG.bands);
-      
-      for (let i = 0; i < CONFIG.bands; i++) {
-        const freqFactor = i / CONFIG.bands;
-        // Vogelstimmen: 1-8 kHz, Peak bei 2-4 kHz
-        const birdPeak1 = Math.exp(-Math.pow((freqFactor - 0.3) * 4, 2));
-        const birdPeak2 = Math.exp(-Math.pow((freqFactor - 0.5) * 5, 2)) * 0.7;
-        const birdWeight = birdPeak1 + birdPeak2;
-        
-        // Natürliche Variation mit Harmonischen
-        const harmonics = Math.sin(freqFactor * Math.PI * 8) * 0.2 + 0.8;
-        const noise = 0.5 + Math.random() * 0.5;
-        
-        bands[i] = normalizedLevel * birdWeight * noise * harmonics;
-      }
-      
-      updateSpectrum(bands);
-    }
-    
-    // Clear Spektrogramm
-    function clearSpectrum() {
-      spectrogramData = [];
-      currentBands = new Array(CONFIG.bands).fill(0);
-    }
-    
-    // Handler für Nachrichten von React Native
-    function handleMessage(event) {
-      try {
-        const data = event.data || event.detail;
-        const msg = typeof data === 'string' ? JSON.parse(data) : data;
-        if (msg.type === 'level') {
-          updateFromLevel(msg.value);
-        } else if (msg.type === 'spectrum') {
-          updateSpectrum(msg.data);
-        } else if (msg.type === 'clear') {
-          clearSpectrum();
-        } else if (msg.type === 'config') {
-          Object.assign(CONFIG, msg.config);
-        }
-      } catch(e) { console.log('Message parse error:', e); }
-    }
-    
-    // Beide Event-Typen für Android und iOS Kompatibilität
-    window.addEventListener('message', handleMessage);
-    document.addEventListener('message', handleMessage);
-    
-    // Touch-Interaktion für Rotation
-    let touchStart = null;
-    let lastPinchDist = 0;
-    
-    canvas.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 1) {
-        touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      } else if (e.touches.length === 2) {
-        lastPinchDist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-      }
-    });
-    
-    canvas.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      if (e.touches.length === 1 && touchStart) {
-        const dx = e.touches[0].clientX - touchStart.x;
-        const dy = e.touches[0].clientY - touchStart.y;
-        CONFIG.rotationY = Math.max(-1, Math.min(1, CONFIG.rotationY + dx * 0.003));
-        CONFIG.rotationX = Math.max(0.3, Math.min(1.2, CONFIG.rotationX + dy * 0.003));
-        touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      } else if (e.touches.length === 2) {
-        const dist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-        const delta = dist - lastPinchDist;
-        CONFIG.heightScale = Math.max(50, Math.min(400, CONFIG.heightScale + delta * 0.5));
-        lastPinchDist = dist;
-      }
-    });
-    
-    canvas.addEventListener('touchend', () => { touchStart = null; });
-  </script>
-</body>
-</html>
-`;
 
 // Background Location Task für kontinuierliche Updates
 TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
@@ -497,6 +96,15 @@ export default function App() {
   const [filter, setFilter] = useState({ species: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [mapError, setMapError] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState(null); // { version, downloadUrl, releaseNotes, mandatory }
+  const [mapFilter, setMapFilter] = useState('');
+  const [mapShowOptions, setMapShowOptions] = useState(false);
+  const [mapBaseLayer, setMapBaseLayer] = useState('osm'); // osm | topo | sat | dark
+  const [mapHeatmap, setMapHeatmap] = useState(false);
+  const [mapTimeRange, setMapTimeRange] = useState('all'); // all | today | 7d | 30d
+  const [mapMinConf, setMapMinConf] = useState(0); // 0 | 0.5 | 0.7 | 0.9
+  const [refreshing, setRefreshing] = useState(false);
+  const [mapFiltersLoaded, setMapFiltersLoaded] = useState(false);
   
   const recordingRef = useRef(null);
   const timerRef = useRef(null);
@@ -506,6 +114,117 @@ export default function App() {
   const appStateRef = useRef(AppState.currentState);
   const spectrogramRef = useRef(null);
   const lastDetectionTimesRef = useRef({}); // Temporal dedup: { species: lastTimestamp }
+  const mapWebViewRef = useRef(null);
+  const playRef = useRef(null);
+
+  // ---- Helper: Fuzzy-Suche (normalisiert + Levenshtein für Tippfehler) ----
+  const norm = (s) => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const lev = (a, b, max = 2) => {
+    if (a === b) return 0;
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    const dp = Array(b.length + 1).fill(0).map((_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      let prev = dp[0]; dp[0] = i; let bestRow = i;
+      for (let j = 1; j <= b.length; j++) {
+        const tmp = dp[j];
+        dp[j] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[j - 1], dp[j]);
+        prev = tmp;
+        if (dp[j] < bestRow) bestRow = dp[j];
+      }
+      if (bestRow > max) return max + 1;
+    }
+    return dp[b.length];
+  };
+  const fuzzyHit = (query, fields) => {
+    if (!query) return true;
+    const nq = norm(query);
+    if (!nq) return true;
+    for (const f of fields) {
+      const nf = norm(f); if (!nf) continue;
+      if (nf.includes(nq)) return true;
+      if (nq.length >= 4) {
+        const tol = Math.max(1, Math.floor(nq.length / 5));
+        if (lev(nq, nf, tol) <= tol) return true;
+        for (const tok of nf.split(/[\s\-]+/)) {
+          if (tok.length >= 3 && lev(nq, tok, tol) <= tol) return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  // ---- Helper: gespeichertes Audio einer Erkennung abspielen ----
+  const playDetectionAudio = async (d) => {
+    try {
+      if (!d || !d.audioUri) { Alert.alert('Keine Aufnahme', 'Für diese Erkennung wurde kein Audio gespeichert.'); return; }
+      if (playRef.current) {
+        try { await playRef.current.stopAsync(); await playRef.current.unloadAsync(); } catch {}
+        playRef.current = null;
+      }
+      const { sound } = await Audio.Sound.createAsync({ uri: d.audioUri }, { shouldPlay: true });
+      playRef.current = sound;
+      sound.setOnPlaybackStatusUpdate((st) => {
+        if (st && (st.didJustFinish || st.error)) {
+          sound.unloadAsync().catch(() => {});
+          if (playRef.current === sound) playRef.current = null;
+        }
+      });
+    } catch (e) { Alert.alert('Wiedergabe fehlgeschlagen', String(e?.message || e)); }
+  };
+
+  // ---- Helper: Pull-to-Refresh ----
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await loadData(); } catch {}
+    setRefreshing(false);
+  }, []);
+
+  // Semver-Vergleich: liefert true, wenn `latest` neuer als `current` ist.
+  const isNewerVersion = (current, latest) => {
+    if (!current || !latest) return false;
+    const a = String(current).split('.').map(n => parseInt(n, 10) || 0);
+    const b = String(latest).split('.').map(n => parseInt(n, 10) || 0);
+    for (let i = 0; i < Math.max(a.length, b.length); i++) {
+      const x = a[i] || 0, y = b[i] || 0;
+      if (y > x) return true;
+      if (y < x) return false;
+    }
+    return false;
+  };
+
+  const checkForUpdate = useCallback(async (url) => {
+    const backendUrl = url || settings.backendUrl;
+    try {
+      const r = await fetchWithTimeout(`${backendUrl}/api/v1/mobile/latest-version`, { headers: { 'ngrok-skip-browser-warning': '1' } }, 4000);
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d && d.version && isNewerVersion(APP_VERSION, d.version)) {
+        setUpdateInfo({
+          version: d.version,
+          downloadUrl: d.downloadUrl || 'https://github.com/donapart/Birds/releases/latest',
+          releaseNotes: d.releaseNotes || '',
+          mandatory: !!d.mandatory,
+        });
+      } else {
+        setUpdateInfo(null);
+      }
+    } catch (e) { /* still kein Update-Banner zeigen */ }
+  }, [settings.backendUrl]);
+
+  const openUpdateUrl = useCallback(() => {
+    if (!updateInfo) return;
+    const msg = updateInfo.releaseNotes
+      ? `Version ${updateInfo.version}\n\n${updateInfo.releaseNotes}`
+      : `Version ${updateInfo.version} ist verfügbar.`;
+    Alert.alert(
+      updateInfo.mandatory ? 'Pflicht-Update' : 'Update verfügbar',
+      msg,
+      [
+        { text: 'Später', style: 'cancel' },
+        { text: 'Herunterladen', onPress: () => Linking.openURL(updateInfo.downloadUrl).catch(() => {}) },
+      ]
+    );
+  }, [updateInfo]);
 
   // Sende Audio-Level an 3D-Spektrogramm WebView
   const updateSpectrogram = useCallback((level) => {
@@ -551,6 +270,14 @@ export default function App() {
 
   useEffect(() => { init(); return cleanup; }, []);
   useEffect(() => { const i = setInterval(checkNetwork, 10000); return () => clearInterval(i); }, []);
+
+  // Map-Filter persistieren (laden in loadData(), speichern bei Änderung)
+  useEffect(() => {
+    if (!mapFiltersLoaded) return;
+    AsyncStorage.setItem('mapPrefs', JSON.stringify({
+      mapBaseLayer, mapHeatmap, mapTimeRange, mapMinConf, mapFilter,
+    })).catch(() => {});
+  }, [mapBaseLayer, mapHeatmap, mapTimeRange, mapMinConf, mapFilter, mapFiltersLoaded]);
   
   // Auto-Reconnect: Prüfe Backend-Verbindung alle 15 Sekunden und reconnecte automatisch
   useEffect(() => {
@@ -572,6 +299,7 @@ export default function App() {
     await checkNetwork();
     await checkBackend(url);
     await fetchModels(url);
+    checkForUpdate(url);
     if (settings.enableGPS) initGPS();
   };
 
@@ -579,10 +307,10 @@ export default function App() {
 
   const loadData = async () => {
     try {
-      const [det, stats, queue, sessions, saved] = await Promise.all([
+      const [det, stats, queue, sessions, saved, mapPrefsRaw] = await Promise.all([
         AsyncStorage.getItem('detections'), AsyncStorage.getItem('userStats'),
         AsyncStorage.getItem('offlineQueue'), AsyncStorage.getItem('sessionHistory'),
-        AsyncStorage.getItem('settings'),
+        AsyncStorage.getItem('settings'), AsyncStorage.getItem('mapPrefs'),
       ]);
       if (det) setDetections(JSON.parse(det));
       if (stats) setUserStats(JSON.parse(stats));
@@ -594,8 +322,19 @@ export default function App() {
         setSettings(s => ({ ...s, ...parsed }));
         savedUrl = parsed.backendUrl;
       }
+      if (mapPrefsRaw) {
+        try {
+          const mp = JSON.parse(mapPrefsRaw);
+          if (mp.mapBaseLayer) setMapBaseLayer(mp.mapBaseLayer);
+          if (typeof mp.mapHeatmap === 'boolean') setMapHeatmap(mp.mapHeatmap);
+          if (mp.mapTimeRange) setMapTimeRange(mp.mapTimeRange);
+          if (typeof mp.mapMinConf === 'number') setMapMinConf(mp.mapMinConf);
+          if (typeof mp.mapFilter === 'string') setMapFilter(mp.mapFilter);
+        } catch {}
+      }
+      setMapFiltersLoaded(true);
       return savedUrl;
-    } catch (e) { return null; }
+    } catch (e) { setMapFiltersLoaded(true); return null; }
   };
 
   const saveData = async (key, data) => { try { await AsyncStorage.setItem(key, JSON.stringify(data)); } catch (e) {} };
@@ -652,7 +391,7 @@ export default function App() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') { 
-        const loc = await Location.getCurrentPositionAsync({}); 
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }); 
         setLocation(loc.coords);
         
         // Für Background-Recording: Background-Location-Permission anfragen
@@ -833,7 +572,7 @@ export default function App() {
           order: resolved.order || bird.order || '',
           confidence: p.confidence,
           time: ts.toISOString(),
-          location: location ? { lat: location.latitude, lng: location.longitude } : null,
+          location: location ? { lat: location.latitude, lng: location.longitude, accuracy: location.accuracy ?? null, altitude: location.altitude ?? null } : null,
           audioUri: uri,
           feedback: null,
           model: p.model || 'unknown',
@@ -874,6 +613,31 @@ export default function App() {
   const syncQueue = async () => { for (const item of offlineQueue) { try { await analyzeChunk(item.uri); } catch (e) {} } setOfflineQueue([]); saveData('offlineQueue', []); };
   const submitFeedback = (id, correct) => { const u = detections.map(d => d.id === id ? { ...d, feedback: correct } : d); setDetections(u); saveData('detections', u); const s = { ...userStats, totalFeedback: userStats.totalFeedback + 1 }; setUserStats(s); saveData('userStats', s); };
   const shareDetection = async (d) => { try { await Share.share({ message: `🐦 ${d.species} (${d.scientific || ''}) erkannt! ${Math.round(d.confidence*100)}% #BirdSound` }); } catch(e) { Alert.alert('Fehler', 'Teilen fehlgeschlagen: ' + e.message); } };
+
+  const shareStats = async () => {
+    try {
+      const uniqueCount = (userStats?.uniqueSpecies && Array.isArray(userStats.uniqueSpecies))
+        ? userStats.uniqueSpecies.length
+        : (uniqueSpecies?.size || 0);
+      const totalDet = userStats?.totalDetections ?? detections.length;
+      const top = Object.entries(detections.reduce((acc, d) => { acc[d.species] = (acc[d.species] || 0) + 1; return acc; }, {}))
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([s, n], i) => `${i + 1}. ${s} (${n}×)`)
+        .join('\n');
+      const message =
+        `🐦 BirdSound Statistik\n\n` +
+        `${rank.icon} ${rank.name} • ${points} Punkte\n` +
+        `🎯 ${totalDet} Erkennungen\n` +
+        `🪶 ${uniqueCount} verschiedene Arten\n` +
+        `📊 ${sessionHistory.length} Sessions\n` +
+        (top ? `\n🏆 Top-Arten:\n${top}\n` : '') +
+        `\nApp: BirdSound v${APP_VERSION}\n#BirdSound #Vogelbeobachtung`;
+      await Share.share({ title: 'BirdSound Statistik', message });
+    } catch (e) {
+      Alert.alert('Fehler', 'Teilen fehlgeschlagen: ' + e.message);
+    }
+  };
   const exportKML = async () => {
     try {
       const dets = detections.filter(d => d.location);
@@ -887,9 +651,34 @@ export default function App() {
   const exportJSON = async () => {
     try {
       const p = `${FileSystem.documentDirectory}birdsound_export.json`;
-      await FileSystem.writeAsStringAsync(p, JSON.stringify({ meta: { generator: 'BirdSound v5.9.2', developer: 'Dano Schönwald', exportDate: new Date().toISOString() }, stats: userStats, detections: detections.map(d => ({ species: d.species, scientific: d.scientific, englishName: d.englishName, confidence: d.confidence, time: d.time, location: d.location, model: d.model })), sessions: sessionHistory.map(s => ({ id: s.id, startTime: s.startTime, endTime: s.endTime, duration: s.duration, speciesCount: s.speciesCount, totalDetections: s.detections?.length || 0, totalAnalyzed: s.totalAnalyzed })) }, null, 2));
+      await FileSystem.writeAsStringAsync(p, JSON.stringify({ meta: { generator: `BirdSound v${APP_VERSION}`, developer: 'Dano Schönwald', exportDate: new Date().toISOString() }, stats: userStats, detections: detections.map(d => ({ species: d.species, scientific: d.scientific, englishName: d.englishName, confidence: d.confidence, time: d.time, location: d.location, model: d.model })), sessions: sessionHistory.map(s => ({ id: s.id, startTime: s.startTime, endTime: s.endTime, duration: s.duration, speciesCount: s.speciesCount, totalDetections: s.detections?.length || 0, totalAnalyzed: s.totalAnalyzed })) }, null, 2));
       await Sharing.shareAsync(p, { mimeType: 'application/json', dialogTitle: 'JSON exportieren' });
     } catch(e) { Alert.alert('Export-Fehler', 'JSON-Export fehlgeschlagen: ' + e.message); }
+  };
+
+  // CSV-Export aller Erkennungen (Excel-DE-kompatibel: ; als Trenner, BOM)
+  const csvEsc = (v) => {
+    const s = v == null ? '' : String(v);
+    if (/[;"\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  };
+  const exportCSV = async () => {
+    try {
+      if (!detections.length) { Alert.alert('Keine Daten', 'Es gibt noch keine Erkennungen zum Export.'); return; }
+      const header = ['species','scientific','english','confidence','time','lat','lng','accuracy','altitude','model'];
+      const rows = detections.map(d => [
+        csvEsc(d.species), csvEsc(d.scientific), csvEsc(d.englishName),
+        csvEsc((d.confidence ?? 0).toFixed(4)),
+        csvEsc(d.time),
+        csvEsc(d.location?.lat ?? ''), csvEsc(d.location?.lng ?? ''),
+        csvEsc(d.location?.accuracy ?? ''), csvEsc(d.location?.altitude ?? ''),
+        csvEsc(d.model ?? ''),
+      ].join(';'));
+      const csv = '\uFEFF' + header.join(';') + '\n' + rows.join('\n');
+      const p = `${FileSystem.documentDirectory}birdsound_export.csv`;
+      await FileSystem.writeAsStringAsync(p, csv);
+      await Sharing.shareAsync(p, { mimeType: 'text/csv', dialogTitle: 'CSV exportieren' });
+    } catch(e) { Alert.alert('Export-Fehler', 'CSV-Export fehlgeschlagen: ' + e.message); }
   };
   
   const calcShannon = (c) => { const v = Object.values(c || {}); if (!v.length) return 0; const t = v.reduce((a,b)=>a+b,0); return -v.reduce((s,n) => { const p=n/t; return s+(p>0?p*Math.log(p):0); },0); };
@@ -899,7 +688,17 @@ export default function App() {
     try {
       if (format === 'kml') {
         const kml = generateSessionKML(session);
-        if (!kml) { Alert.alert('Keine GPS-Daten', 'Session enthält keine Standortdaten.'); return; }
+        if (!kml) {
+          const total = session.detections?.length || 0;
+          const withGps = (session.detections || []).filter(d => d.location && typeof d.location.lat === 'number' && typeof d.location.lng === 'number').length;
+          Alert.alert(
+            'Keine GPS-Daten',
+            total === 0
+              ? 'Diese Session enthält keine Erkennungen.'
+              : `Keine Erkennung mit Standortdaten gefunden (${withGps}/${total}).\n\nAktiviere GPS in den Einstellungen und erlaube Standortzugriff, dann werden neue Sessions GPS-fähig.`
+          );
+          return;
+        }
         const p = `${FileSystem.documentDirectory}session_${session.id}.kml`;
         await FileSystem.writeAsStringAsync(p, kml);
         await Sharing.shareAsync(p, { mimeType: 'application/vnd.google-earth.kml+xml', dialogTitle: 'Session KML exportieren' });
@@ -908,9 +707,25 @@ export default function App() {
         const p = `${FileSystem.documentDirectory}session_${session.id}.json`;
         await FileSystem.writeAsStringAsync(p, json);
         await Sharing.shareAsync(p, { mimeType: 'application/json', dialogTitle: 'Session JSON exportieren' });
+      } else if (format === 'csv') {
+        const dets = session.detections || [];
+        if (!dets.length) { Alert.alert('Keine Daten', 'Diese Session enthält keine Erkennungen.'); return; }
+        const header = ['species','scientific','english','confidence','time','lat','lng','accuracy','altitude','model'];
+        const rows = dets.map(d => [
+          csvEsc(d.species), csvEsc(d.scientific), csvEsc(d.englishName),
+          csvEsc((d.confidence ?? 0).toFixed(4)),
+          csvEsc(d.time),
+          csvEsc(d.location?.lat ?? ''), csvEsc(d.location?.lng ?? ''),
+          csvEsc(d.location?.accuracy ?? ''), csvEsc(d.location?.altitude ?? ''),
+          csvEsc(d.model ?? ''),
+        ].join(';'));
+        const csv = '\uFEFF' + header.join(';') + '\n' + rows.join('\n');
+        const p = `${FileSystem.documentDirectory}session_${session.id}.csv`;
+        await FileSystem.writeAsStringAsync(p, csv);
+        await Sharing.shareAsync(p, { mimeType: 'text/csv', dialogTitle: 'Session CSV exportieren' });
       } else {
         // HTML Feldbericht (druckbar)
-        const html = generateFieldReport(session, { appVersion: '5.9.2', observerName: 'Dano Schönwald' });
+        const html = generateFieldReport(session, { appVersion: APP_VERSION, observerName: 'Dano Schönwald' });
         const p = `${FileSystem.documentDirectory}feldbericht_${session.id}.html`;
         await FileSystem.writeAsStringAsync(p, html);
         await Sharing.shareAsync(p, { mimeType: 'text/html', dialogTitle: 'Feldbericht exportieren' });
@@ -955,7 +770,7 @@ export default function App() {
     <View style={z.c}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0a15" />
       <View style={{ height: sbh, backgroundColor: '#0a0a15' }} />
-      <View style={z.h}><View><Text style={z.t}>🐦 BirdSound v5.9.2</Text><Text style={z.st}>{rank.icon} {rank.name} • {points}P</Text></View><View style={z.hr}><View style={[z.bg, isConnected ? z.bgG : z.bgR]}><Text style={z.bgT}>{isConnected ? '🟢' : '🔴'}{offlineQueue.length > 0 ? ` (${offlineQueue.length})` : ''}</Text></View><TouchableOpacity onPress={() => setShowSettings(true)}><Text style={z.ic}>⚙️</Text></TouchableOpacity></View></View>
+      <View style={z.h}><View style={{flex: 1}}><Text style={z.t}>🐦 BirdSound v{APP_VERSION}</Text>{updateInfo ? (<TouchableOpacity onPress={openUpdateUrl} style={z.upd}><Text style={z.updT}>🔄 Update {updateInfo.version} verfügbar — antippen</Text></TouchableOpacity>) : null}<Text style={z.st}>{rank.icon} {rank.name} • {points}P</Text></View><View style={z.hr}><View style={[z.bg, isConnected ? z.bgG : z.bgR]}><Text style={z.bgT}>{isConnected ? '🟢' : '🔴'}{offlineQueue.length > 0 ? ` (${offlineQueue.length})` : ''}</Text></View><TouchableOpacity onPress={() => setShowSettings(true)}><Text style={z.ic}>⚙️</Text></TouchableOpacity></View></View>
       <View style={z.tb}>{[['live','🎙️'],['map','🗺️'],['list','📋'],['library','📚'],['sessions','📊'],['achieve','🏆']].map(([id,ic]) => (<TouchableOpacity key={id} style={[z.ta, activeTab===id && z.taA]} onPress={() => setActiveTab(id)}><Text style={z.taI}>{ic}</Text></TouchableOpacity>))}</View>
 
       {activeTab === 'live' && (<ScrollView style={z.ct}>
@@ -1013,93 +828,265 @@ export default function App() {
       </ScrollView>)}
 
       {activeTab === 'map' && (<View style={z.mapC}>
+        <View style={z.mapFilterBar}>
+          <TextInput
+            style={z.mapFilterInput}
+            placeholder="🔍 Art filtern..."
+            placeholderTextColor="#888"
+            value={mapFilter}
+            onChangeText={(t) => {
+              setMapFilter(t);
+              if (mapWebViewRef.current) {
+                mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: t, baseLayer: mapBaseLayer, heatmap: mapHeatmap, timeRange: mapTimeRange, minConf: mapMinConf }));
+              }
+            }}
+          />
+          {mapFilter ? (<TouchableOpacity onPress={() => { setMapFilter(''); if (mapWebViewRef.current) mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: '', baseLayer: mapBaseLayer, heatmap: mapHeatmap, timeRange: mapTimeRange, minConf: mapMinConf })); }}><Text style={z.mapFilterClear}>✕</Text></TouchableOpacity>) : null}
+          <TouchableOpacity onPress={() => setMapShowOptions(v => !v)} style={z.mapOptT}><Text style={z.mapOptTT}>{mapShowOptions ? '▲' : '⚙️'}</Text></TouchableOpacity>
+        </View>
+        {mapShowOptions && (<View style={z.mapOpts}>
+          <Text style={z.mapOptLbl}>Karte</Text>
+          <View style={z.mapOptRow}>
+            {[['osm','Standard'],['topo','Topo'],['sat','Satellit'],['dark','Dunkel']].map(([k,l]) => (
+              <TouchableOpacity key={k} style={[z.mapChip, mapBaseLayer===k && z.mapChipA]} onPress={() => { setMapBaseLayer(k); mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: mapFilter, baseLayer: k, heatmap: mapHeatmap, timeRange: mapTimeRange, minConf: mapMinConf })); }}><Text style={[z.mapChipT, mapBaseLayer===k && z.mapChipTA]}>{l}</Text></TouchableOpacity>
+            ))}
+          </View>
+          <Text style={z.mapOptLbl}>Zeitraum</Text>
+          <View style={z.mapOptRow}>
+            {[['all','Alle'],['today','Heute'],['7d','7 Tage'],['30d','30 Tage']].map(([k,l]) => (
+              <TouchableOpacity key={k} style={[z.mapChip, mapTimeRange===k && z.mapChipA]} onPress={() => { setMapTimeRange(k); mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: mapFilter, baseLayer: mapBaseLayer, heatmap: mapHeatmap, timeRange: k, minConf: mapMinConf })); }}><Text style={[z.mapChipT, mapTimeRange===k && z.mapChipTA]}>{l}</Text></TouchableOpacity>
+            ))}
+          </View>
+          <Text style={z.mapOptLbl}>Min. Konfidenz</Text>
+          <View style={z.mapOptRow}>
+            {[[0,'0%'],[0.5,'50%'],[0.7,'70%'],[0.9,'90%']].map(([k,l]) => (
+              <TouchableOpacity key={String(k)} style={[z.mapChip, mapMinConf===k && z.mapChipA]} onPress={() => { setMapMinConf(k); mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: mapFilter, baseLayer: mapBaseLayer, heatmap: mapHeatmap, timeRange: mapTimeRange, minConf: k })); }}><Text style={[z.mapChipT, mapMinConf===k && z.mapChipTA]}>{l}</Text></TouchableOpacity>
+            ))}
+          </View>
+          <View style={z.mapOptRow}>
+            <TouchableOpacity style={[z.mapChip, mapHeatmap && z.mapChipA]} onPress={() => { const h = !mapHeatmap; setMapHeatmap(h); mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: mapFilter, baseLayer: mapBaseLayer, heatmap: h, timeRange: mapTimeRange, minConf: mapMinConf })); }}><Text style={[z.mapChipT, mapHeatmap && z.mapChipTA]}>🔥 Heatmap</Text></TouchableOpacity>
+            <TouchableOpacity style={z.mapChip} onPress={() => mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'locate' }))}><Text style={z.mapChipT}>📍 Standort</Text></TouchableOpacity>
+            <TouchableOpacity style={z.mapChip} onPress={() => mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'fit' }))}><Text style={z.mapChipT}>🔍 Alle zeigen</Text></TouchableOpacity>
+          </View>
+        </View>)}
         <WebView
+          ref={mapWebViewRef}
           style={z.map}
           originWhitelist={['*']}
           javaScriptEnabled={true}
           domStorageEnabled={true}
+          onMessage={(event) => {
+            try {
+              const msg = JSON.parse(event.nativeEvent.data);
+              if (msg.type === 'delete' && msg.id != null) {
+                Alert.alert(
+                  '🗑️ Erkennung löschen?',
+                  `${msg.species || 'Erkennung'} wirklich von der Karte entfernen?`,
+                  [
+                    { text: 'Abbrechen', style: 'cancel' },
+                    {
+                      text: 'Löschen', style: 'destructive', onPress: () => {
+                        setDetections(prev => {
+                          const next = prev.filter(d => String(d.id) !== String(msg.id));
+                          saveData('detections', next);
+                          return next;
+                        });
+                      }
+                    }
+                  ]
+                );
+              }
+            } catch (e) { /* ignore */ }
+          }}
           source={{ html: `
 <!DOCTYPE html>
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
   <style>
     body { margin: 0; padding: 0; }
     #map { width: 100%; height: 100vh; background: #1a1a2e; }
     .bird-marker { background: rgba(78, 205, 196, 0.9); border-radius: 50%; padding: 8px; font-size: 20px; text-align: center; border: 2px solid #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-    .leaflet-popup-content { text-align: center; }
-    .popup-title { font-weight: bold; color: #333; }
-    .popup-conf { color: #4ecdc4; }
+    .leaflet-popup-content { text-align: center; min-width: 160px; }
+    .popup-title { font-weight: bold; color: #222; font-size: 14px; }
+    .popup-sci { color: #666; font-style: italic; font-size: 11px; }
+    .popup-conf { color: #4ecdc4; font-weight: 600; margin-top: 4px; }
+    .popup-time { color: #888; font-size: 10px; margin-top: 2px; }
+    .popup-del { background: #ff6b6b; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; margin-top: 8px; font-size: 12px; cursor: pointer; width: 100%; }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <script>
-    const detections = ${JSON.stringify(detWithLocation.map(d => ({
+    var allDetections = ${JSON.stringify(detWithLocation.map(d => ({
+      id: d.id,
       lat: d.location?.lat || 0,
       lng: d.location?.lng || 0,
       species: d.species,
+      scientific: d.scientific || '',
       confidence: d.confidence,
       time: d.time,
-      icon: '🐦'
+      icon: BIRD_LIBRARY[d.species]?.icon || '🐦'
     })))};
-    const userLat = ${location?.latitude || 51.5};
-    const userLng = ${location?.longitude || 10.0};
-    
-    const map = L.map('map').setView([userLat, userLng], 10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
-    
-    // User location marker
-    L.circleMarker([userLat, userLng], {
+    var userLat = ${location?.latitude || 51.5};
+    var userLng = ${location?.longitude || 10.0};
+    var currentFilter = '';
+    var currentTimeRange = 'all';
+    var currentMinConf = 0;
+    var heatmapOn = false;
+    var heatLayer = null;
+
+    var map = L.map('map').setView([userLat, userLng], 10);
+
+    var baseLayers = {
+      osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }),
+      topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17 }),
+      sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19 }),
+      dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', { attribution: '© CARTO', maxZoom: 19, subdomains: 'abcd' })
+    };
+    var currentBaseKey = 'osm';
+    baseLayers.osm.addTo(map);
+    function setBaseLayer(key) {
+      if (!baseLayers[key] || key === currentBaseKey) return;
+      map.removeLayer(baseLayers[currentBaseKey]);
+      baseLayers[key].addTo(map);
+      currentBaseKey = key;
+    }
+
+    var userMarker = L.circleMarker([userLat, userLng], {
       radius: 10, fillColor: '#4ecdc4', color: '#fff', weight: 2, fillOpacity: 0.8
     }).addTo(map).bindPopup('📍 Dein Standort');
-    
-    // Detection markers
-    detections.forEach(d => {
-      if (d.lat && d.lng) {
-        const icon = L.divIcon({ className: '', html: '<div class="bird-marker">' + d.icon + '</div>', iconSize: [40, 40], iconAnchor: [20, 20] });
-        L.marker([d.lat, d.lng], { icon })
-          .addTo(map)
-          .bindPopup('<div class="popup-title">' + d.species + '</div><div class="popup-conf">' + Math.round(d.confidence * 100) + '%</div><div>' + new Date(d.time).toLocaleString() + '</div>');
-      }
+
+    var clusterGroup = L.markerClusterGroup({
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      maxClusterRadius: 40,
+      zoomToBoundsOnClick: true,
+      spiderfyDistanceMultiplier: 1.4
     });
-    
-    // Fit bounds if detections exist
-    if (detections.length > 0) {
-      const bounds = detections.filter(d => d.lat && d.lng).map(d => [d.lat, d.lng]);
-      if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50] });
+    map.addLayer(clusterGroup);
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+      });
     }
+
+    function buildPopup(d) {
+      var safeId = escapeHtml(d.id);
+      var safeSpec = escapeHtml(d.species);
+      var safeSci = d.scientific ? '<div class="popup-sci">' + escapeHtml(d.scientific) + '</div>' : '';
+      var time = d.time ? new Date(d.time).toLocaleString() : '';
+      return '<div class="popup-title">' + safeSpec + '</div>'
+        + safeSci
+        + '<div class="popup-conf">' + Math.round((d.confidence||0)*100) + '%</div>'
+        + '<div class="popup-time">' + escapeHtml(time) + '</div>'
+        + '<button class="popup-del" onclick="(function(){if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage(JSON.stringify({type:\\'delete\\',id:\\'' + safeId + '\\',species:\\'' + safeSpec + '\\'}));}})()">🗑️ Entfernen</button>';
+    }
+
+    function timeCutoff(range) {
+      var now = Date.now();
+      if (range === 'today') { var d = new Date(); d.setHours(0,0,0,0); return d.getTime(); }
+      if (range === '7d') return now - 7*24*3600*1000;
+      if (range === '30d') return now - 30*24*3600*1000;
+      return 0;
+    }
+
+    function getVisible() {
+      var filterLow = currentFilter.trim().toLowerCase();
+      var cutoff = timeCutoff(currentTimeRange);
+      return allDetections.filter(function(d) {
+        if (!d.lat || !d.lng) return false;
+        if (currentMinConf && (d.confidence || 0) < currentMinConf) return false;
+        if (cutoff && d.time && new Date(d.time).getTime() < cutoff) return false;
+        if (!filterLow) return true;
+        return (d.species && d.species.toLowerCase().indexOf(filterLow) !== -1)
+          || (d.scientific && d.scientific.toLowerCase().indexOf(filterLow) !== -1);
+      });
+    }
+
+    var lastBounds = [];
+    function rebuildMarkers(autoFit) {
+      clusterGroup.clearLayers();
+      if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+      var visible = getVisible();
+      var bounds = [];
+      if (heatmapOn && L.heatLayer) {
+        var pts = visible.map(function(d){ return [d.lat, d.lng, Math.max(0.2, d.confidence||0.5)]; });
+        heatLayer = L.heatLayer(pts, { radius: 28, blur: 22, maxZoom: 15 }).addTo(map);
+        visible.forEach(function(d){ bounds.push([d.lat, d.lng]); });
+      } else {
+        visible.forEach(function(d) {
+          var icon = L.divIcon({ className: '', html: '<div class="bird-marker">' + (d.icon || '🐦') + '</div>', iconSize: [40, 40], iconAnchor: [20, 20] });
+          var m = L.marker([d.lat, d.lng], { icon: icon });
+          m.bindPopup(buildPopup(d));
+          clusterGroup.addLayer(m);
+          bounds.push([d.lat, d.lng]);
+        });
+      }
+      lastBounds = bounds;
+      if (autoFit && bounds.length > 0) {
+        try { map.fitBounds(bounds, { padding: [60, 60], maxZoom: 15 }); } catch(e) {}
+      }
+    }
+
+    rebuildMarkers(true);
+
+    function onFilterMessage(ev) {
+      try {
+        var data = JSON.parse(ev.data || ev.detail || '{}');
+        if (data.type === 'options') {
+          currentFilter = data.filter || '';
+          currentTimeRange = data.timeRange || 'all';
+          currentMinConf = data.minConf || 0;
+          if (data.baseLayer) setBaseLayer(data.baseLayer);
+          heatmapOn = !!data.heatmap;
+          rebuildMarkers(false);
+        } else if (data.type === 'filter') {
+          currentFilter = data.value || '';
+          rebuildMarkers(false);
+        } else if (data.type === 'locate') {
+          map.setView([userLat, userLng], 14);
+        } else if (data.type === 'fit') {
+          if (lastBounds.length > 0) { try { map.fitBounds(lastBounds, { padding: [60,60], maxZoom: 15 }); } catch(e) {} }
+        }
+      } catch(e) {}
+    }
+    document.addEventListener('message', onFilterMessage);
+    window.addEventListener('message', onFilterMessage);
   </script>
 </body>
 </html>
           ` }}
         />
         <View style={z.mapO}>
-          <Text style={z.mapSt}>📍 {detWithLocation.length} Fundorte</Text>
+          <Text style={z.mapSt}>📍 {detWithLocation.length} Fundorte{mapFilter ? ' • Filter aktiv' : ''}</Text>
           <TouchableOpacity style={z.mapB} onPress={exportKML}><Text style={z.mapBT}>🌍 KML Export</Text></TouchableOpacity>
         </View>
       </View>)}
 
       {activeTab === 'list' && (<View style={z.ct}>
         <View style={z.fR}><TextInput style={z.se} placeholder="Suchen..." placeholderTextColor="#666" value={filter.species} onChangeText={t => setFilter({...filter, species: t})} /><TouchableOpacity style={z.fB} onPress={exportKML}><Text>📤</Text></TouchableOpacity></View>
-        <FlatList data={filtered} keyExtractor={i => i.id.toString()} renderItem={({ item: d }) => (
-          <View style={z.li}><TouchableOpacity style={z.lm} onPress={() => setShowBirdDetail(d)}><Text style={z.lIc}>{BIRD_LIBRARY[d.species]?.icon || '🐦'}</Text><View style={z.lIn}><Text style={z.lSp}>{d.species}</Text><Text style={z.lMt}>{new Date(d.time).toLocaleString()} {d.location ? '📍' : ''} • {d.model}</Text></View><Text style={[z.lCf, { color: cc(d.confidence) }]}>{Math.round(d.confidence*100)}%</Text></TouchableOpacity>
-          <View style={z.fb}><TouchableOpacity style={[z.fbB, d.feedback === true && z.fbA]} onPress={() => submitFeedback(d.id, true)}><Text>👍</Text></TouchableOpacity><TouchableOpacity style={[z.fbB, d.feedback === false && z.fbA]} onPress={() => submitFeedback(d.id, false)}><Text>👎</Text></TouchableOpacity><TouchableOpacity style={z.fbB} onPress={() => shareDetection(d)}><Text>📤</Text></TouchableOpacity></View></View>
+        <FlatList data={filtered} keyExtractor={i => i.id.toString()} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4ecdc4" colors={["#4ecdc4"]} />} renderItem={({ item: d }) => (
+          <View style={z.li}><TouchableOpacity style={z.lm} onPress={() => setShowBirdDetail(d)}><Text style={z.lIc}>{BIRD_LIBRARY[d.species]?.icon || '🐦'}</Text><View style={z.lIn}><Text style={z.lSp}>{d.species}</Text><Text style={z.lMt}>{new Date(d.time).toLocaleString()} {d.location ? `📍${d.location.accuracy ? ` ±${Math.round(d.location.accuracy)}m` : ''}` : ''} • {d.model}</Text></View><Text style={[z.lCf, { color: cc(d.confidence) }]}>{Math.round(d.confidence*100)}%</Text></TouchableOpacity>
+          <View style={z.fb}>{d.audioUri ? <TouchableOpacity style={z.fbB} onPress={() => playDetectionAudio(d)}><Text>▶️</Text></TouchableOpacity> : null}<TouchableOpacity style={[z.fbB, d.feedback === true && z.fbA]} onPress={() => submitFeedback(d.id, true)}><Text>👍</Text></TouchableOpacity><TouchableOpacity style={[z.fbB, d.feedback === false && z.fbA]} onPress={() => submitFeedback(d.id, false)}><Text>👎</Text></TouchableOpacity><TouchableOpacity style={z.fbB} onPress={() => shareDetection(d)}><Text>📤</Text></TouchableOpacity></View></View>
         )} />
       </View>)}
 
       {activeTab === 'library' && (<View style={z.ct}>
         <TextInput style={z.se} placeholder="Vogel suchen..." placeholderTextColor="#666" value={searchQuery} onChangeText={setSearchQuery} />
-        <FlatList data={Object.entries(BIRD_LIBRARY).filter(([k]) => k.toLowerCase().includes(searchQuery.toLowerCase()))} keyExtractor={([k]) => k} renderItem={({ item: [key, bird] }) => (
+        <FlatList data={Object.entries(BIRD_LIBRARY).filter(([k, b]) => fuzzyHit(searchQuery, [k, b?.germanName, b?.scientificName, b?.englishName, b?.family]))} keyExtractor={([k]) => k} renderItem={({ item: [key, bird] }) => (
           <TouchableOpacity style={z.lb} onPress={() => setShowBirdDetail(bird)}><Text style={z.lbI}>{bird.icon || '🐦'}</Text><View style={z.lbC}><Text style={z.lbN}>{bird.germanName || key}</Text><Text style={z.lbS}>{bird.scientificName}</Text><Text style={z.lbF}>{bird.family}</Text></View><Text style={z.lbR}>{'⭐'.repeat(bird.rarity || 1)}</Text></TouchableOpacity>
         )} />
       </View>)}
 
-      {activeTab === 'sessions' && (<ScrollView style={z.ct}>
+      {activeTab === 'sessions' && (<ScrollView style={z.ct} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4ecdc4" colors={["#4ecdc4"]} />}>
         <Text style={z.sc}>📊 Sessions ({sessionHistory.length})</Text>
         {sessionHistory.map(s => (<View key={s.id} style={z.sC}>
           <TouchableOpacity onPress={() => setShowSessionReport(s)}>
@@ -1118,7 +1105,7 @@ export default function App() {
         {unlocked.map(a => (<View key={a.id} style={[z.ac, z.acU]}><Text style={z.acI}>{a.icon}</Text><View style={z.acC}><Text style={z.acN}>{a.name}</Text><Text style={z.acD}>{a.description}</Text></View><Text style={z.acP}>+{a.points}</Text></View>))}
         <Text style={z.sc}>🔒 Gesperrt ({locked.length})</Text>
         {locked.slice(0, 6).map(a => (<View key={a.id} style={z.ac}><Text style={z.acI}>{a.icon}</Text><View style={z.acC}><Text style={z.acN}>{a.name}</Text><Text style={z.acD}>{a.description}</Text></View><Text style={z.acP}>{a.points}</Text></View>))}
-        <View style={z.exC}><TouchableOpacity style={z.ex} onPress={exportKML}><Text style={z.exI}>🌍</Text><Text style={z.exT}>KML</Text></TouchableOpacity><TouchableOpacity style={z.ex} onPress={exportJSON}><Text style={z.exI}>📋</Text><Text style={z.exT}>JSON</Text></TouchableOpacity></View>
+        <View style={z.exC}><TouchableOpacity style={z.ex} onPress={exportKML}><Text style={z.exI}>🌍</Text><Text style={z.exT}>KML</Text></TouchableOpacity><TouchableOpacity style={z.ex} onPress={exportJSON}><Text style={z.exI}>📋</Text><Text style={z.exT}>JSON</Text></TouchableOpacity><TouchableOpacity style={z.ex} onPress={exportCSV}><Text style={z.exI}>📑</Text><Text style={z.exT}>CSV</Text></TouchableOpacity><TouchableOpacity style={z.ex} onPress={shareStats}><Text style={z.exI}>📤</Text><Text style={z.exT}>Statistik</Text></TouchableOpacity></View>
       </ScrollView>)}
 
       <Modal visible={!!showBirdDetail} transparent animationType="slide">
@@ -1130,6 +1117,10 @@ export default function App() {
           <View style={z.dG}><View style={z.dCe}><Text style={z.dCL}>Familie</Text><Text style={z.dCV}>{showBirdDetail.family || '-'}</Text></View><View style={z.dCe}><Text style={z.dCL}>Größe</Text><Text style={z.dCV}>{showBirdDetail.size || '-'}</Text></View><View style={z.dCe}><Text style={z.dCL}>Frequenz</Text><Text style={z.dCV}>{showBirdDetail.voice?.frequency || '-'}</Text></View></View>
           {showBirdDetail.habitat && <><Text style={z.dSc}>🏠 Lebensraum</Text><Text style={z.dT}>{showBirdDetail.habitat?.join?.(', ') || showBirdDetail.habitat}</Text></>}
           {showBirdDetail.voice?.song && <><Text style={z.dSc}>🎵 Gesang</Text><Text style={z.dT}>{showBirdDetail.voice.song}</Text></>}
+          {showBirdDetail.breedingSeason && <><Text style={z.dSc}>🥚 Brutzeit</Text><Text style={z.dT}>{showBirdDetail.breedingSeason}</Text></>}
+          {showBirdDetail.nestType && <><Text style={z.dSc}>🪺 Nest</Text><Text style={z.dT}>{showBirdDetail.nestType}</Text></>}
+          {showBirdDetail.eggs && <><Text style={z.dSc}>🐣 Eier / Gelege</Text><Text style={z.dT}>{showBirdDetail.eggs}</Text></>}
+          {showBirdDetail.incubation && <><Text style={z.dSc}>⏳ Brutdauer</Text><Text style={z.dT}>{showBirdDetail.incubation}</Text></>}
           {showBirdDetail.funFacts && <><Text style={z.dSc}>💡 Fakten</Text>{showBirdDetail.funFacts.slice(0,3).map((f, i) => <Text key={i} style={z.dF}>• {f}</Text>)}</>}
           {showBirdDetail.confidence && <TouchableOpacity style={z.aB} onPress={() => shareDetection(showBirdDetail)}><Text style={z.aBT}>📤 Teilen</Text></TouchableOpacity>}
         </>)}</ScrollView><TouchableOpacity style={z.cl} onPress={() => setShowBirdDetail(null)}><Text style={z.clT}>Schließen</Text></TouchableOpacity></View></View>
@@ -1137,7 +1128,7 @@ export default function App() {
 
       <Modal visible={!!showSessionReport} transparent animationType="slide" onRequestClose={() => setShowSessionReport(null)}>
         <View style={z.mo}>
-          <View style={[z.moL, {maxHeight: '95%', paddingBottom: 0}]}>
+          <View style={[z.moL, {height: '90%', maxHeight: '95%', paddingBottom: 0, overflow: 'hidden'}]}>
             <ScrollView style={{flex: 1}} contentContainerStyle={{padding: 4, paddingBottom: 16}} showsVerticalScrollIndicator={true} bounces={true} nestedScrollEnabled={true}>{showSessionReport && (<>
           <Text style={z.moT}>📊 Ornithologischer Feldbericht</Text>
           <View style={z.rpH}><Text style={z.rpD}>{new Date(showSessionReport.startTime).toLocaleDateString('de-DE')}</Text><Text style={z.rpT}>{fmt(showSessionReport.duration || 0)}</Text></View>
@@ -1152,6 +1143,7 @@ export default function App() {
             const dets = (showSessionReport.detections || []).filter(d => d.species === sp);
             const maxConf = dets.length ? Math.max(...dets.map(d=>d.confidence||0)) : 0;
             const sci = dets[0]?.scientific || dets[0]?.scientificName || BIRD_LIBRARY[sp]?.scientificName || '';
+            const bestDet = dets.slice().sort((a,b)=>(b.confidence||0)-(a.confidence||0))[0];
             return (<View key={sp} style={z.spR}>
               <Text style={z.spN}>{i+1}.</Text>
               <Text style={z.spI}>{BIRD_LIBRARY[sp]?.icon || '🐦'}</Text>
@@ -1159,6 +1151,7 @@ export default function App() {
                 <Text style={z.spNm}>{sp}</Text>
                 {sci ? <Text style={{color:'#888',fontSize:9,fontStyle:'italic'}}>{sci}</Text> : null}
               </View>
+              {bestDet?.audioUri ? <TouchableOpacity onPress={() => playDetectionAudio(bestDet)} style={{paddingHorizontal:6, paddingVertical:2}}><Text style={{fontSize:14}}>▶️</Text></TouchableOpacity> : null}
               <View style={{alignItems:'flex-end'}}>
                 <Text style={z.spC}>{ct}x</Text>
                 <Text style={{color:'#4ecdc4',fontSize:8}}>{Math.round(maxConf*100)}%</Text>
@@ -1181,6 +1174,7 @@ export default function App() {
           <View style={[z.sBtns, {marginTop: 4}]}>
             <TouchableOpacity style={[z.sv,{backgroundColor:'#1a472a'}]} onPress={() => exportSessionReport(showSessionReport, 'kml')}><Text style={[z.svT,{color:'#fff'}]}>🌍 KML</Text></TouchableOpacity>
             <TouchableOpacity style={[z.sv,{backgroundColor:'#1a472a'}]} onPress={() => exportSessionReport(showSessionReport, 'json')}><Text style={[z.svT,{color:'#fff'}]}>📋 JSON</Text></TouchableOpacity>
+            <TouchableOpacity style={[z.sv,{backgroundColor:'#1a472a'}]} onPress={() => exportSessionReport(showSessionReport, 'csv')}><Text style={[z.svT,{color:'#fff'}]}>📑 CSV</Text></TouchableOpacity>
           </View>
           <View style={[z.sBtns, {marginTop: 4}]}>
             <TouchableOpacity style={[z.sv,{backgroundColor:'#2196F3'}]} onPress={async () => {
@@ -1192,7 +1186,7 @@ export default function App() {
                   const sci = BIRD_LIBRARY[sp]?.scientificName || '';
                   return `  • ${sp}${sci ? ` (${sci})` : ''}: ${ct}x`;
                 }).join('\n');
-                const txt = `🐦 BirdSound Feldbericht\n📅 ${new Date(s.startTime).toLocaleDateString('de-DE')} | ⏱️ ${fmt(s.duration||0)}\n\n📊 ${d} Erkennungen, ${n} Arten\n📈 Shannon H': ${calcShannon(s.speciesCount).toFixed(2)} | Simpson: ${calcSimpson(s.speciesCount).toFixed(2)}\n\n🦅 Top-Arten:\n${arten}\n\n— BirdSound v5.9.2 | Dano Schönwald`;
+                const txt = `🐦 BirdSound Feldbericht\n📅 ${new Date(s.startTime).toLocaleDateString('de-DE')} | ⏱️ ${fmt(s.duration||0)}\n\n📊 ${d} Erkennungen, ${n} Arten\n📈 Shannon H': ${calcShannon(s.speciesCount).toFixed(2)} | Simpson: ${calcSimpson(s.speciesCount).toFixed(2)}\n\n🦅 Top-Arten:\n${arten}\n\n— BirdSound v${APP_VERSION} | Dano Schönwald`;
                 await Share.share({ message: txt, title: 'BirdSound Feldbericht' });
               } catch(e) { Alert.alert('Fehler', 'Teilen fehlgeschlagen: ' + e.message); }
             }}><Text style={[z.svT,{color:'#fff'}]}>📤 Teilen</Text></TouchableOpacity>
@@ -1316,4 +1310,18 @@ const z = StyleSheet.create({
   sBtns: { flexDirection: 'row', gap: 8, marginTop: 12 }, sv: { flex: 1, backgroundColor: '#4ecdc4', borderRadius: 8, padding: 10, alignItems: 'center' }, svT: { color: '#000', fontWeight: '600', fontSize: 12 },
   sDel: { flex: 1, backgroundColor: '#ff6b6b', borderRadius: 8, padding: 10, alignItems: 'center' }, sDelT: { color: '#fff', fontWeight: '600', fontSize: 12 },
   cl: { backgroundColor: '#333', borderRadius: 8, padding: 10, alignItems: 'center', marginTop: 6 }, clT: { color: '#fff', fontWeight: '600', fontSize: 12 },
+  upd: { backgroundColor: '#ff6b35', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginTop: 4, marginBottom: 2, alignSelf: 'flex-start' },
+  updT: { color: '#fff', fontSize: 11, fontWeight: '600' },
+  mapFilterBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#16213e', paddingHorizontal: 8, paddingVertical: 6 },
+  mapFilterInput: { flex: 1, backgroundColor: '#0a0a15', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, color: '#fff', fontSize: 12, borderWidth: 1, borderColor: '#333' },
+  mapFilterClear: { color: '#ff6b6b', fontSize: 18, paddingHorizontal: 10, fontWeight: '700' },
+  mapOptT: { paddingHorizontal: 8, paddingVertical: 4 },
+  mapOptTT: { color: '#4ecdc4', fontSize: 16 },
+  mapOpts: { backgroundColor: '#16213e', paddingHorizontal: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#0a0a15' },
+  mapOptLbl: { color: '#888', fontSize: 10, marginTop: 4, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  mapOptRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  mapChip: { paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#0a0a15', borderRadius: 14, borderWidth: 1, borderColor: '#333' },
+  mapChipA: { backgroundColor: '#4ecdc4', borderColor: '#4ecdc4' },
+  mapChipT: { color: '#fff', fontSize: 11 },
+  mapChipTA: { color: '#000', fontWeight: '700' },
 });

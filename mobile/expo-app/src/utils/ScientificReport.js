@@ -478,33 +478,84 @@ ${intervals.length > 0 ? `
 </html>`;
 };
 
+/** XML-Escape für KML-Text-Attribute */
+const escXml = (s) => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&apos;');
+
+/** Wandelt einen beliebigen Zeit-Wert in einen ISO-8601 String um (KML <when> Format) */
+const toIsoWhen = (t) => {
+  if (!t) return '';
+  try {
+    const d = (t instanceof Date) ? t : new Date(t);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString();
+  } catch { return ''; }
+};
+
+/** Validiert ob d.location geographisch plausible Koordinaten enthält */
+const hasValidLocation = (d) => {
+  const loc = d && d.location;
+  if (!loc) return false;
+  const lat = Number(loc.lat), lng = Number(loc.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  if (lat === 0 && lng === 0) return false; // Null-Insel ausschließen
+  return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+};
+
 /**
  * Erzeugt einen KML-Export für eine einzelne Session.
+ * Gibt null zurück, wenn keine Erkennung mit gültigen GPS-Koordinaten existiert.
  */
 export const generateSessionKML = (session) => {
-  const dets = (session.detections || []).filter(d => d.location);
+  const dets = (session.detections || []).filter(hasValidLocation);
   if (!dets.length) return null;
-  
+
   const startDate = new Date(session.startTime);
-  const docName = `BirdSound Session ${startDate.toLocaleDateString('de-DE')}`;
-  
+  const dateStr = isNaN(startDate.getTime()) ? '' : startDate.toLocaleDateString('de-DE');
+  const docName = `BirdSound Session ${dateStr}`.trim();
+
+  // Track-Linie: zeitlich sortierte Punkte verbinden (optisch der Beobachtungs-Pfad)
+  const sorted = [...dets].sort((a, b) => new Date(a.time) - new Date(b.time));
+  const trackCoords = sorted.map(d => `${Number(d.location.lng)},${Number(d.location.lat)},0`).join(' ');
+
+  const placemarks = sorted.map(d => {
+    const name = `${d.species || 'Unbekannt'}${d.scientific ? ` (${d.scientific})` : ''}`;
+    const conf = Math.round((d.confidence || 0) * 100);
+    const timeIso = toIsoWhen(d.time);
+    const timeStr = timeIso ? new Date(timeIso).toLocaleTimeString('de-DE') : '?';
+    const desc = `Konfidenz: ${conf}% | Modell: ${d.model || '?'} | Zeit: ${timeStr}`;
+    const whenTag = timeIso ? `<TimeStamp><when>${timeIso}</when></TimeStamp>` : '';
+    return `  <Placemark>
+    <name>${escXml(name)}</name>
+    <description><![CDATA[${desc}]]></description>
+    ${whenTag}
+    <styleUrl>#birdIcon</styleUrl>
+    <Point><coordinates>${Number(d.location.lng)},${Number(d.location.lat)},0</coordinates></Point>
+  </Placemark>`;
+  }).join('\n');
+
+  const trackPlacemark = sorted.length > 1 ? `
+  <Placemark>
+    <name>Beobachtungs-Pfad</name>
+    <styleUrl>#trackLine</styleUrl>
+    <LineString>
+      <tessellate>1</tessellate>
+      <coordinates>${trackCoords}</coordinates>
+    </LineString>
+  </Placemark>` : '';
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
 <Document>
-  <name>${docName}</name>
-  <description>Ornithologische Bestandserfassung vom ${startDate.toLocaleDateString('de-DE')}</description>
-  <Style id="birdIcon"><IconStyle><color>ff00ff00</color><scale>1.0</scale></IconStyle></Style>
-  ${dets.map(d => `
-  <Placemark>
-    <name>${d.species}${d.scientific ? ` (${d.scientific})` : ''}</name>
-    <description>
-      Konfidenz: ${Math.round((d.confidence || 0) * 100)}%
-      Modell: ${d.model || '?'}
-      Zeit: ${new Date(d.time).toLocaleTimeString('de-DE')}
-    </description>
-    <TimeStamp><when>${d.time}</when></TimeStamp>
-    <Point><coordinates>${d.location.lng},${d.location.lat},0</coordinates></Point>
-  </Placemark>`).join('')}
+  <name>${escXml(docName)}</name>
+  <description><![CDATA[Ornithologische Bestandserfassung vom ${dateStr} — ${dets.length} Erkennungen mit GPS]]></description>
+  <Style id="birdIcon"><IconStyle><color>ff00ff00</color><scale>1.0</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/parks.png</href></Icon></IconStyle></Style>
+  <Style id="trackLine"><LineStyle><color>ff4ecdc4</color><width>3</width></LineStyle></Style>
+${placemarks}${trackPlacemark}
 </Document>
 </kml>`;
 };
