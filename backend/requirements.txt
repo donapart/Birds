@@ -16,7 +16,7 @@ alembic>=1.14.0
 # Audio Processing
 numpy>=2.0.0
 scipy>=1.14.0
-librosa>=0.10.2
+librosa>=0.11.0
 soundfile>=0.12.1
 pydub>=0.25.1  # Audio format conversion (M4A, MP3, etc.)
 noisereduce>=3.0.3  # Audio enhancement - noise reduction
