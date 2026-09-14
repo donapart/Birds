@@ -1,8 +1,8 @@
 {
-  "version": "5.13.0",
-  "versionCode": 68,
+  "version": "5.13.1",
+  "versionCode": 69,
   "downloadUrl": "https://github.com/donapart/Birds/releases/latest",
-  "releaseNotes": "v5.13.0 — Push-Benachrichtigungen end-to-end (Expo Push API Sender + opt-in Trigger bei Erkennung), Sentry vollständig aktiviert (Sentry.wrap + Expo-Plugin), Backend-Tests für /push (7/7 grün), In-App Changelog-Modal beim Update, iOS/EAS-Submit-Profil vorbereitet, npm audit Cleanup (20→15 moderate).",
+  "releaseNotes": "v5.13.1 — Wiedergabe von Aufnahmen repariert (persistenter Speicherort statt Cache), Filter für nicht-europäische Großfußhühner erweitert, API-Absicherung granular korrigiert (Modell-Listing wieder öffentlich, alle Inferenz-Endpunkte konsistent geschützt), Expo SDK 57 (React 19.2 / React Native 0.86, expo-audio statt expo-av).",
   "mandatory": false
 }
 

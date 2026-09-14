@@ -16,6 +16,7 @@ from uuid import uuid4
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import get_ws_api_key
 from app.schemas.audio import AudioChunkRequest
 from app.schemas.prediction import PredictionResponse
 from app.services.prediction_service import PredictionService
@@ -132,9 +133,14 @@ manager = ConnectionManager()
 
 
 @router.websocket("/ws/live")
-async def websocket_live_feed(websocket: WebSocket):
+async def websocket_live_feed(
+    websocket: WebSocket,
+    api_key: str = Depends(get_ws_api_key),
+):
     """
     WebSocket endpoint for live prediction feed.
+
+    Requires an API key via the X-API-Key header or ?api_key= query param.
 
     Receives all predictions from all devices in real-time.
 
@@ -176,9 +182,15 @@ async def websocket_live_feed(websocket: WebSocket):
 
 
 @router.websocket("/ws/device/{device_id}")
-async def websocket_device_feed(websocket: WebSocket, device_id: str):
+async def websocket_device_feed(
+    websocket: WebSocket,
+    device_id: str,
+    api_key: str = Depends(get_ws_api_key),
+):
     """
     WebSocket endpoint for device-specific prediction feed.
+
+    Requires an API key via the X-API-Key header or ?api_key= query param.
 
     Receives predictions only from the specified device.
 
@@ -208,9 +220,12 @@ async def websocket_device_feed(websocket: WebSocket, device_id: str):
 @router.websocket("/ws/stream")
 async def websocket_audio_stream(
     websocket: WebSocket,
+    api_key: str = Depends(get_ws_api_key),
 ):
     """
     WebSocket endpoint for streaming audio and receiving predictions.
+
+    Requires an API key via the X-API-Key header or ?api_key= query param.
 
     This endpoint allows a device to:
     1. Send audio chunks via WebSocket

@@ -93,67 +93,6 @@ async def list_recordings(
     return items
 
 
-@router.get("/recordings/{recording_id}", response_model=RecordingDetail)
-async def get_recording(
-    recording_id: UUID,
-    db: AsyncSession = Depends(get_db)
-):
-    """Get detailed information about a specific recording."""
-    query = (
-        select(Recording)
-        .options(selectinload(Recording.predictions))
-        .where(Recording.id == recording_id)
-    )
-
-    result = await db.execute(query)
-    recording = result.scalar_one_or_none()
-
-    if recording is None:
-        raise HTTPException(status_code=404, detail="Recording not found")
-
-    # Group predictions by model
-    models_dict = {}
-    for pred in recording.predictions:
-        if pred.model_name not in models_dict:
-            models_dict[pred.model_name] = {
-                "model_name": pred.model_name,
-                "model_version": pred.model_version,
-                "inference_time_ms": pred.inference_time_ms or 0,
-                "predictions": []
-            }
-
-        models_dict[pred.model_name]["predictions"].append(
-            SpeciesPrediction(
-                species_code=pred.species_code,
-                species_scientific=pred.species_scientific,
-                species_common=pred.species_common,
-                confidence=pred.confidence,
-                rank=pred.rank
-            )
-        )
-
-    # Sort predictions within each model by rank
-    model_predictions = []
-    for model_data in models_dict.values():
-        model_data["predictions"].sort(key=lambda x: x.rank)
-        model_predictions.append(ModelPrediction(**model_data))
-
-    return RecordingDetail(
-        id=recording.id,
-        device_id=recording.device_id,
-        timestamp_utc=recording.timestamp_utc,
-        latitude=recording.latitude,
-        longitude=recording.longitude,
-        duration_sec=recording.duration_sec,
-        sample_rate=recording.sample_rate,
-        consensus_species=recording.consensus_species,
-        consensus_confidence=recording.consensus_confidence,
-        consensus_method=recording.consensus_method,
-        predictions=model_predictions,
-        metadata=recording.metadata
-    )
-
-
 @router.get("/recordings/map/points", response_model=List[MapDataPoint])
 async def get_map_data(
     species: Optional[str] = None,
@@ -385,3 +324,66 @@ async def compare_models(
         ))
 
     return comparisons
+
+
+# NOTE: must stay after the static /recordings/* routes,
+# otherwise it captures paths like /recordings/timeline.
+@router.get("/recordings/{recording_id}", response_model=RecordingDetail)
+async def get_recording(
+    recording_id: UUID,
+    db: AsyncSession = Depends(get_db)
+):
+    """Get detailed information about a specific recording."""
+    query = (
+        select(Recording)
+        .options(selectinload(Recording.predictions))
+        .where(Recording.id == recording_id)
+    )
+
+    result = await db.execute(query)
+    recording = result.scalar_one_or_none()
+
+    if recording is None:
+        raise HTTPException(status_code=404, detail="Recording not found")
+
+    # Group predictions by model
+    models_dict = {}
+    for pred in recording.predictions:
+        if pred.model_name not in models_dict:
+            models_dict[pred.model_name] = {
+                "model_name": pred.model_name,
+                "model_version": pred.model_version,
+                "inference_time_ms": pred.inference_time_ms or 0,
+                "predictions": []
+            }
+
+        models_dict[pred.model_name]["predictions"].append(
+            SpeciesPrediction(
+                species_code=pred.species_code,
+                species_scientific=pred.species_scientific,
+                species_common=pred.species_common,
+                confidence=pred.confidence,
+                rank=pred.rank
+            )
+        )
+
+    # Sort predictions within each model by rank
+    model_predictions = []
+    for model_data in models_dict.values():
+        model_data["predictions"].sort(key=lambda x: x.rank)
+        model_predictions.append(ModelPrediction(**model_data))
+
+    return RecordingDetail(
+        id=recording.id,
+        device_id=recording.device_id,
+        timestamp_utc=recording.timestamp_utc,
+        latitude=recording.latitude,
+        longitude=recording.longitude,
+        duration_sec=recording.duration_sec,
+        sample_rate=recording.sample_rate,
+        consensus_species=recording.consensus_species,
+        consensus_confidence=recording.consensus_confidence,
+        consensus_method=recording.consensus_method,
+        predictions=model_predictions,
+        metadata=recording.extra_metadata
+    )

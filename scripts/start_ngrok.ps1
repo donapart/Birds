@@ -1,5 +1,5 @@
 # ============================================================
-# BirdSound - Starte ngrok für Docker (Port 8003)
+# BirdSound - Starte ngrok fuer Backend (Port 8000)
 # ============================================================
 # Verwendung: .\start_ngrok.ps1
 # ============================================================
@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "  BirdSound ngrok Tunnel (Docker Port 8003)" -ForegroundColor Cyan
+Write-Host "  BirdSound ngrok Tunnel (Backend Port 8000)" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -39,21 +39,21 @@ if ($existing) {
     exit 0
 }
 
-# Prüfe ob Docker läuft
-$dockerApi = Test-NetConnection -ComputerName localhost -Port 8003 -WarningAction SilentlyContinue
-if (-not $dockerApi.TcpTestSucceeded) {
-    Write-Host "[WARN] Docker-API nicht erreichbar auf Port 8003!" -ForegroundColor Red
-    Write-Host "       Starte Docker zuerst: docker-compose up -d" -ForegroundColor Yellow
+# Pruefe ob Backend laeuft
+$backendApi = Test-NetConnection -ComputerName localhost -Port 8000 -WarningAction SilentlyContinue
+if (-not $backendApi.TcpTestSucceeded) {
+    Write-Host "[WARN] Backend nicht erreichbar auf Port 8000!" -ForegroundColor Red
+    Write-Host "       Starte Backend zuerst (z.B. uvicorn auf 8000)." -ForegroundColor Yellow
     Write-Host ""
     exit 1
 }
 
-Write-Host "[OK] Docker-API läuft auf Port 8003" -ForegroundColor Green
+Write-Host "[OK] Backend laeuft auf Port 8000" -ForegroundColor Green
 Write-Host ""
 
-# Starte ngrok
-Write-Host "[START] Starte ngrok Tunnel zu localhost:8003..." -ForegroundColor Cyan
-Start-Process ngrok -ArgumentList "http", "8003" -WindowStyle Hidden
+# Starte ngrok (reservierte Domain)
+Write-Host "[START] Starte ngrok Tunnel zu localhost:8000..." -ForegroundColor Cyan
+Start-Process ngrok -ArgumentList "http", "--url=available-nonsegmentary-arlene.ngrok-free.dev", "8000" -WindowStyle Hidden
 
 Write-Host "[WAIT] Warte auf ngrok..." -ForegroundColor Gray
 Start-Sleep -Seconds 5

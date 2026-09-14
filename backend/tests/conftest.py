@@ -17,7 +17,8 @@ os.environ["USE_SQLITE"] = "true"
 os.environ["SQLITE_PATH"] = ":memory:"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["DEBUG"] = "true"
-os.environ["API_KEYS"] = '[\"test-api-key\"]'
+os.environ["API_KEYS"] = '["test-api-key"]'
+os.environ["USE_MODEL_STUBS"] = "true"
 
 # Test API key for authenticated endpoints
 TEST_API_KEY = "test-api-key"
@@ -39,9 +40,20 @@ def app():
 
 
 @pytest.fixture
-def client(app) -> TestClient:
-    """Create synchronous test client."""
-    return TestClient(app)
+def client(app) -> Generator[TestClient, None, None]:
+    """Create synchronous test client (authenticated by default).
+
+    Uses the context manager so the app lifespan runs (init_db etc.).
+    """
+    with TestClient(app, headers={"X-API-Key": TEST_API_KEY}) as client:
+        yield client
+
+
+@pytest.fixture
+def anon_client(app) -> Generator[TestClient, None, None]:
+    """Create synchronous test client WITHOUT API key (for auth tests)."""
+    with TestClient(app) as client:
+        yield client
 
 
 @pytest.fixture
@@ -52,10 +64,11 @@ def auth_headers() -> dict:
 
 @pytest.fixture
 async def async_client(app) -> AsyncGenerator[AsyncClient, None]:
-    """Create async test client."""
+    """Create async test client (authenticated by default)."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
-        base_url="http://test"
+        base_url="http://test",
+        headers={"X-API-Key": TEST_API_KEY},
     ) as client:
         yield client
 

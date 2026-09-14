@@ -20,6 +20,7 @@ from app.services.model_registry import model_registry
 from app.services.audio_enhancement import audio_enhancer, EnhancementSettings
 from app.db.database import get_db
 from app.api.dependencies import get_api_key
+from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -65,7 +66,8 @@ async def predict_bird_sound(
 @router.post("/predict/batch", response_model=BatchPredictionResponse)
 async def predict_batch(
     request: AudioChunkBatchRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    api_key: str = Depends(get_api_key)
 ):
     """
     Process multiple audio chunks in a single request.
@@ -140,7 +142,8 @@ async def predict_upload(
     spectral_gate_threshold_db: float = Form(default=-40.0),
     highpass_enabled: bool = Form(default=False),
     highpass_freq: int = Form(default=200),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    api_key: str = Depends(get_api_key)
 ):
     """
     Upload audio file for prediction with GPS coordinates and audio enhancement.
@@ -166,8 +169,14 @@ async def predict_upload(
     import numpy as np
     import io
     
-    # Read audio file
-    audio_bytes = await file.read()
+    # Read audio file (with size limit to prevent memory exhaustion)
+    max_bytes = get_settings().MAX_AUDIO_UPLOAD_MB * 1024 * 1024
+    audio_bytes = await file.read(max_bytes + 1)
+    if len(audio_bytes) > max_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File exceeds maximum size of {get_settings().MAX_AUDIO_UPLOAD_MB} MB",
+        )
     
     # Decode audio to numpy array for enhancement
     try:

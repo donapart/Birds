@@ -61,13 +61,14 @@ class PredictionService:
         """
         start_time = time.perf_counter()
 
-        # 1. Preprocess audio
+        # 1. Preprocess audio (decode/resample are CPU-bound -> worker thread)
         logger.debug(f"Processing audio from device {request.device_id}")
-        audio = audio_processor.prepare_for_model(
+        audio = await asyncio.to_thread(
+            audio_processor.prepare_for_model,
             audio_base64=request.audio_base64,
             audio_format=request.audio_format.value,
             source_sample_rate=request.sample_rate,
-            normalize=True
+            normalize=True,
         )
 
         # Check for silence

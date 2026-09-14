@@ -1,7 +1,7 @@
 # Makefile for BirdSound Backend
 # Provides convenient shortcuts for common development tasks
 
-.PHONY: help setup install test test-cov clean run run-prod download-models docker-up docker-down lint format
+.PHONY: help setup install lock audit test test-cov clean run run-prod download-models docker-up docker-down lint format
 
 # Default target
 help:
@@ -11,6 +11,8 @@ help:
 	@echo "Setup & Installation:"
 	@echo "  make setup          - Initial setup (create .env, directories)"
 	@echo "  make install        - Install Python dependencies"
+	@echo "  make lock           - Regenerate requirements.lock (uv)"
+	@echo "  make audit          - Run pip-audit against the lockfile"
 	@echo "  make download-models - Download production ML models"
 	@echo ""
 	@echo "Development:"
@@ -37,6 +39,14 @@ setup:
 install:
 	@echo "Installing dependencies..."
 	pip install -r requirements.txt
+
+lock:
+	@echo "Regenerating requirements.lock (target: Python 3.12 / Linux)..."
+	uv pip compile requirements.txt -c constraints.txt -o requirements.lock --python-version 3.12 --python-platform linux
+
+audit:
+	@echo "Auditing pinned dependencies..."
+	uvx pip-audit -r requirements.lock --no-deps --disable-pip
 
 download-models:
 	@echo "Downloading ML models..."

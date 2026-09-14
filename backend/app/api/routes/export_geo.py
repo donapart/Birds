@@ -6,6 +6,7 @@ for use in Google Earth, QGIS, and other GIS applications.
 """
 
 import io
+import logging
 import zipfile
 from datetime import datetime, timedelta
 from typing import Optional, List
@@ -16,6 +17,8 @@ from fastapi.responses import Response, StreamingResponse
 
 from app.db.database import async_session_maker
 from app.db.models import Recording, Prediction
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/export", tags=["export"])
 
@@ -365,7 +368,7 @@ async def get_detections_for_export(
             from sqlalchemy.orm import selectinload
             
             # Build query
-            query = select(Recording).options(selectinload(Recording.detections))
+            query = select(Recording).options(selectinload(Recording.predictions))
             
             conditions = []
             
@@ -416,68 +419,10 @@ async def get_detections_for_export(
                         })
             
             return detections
-            
-    except Exception as e:
-        # Return demo data if database not available
-        return get_demo_detections()
 
-
-def get_demo_detections() -> List[dict]:
-    """Return demo detection data for testing."""
-    return [
-        {
-            'species_common': 'Amsel',
-            'species_scientific': 'Turdus merula',
-            'species_code': 'turmer',
-            'confidence': 0.92,
-            'timestamp': datetime.now() - timedelta(hours=2),
-            'latitude': 52.520,
-            'longitude': 13.405,
-            'model': 'BirdNET',
-            'device_id': 'demo'
-        },
-        {
-            'species_common': 'Rotkehlchen',
-            'species_scientific': 'Erithacus rubecula',
-            'species_code': 'erirub',
-            'confidence': 0.85,
-            'timestamp': datetime.now() - timedelta(hours=1),
-            'latitude': 52.521,
-            'longitude': 13.406,
-            'model': 'BirdNET',
-            'device_id': 'demo'
-        },
-        {
-            'species_common': 'Kohlmeise',
-            'species_scientific': 'Parus major',
-            'species_code': 'parmaj',
-            'confidence': 0.78,
-            'timestamp': datetime.now() - timedelta(minutes=30),
-            'latitude': 52.519,
-            'longitude': 13.404,
-            'model': 'DimaBird',
-            'device_id': 'demo'
-        },
-        {
-            'species_common': 'Buchfink',
-            'species_scientific': 'Fringilla coelebs',
-            'species_code': 'fricoe',
-            'confidence': 0.65,
-            'timestamp': datetime.now() - timedelta(minutes=15),
-            'latitude': 52.522,
-            'longitude': 13.407,
-            'model': 'BirdNET',
-            'device_id': 'demo'
-        },
-        {
-            'species_common': 'Zilpzalp',
-            'species_scientific': 'Phylloscopus collybita',
-            'species_code': 'phycol',
-            'confidence': 0.45,
-            'timestamp': datetime.now(),
-            'latitude': 52.518,
-            'longitude': 13.403,
-            'model': 'DimaBird',
-            'device_id': 'demo'
-        }
-    ]
+    except Exception as exc:
+        logger.exception("Failed to load detections for geo export")
+        raise HTTPException(
+            status_code=503,
+            detail="Export data could not be loaded from the database",
+        ) from exc

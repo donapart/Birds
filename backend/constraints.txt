@@ -1,0 +1,4 @@
+# Resolver constraints for uv pip compile (see make lock).
+# ai-edge-litert pulls backports-strenum, whose 1.3.1 release declares
+# Requires-Python <3.11 and is uninstallable with pip on 3.11+.
+backports-strenum<1.3

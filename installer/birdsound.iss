@@ -2,7 +2,7 @@
 ; Inno Setup Script für BirdSound v5.9.2
 
 #define MyAppName "BirdSound"
-#define MyAppVersion "5.9.2"
+#define MyAppVersion "5.13.1"
 #define MyAppPublisher "Dano Schönwald"
 #define MyAppURL "https://github.com/donapart/Birds"
 #define MyAppExeName "start_server.bat"

@@ -32,7 +32,7 @@ async def detailed_health():
     for name, model in model_registry.models.items():
         model_status[name] = {
             "loaded": model.is_loaded,
-            "version": model.model_version
+            "version": getattr(model, "model_version", None)
         }
 
     return {

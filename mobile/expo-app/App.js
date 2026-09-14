@@ -6,14 +6,21 @@
  * Read at runtime via Constants.expoConfig.version.
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, StatusBar, Platform, Alert, TextInput, Modal, Switch, Share, FlatList, Dimensions, AppState, Linking, RefreshControl } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, StatusBar, Platform, Alert, TextInput, Share, FlatList, Dimensions, AppState, Linking, RefreshControl } from 'react-native';
 import { WebView } from 'react-native-webview';
 // MapView replaced with WebView + OpenStreetMap (no API key required)
-import { Audio } from 'expo-av';
+import {
+  createAudioPlayer,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioRecorder,
+} from 'expo-audio';
 import * as Location from 'expo-location';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as Network from 'expo-network';
+import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as TaskManager from 'expo-task-manager';
@@ -22,19 +29,18 @@ import { BIRD_LIBRARY } from './src/data/BirdLibrary';
 import { ACHIEVEMENTS, calculateUnlockedAchievements, calculateTotalPoints, getRank } from './src/data/Achievements';
 import { resolveSpecies, isPlausibleEuropean, isIndependentDetection } from './src/utils/SpeciesResolver';
 import { generateFieldReport, generateSessionKML, generateSessionJSON } from './src/utils/ScientificReport';
+import { BirdDetailModal } from './src/components/BirdDetailModal';
+import { SessionReportModal } from './src/components/SessionReportModal';
+import { SettingsModal } from './src/components/SettingsModal';
 import { SPECTROGRAM_HTML } from './src/components/SpectrogramHTML';
-
-// API-URL via app.json -> expo.extra.apiUrl (override per build/env if needed)
-const URL =
-  (Constants.expoConfig && Constants.expoConfig.extra && Constants.expoConfig.extra.apiUrl) ||
-  (Constants.manifest && Constants.manifest.extra && Constants.manifest.extra.apiUrl) ||
-  'https://available-nonsegmentary-arlene.ngrok-free.dev';
-
-// App-Version aus app.json/package.json (single source of truth)
-const APP_VERSION =
-  (Constants.expoConfig && Constants.expoConfig.version) ||
-  (Constants.manifest && Constants.manifest.version) ||
-  '0.0.0';
+import { APP_VERSION, DEFAULT_API_URL, createApiHeaders } from './src/config/appConfig';
+import {
+  confidenceColor as cc,
+  csvEscape as csvEsc,
+  formatDuration as fmt,
+  fuzzyHit,
+  isNewerVersion,
+} from './src/utils/appUtils';
 
 const BACKGROUND_LOCATION_TASK = 'background-location-task';
 
@@ -55,8 +61,9 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
 });
 
 function App() {
+  const appStyles = makeStyles(PAL.dark);
   const [settings, setSettings] = useState({
-    backendUrl: URL, chunkDuration: 3, minConfidence: 0.3, enableGPS: true, offlineMode: true,
+    backendUrl: DEFAULT_API_URL, apiKey: '', chunkDuration: 3, minConfidence: 0.3, enableGPS: true, offlineMode: true,
     selectedModel: null, consensusMethod: 'weighted_average', autoStopMinutes: 0,
     backgroundRecording: false,  // Neue Einstellung für Hintergrund-Aufnahme
     // Audio Enhancement Settings (v5.6.0)
@@ -117,58 +124,23 @@ function App() {
   const mapWebViewRef = useRef(null);
   const playRef = useRef(null);
 
-  // ---- Helper: Fuzzy-Suche (normalisiert + Levenshtein für Tippfehler) ----
-  const norm = (s) => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const lev = (a, b, max = 2) => {
-    if (a === b) return 0;
-    if (Math.abs(a.length - b.length) > max) return max + 1;
-    const dp = Array(b.length + 1).fill(0).map((_, i) => i);
-    for (let i = 1; i <= a.length; i++) {
-      let prev = dp[0]; dp[0] = i; let bestRow = i;
-      for (let j = 1; j <= b.length; j++) {
-        const tmp = dp[j];
-        dp[j] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[j - 1], dp[j]);
-        prev = tmp;
-        if (dp[j] < bestRow) bestRow = dp[j];
-      }
-      if (bestRow > max) return max + 1;
-    }
-    return dp[b.length];
-  };
-  const fuzzyHit = (query, fields) => {
-    if (!query) return true;
-    const nq = norm(query);
-    if (!nq) return true;
-    for (const f of fields) {
-      const nf = norm(f); if (!nf) continue;
-      if (nf.includes(nq)) return true;
-      if (nq.length >= 4) {
-        const tol = Math.max(1, Math.floor(nq.length / 5));
-        if (lev(nq, nf, tol) <= tol) return true;
-        for (const tok of nf.split(/[\s\-]+/)) {
-          if (tok.length >= 3 && lev(nq, tok, tol) <= tol) return true;
-        }
-      }
-    }
-    return false;
-  };
-
   // ---- Helper: gespeichertes Audio einer Erkennung abspielen ----
   const playDetectionAudio = async (d) => {
     try {
       if (!d || !d.audioUri) { Alert.alert('Keine Aufnahme', 'Für diese Erkennung wurde kein Audio gespeichert.'); return; }
       if (playRef.current) {
-        try { await playRef.current.stopAsync(); await playRef.current.unloadAsync(); } catch {}
+        try { playRef.current.pause(); playRef.current.remove(); } catch {}
         playRef.current = null;
       }
-      const { sound } = await Audio.Sound.createAsync({ uri: d.audioUri }, { shouldPlay: true });
-      playRef.current = sound;
-      sound.setOnPlaybackStatusUpdate((st) => {
-        if (st && (st.didJustFinish || st.error)) {
-          sound.unloadAsync().catch(() => {});
-          if (playRef.current === sound) playRef.current = null;
+      const player = createAudioPlayer({ uri: d.audioUri });
+      playRef.current = player;
+      player.addListener('playbackStatusUpdate', (status) => {
+        if (status.didJustFinish || status.error) {
+          player.remove();
+          if (playRef.current === player) playRef.current = null;
         }
       });
+      player.play();
     } catch (e) { Alert.alert('Wiedergabe fehlgeschlagen', String(e?.message || e)); }
   };
 
@@ -179,23 +151,10 @@ function App() {
     setRefreshing(false);
   }, []);
 
-  // Semver-Vergleich: liefert true, wenn `latest` neuer als `current` ist.
-  const isNewerVersion = (current, latest) => {
-    if (!current || !latest) return false;
-    const a = String(current).split('.').map(n => parseInt(n, 10) || 0);
-    const b = String(latest).split('.').map(n => parseInt(n, 10) || 0);
-    for (let i = 0; i < Math.max(a.length, b.length); i++) {
-      const x = a[i] || 0, y = b[i] || 0;
-      if (y > x) return true;
-      if (y < x) return false;
-    }
-    return false;
-  };
-
-  const checkForUpdate = useCallback(async (url) => {
+  const checkForUpdate = useCallback(async (url, apiKey = settings.apiKey) => {
     const backendUrl = url || settings.backendUrl;
     try {
-      const r = await fetchWithTimeout(`${backendUrl}/api/v1/mobile/latest-version`, { headers: { 'ngrok-skip-browser-warning': '1' } }, 4000);
+      const r = await fetchWithTimeout(`${backendUrl}/api/v1/mobile/latest-version`, { headers: createApiHeaders(apiKey) }, 4000);
       if (!r.ok) return;
       const d = await r.json();
       if (d && d.version && isNewerVersion(APP_VERSION, d.version)) {
@@ -209,7 +168,7 @@ function App() {
         setUpdateInfo(null);
       }
     } catch (e) { /* still kein Update-Banner zeigen */ }
-  }, [settings.backendUrl]);
+  }, [settings.backendUrl, settings.apiKey]);
 
   const openUpdateUrl = useCallback(() => {
     if (!updateInfo) return;
@@ -238,6 +197,16 @@ function App() {
       spectrogramRef.current.postMessage(JSON.stringify({ type: 'clear' }));
     }
   }, []);
+
+  const audioRecorder = useAudioRecorder(
+    { ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true },
+    (status) => {
+      if (typeof status.metering !== 'number') return;
+      const level = Math.max(0, (status.metering + 60) * 1.67);
+      setAudioLevel(level);
+      updateSpectrogram(level);
+    }
+  );
 
   // AppState Listener für Background-Erkennung
   useEffect(() => {
@@ -294,12 +263,12 @@ function App() {
   }, [isConnected, settings.backendUrl]);
 
   const init = async () => {
-    const savedUrl = await loadData();
-    const url = savedUrl || URL;
+    const saved = await loadData();
+    const url = saved.backendUrl || DEFAULT_API_URL;
     await checkNetwork();
     await checkBackend(url);
-    await fetchModels(url);
-    checkForUpdate(url);
+    await fetchModels(url, saved.apiKey);
+    checkForUpdate(url, saved.apiKey);
     if (settings.enableGPS) initGPS();
   };
 
@@ -307,20 +276,33 @@ function App() {
 
   const loadData = async () => {
     try {
-      const [det, stats, queue, sessions, saved, mapPrefsRaw] = await Promise.all([
+      const [det, stats, queue, sessions, saved, mapPrefsRaw, apiKey] = await Promise.all([
         AsyncStorage.getItem('detections'), AsyncStorage.getItem('userStats'),
         AsyncStorage.getItem('offlineQueue'), AsyncStorage.getItem('sessionHistory'),
         AsyncStorage.getItem('settings'), AsyncStorage.getItem('mapPrefs'),
+        SecureStore.getItemAsync('apiKey'),
       ]);
       if (det) setDetections(JSON.parse(det));
       if (stats) setUserStats(JSON.parse(stats));
       if (queue) setOfflineQueue(JSON.parse(queue));
       if (sessions) setSessionHistory(JSON.parse(sessions));
       let savedUrl = null;
+      let resolvedApiKey = apiKey || '';
       if (saved) {
         const parsed = JSON.parse(saved);
-        setSettings(s => ({ ...s, ...parsed }));
+        if (parsed.apiKey) {
+          resolvedApiKey ||= parsed.apiKey;
+          const publicSettings = { ...parsed };
+          delete publicSettings.apiKey;
+          await Promise.all([
+            AsyncStorage.setItem('settings', JSON.stringify(publicSettings)),
+            SecureStore.setItemAsync('apiKey', resolvedApiKey),
+          ]);
+        }
+        setSettings(s => ({ ...s, ...parsed, apiKey: resolvedApiKey }));
         savedUrl = parsed.backendUrl;
+      } else if (resolvedApiKey) {
+        setSettings(s => ({ ...s, apiKey: resolvedApiKey }));
       }
       if (mapPrefsRaw) {
         try {
@@ -333,11 +315,21 @@ function App() {
         } catch {}
       }
       setMapFiltersLoaded(true);
-      return savedUrl;
-    } catch (e) { setMapFiltersLoaded(true); return null; }
+      return { backendUrl: savedUrl, apiKey: resolvedApiKey };
+    } catch (e) { setMapFiltersLoaded(true); return { backendUrl: null, apiKey: '' }; }
   };
 
   const saveData = async (key, data) => { try { await AsyncStorage.setItem(key, JSON.stringify(data)); } catch (e) {} };
+
+  const saveSettings = async () => {
+    const { apiKey, ...publicSettings } = settings;
+    await Promise.all([
+      saveData('settings', publicSettings),
+      apiKey ? SecureStore.setItemAsync('apiKey', apiKey) : SecureStore.deleteItemAsync('apiKey'),
+    ]);
+    await fetchModels(undefined, apiKey);
+    setShowSettings(false);
+  };
 
   const checkNetwork = async () => {
     try {
@@ -364,7 +356,7 @@ function App() {
     const backendUrl = url || settings.backendUrl;
     const wasConnected = isConnected;
     try {
-      const r = await fetchWithTimeout(`${backendUrl}/health`, { headers: { 'ngrok-skip-browser-warning': '1' } });
+      const r = await fetchWithTimeout(`${backendUrl}/health`, { headers: createApiHeaders(settings.apiKey) });
       const d = await r.json();
       const nowConnected = d.status === 'healthy';
       setIsConnected(nowConnected);
@@ -376,11 +368,11 @@ function App() {
     } catch (e) { setIsConnected(false); console.log('Backend check failed:', e.message); }
   };
 
-  const fetchModels = async (url) => {
+  const fetchModels = async (url, apiKey = settings.apiKey) => {
     const backendUrl = url || settings.backendUrl;
     try {
       console.log('Fetching models from:', backendUrl);
-      const r = await fetchWithTimeout(`${backendUrl}/api/v1/models`, { headers: { 'ngrok-skip-browser-warning': '1' } });
+      const r = await fetchWithTimeout(`${backendUrl}/api/v1/models`, { headers: createApiHeaders(apiKey) });
       const d = await r.json();
       console.log('Models response:', d);
       if (d.models) setAvailableModels(d.models);
@@ -407,16 +399,16 @@ function App() {
 
   const startStreaming = async () => {
     try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') { Alert.alert('Fehler', 'Mikrofon benötigt'); return; }
+      const { granted } = await requestRecordingPermissionsAsync();
+      if (!granted) { Alert.alert('Fehler', 'Mikrofon benötigt'); return; }
       
       // Audio-Modus für Background-Recording konfigurieren
-      await Audio.setAudioModeAsync({ 
-        allowsRecordingIOS: true, 
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: settings.backgroundRecording,  // WICHTIG für iOS Background
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+        allowsBackgroundRecording: settings.backgroundRecording,
+        interruptionMode: 'duckOthers',
+        shouldRouteThroughEarpiece: false,
       });
       
       // Keep-Awake aktivieren wenn Background-Recording aktiv
@@ -458,7 +450,7 @@ function App() {
   const stopStreaming = async () => {
     setIsStreaming(false);
     [timerRef, analysisRef, autoStopRef].forEach(r => { if (r.current) { clearInterval(r.current); clearTimeout(r.current); r.current = null; } });
-    if (recordingRef.current) { try { await recordingRef.current.stopAndUnloadAsync(); } catch (e) {} recordingRef.current = null; }
+    if (recordingRef.current) { try { await recordingRef.current.stop(); } catch (e) {} recordingRef.current = null; }
     
     // Keep-Awake und Background-Location deaktivieren
     deactivateKeepAwake('birdsound-recording');
@@ -483,26 +475,17 @@ function App() {
 
   const startChunk = async () => {
     try {
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY, 
-        (s) => { 
-          if (s.metering) {
-            const level = Math.max(0, (s.metering + 60) * 1.67);
-            setAudioLevel(level);
-            updateSpectrogram(level);  // 3D-Spektrogramm aktualisieren
-          }
-        }, 
-        50  // Update alle 50ms für flüssige Animation
-      );
-      recordingRef.current = recording;
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
+      recordingRef.current = audioRecorder;
     } catch (e) {}
   };
 
   const processChunk = async () => {
     if (!recordingRef.current) return;
     try {
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
+      await recordingRef.current.stop();
+      const uri = recordingRef.current.uri;
       recordingRef.current = null; startChunk();
       if (uri) { if (isOnline && isConnected) analyzeChunk(uri); else if (settings.offlineMode) queueOffline(uri); }
     } catch (e) { startChunk(); }
@@ -540,7 +523,7 @@ function App() {
       
       const r = await fetch(`${settings.backendUrl}/api/v1/predict/upload`, { 
         method: 'POST', 
-        headers: { 'ngrok-skip-browser-warning': '1' }, 
+        headers: createApiHeaders(settings.apiKey),
         body: form 
       });
       const result = await r.json();
@@ -656,12 +639,6 @@ function App() {
     } catch(e) { Alert.alert('Export-Fehler', 'JSON-Export fehlgeschlagen: ' + e.message); }
   };
 
-  // CSV-Export aller Erkennungen (Excel-DE-kompatibel: ; als Trenner, BOM)
-  const csvEsc = (v) => {
-    const s = v == null ? '' : String(v);
-    if (/[;"\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
-    return s;
-  };
   const exportCSV = async () => {
     try {
       if (!detections.length) { Alert.alert('Keine Daten', 'Es gibt noch keine Erkennungen zum Export.'); return; }
@@ -680,9 +657,6 @@ function App() {
       await Sharing.shareAsync(p, { mimeType: 'text/csv', dialogTitle: 'CSV exportieren' });
     } catch(e) { Alert.alert('Export-Fehler', 'CSV-Export fehlgeschlagen: ' + e.message); }
   };
-  
-  const calcShannon = (c) => { const v = Object.values(c || {}); if (!v.length) return 0; const t = v.reduce((a,b)=>a+b,0); return -v.reduce((s,n) => { const p=n/t; return s+(p>0?p*Math.log(p):0); },0); };
-  const calcSimpson = (c) => { const v = Object.values(c || {}); if (!v.length) return 0; const t = v.reduce((a,b)=>a+b,0); return 1-(v.reduce((s,n)=>s+(n*(n-1)),0)/(t*(t-1)||1)); };
   
   const exportSessionReport = async (session, format = 'html') => {
     try {
@@ -755,8 +729,6 @@ function App() {
   const { unlocked, locked } = calculateUnlockedAchievements({ ...userStats, uniqueSpecies: uniqueSpecies.size, hasOwl: detections.some(d => ['Waldkauz','Uhu'].includes(d.species)), hasWoodpecker: detections.some(d => ['Buntspecht','Grünspecht'].includes(d.species)), hasRaptor: detections.some(d => ['Mäusebussard','Turmfalke'].includes(d.species)), hasNightingale: detections.some(d => d.species === 'Nachtigall'), hasCuckoo: detections.some(d => d.species === 'Kuckuck') });
   const points = calculateTotalPoints(userStats);
   const rank = getRank(points);
-  const fmt = (s) => `${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
-  const cc = (c) => c >= 0.8 ? '#51cf66' : c >= 0.5 ? '#ffd43b' : '#ff6b6b';
   const sbh = Platform.OS === 'android' ? Constants.statusBarHeight : 0;
 
   const detWithLocation = detections.filter(d => d.location);
@@ -767,34 +739,34 @@ function App() {
   } : location ? { latitude: location.latitude, longitude: location.longitude, latitudeDelta: 0.02, longitudeDelta: 0.02 } : { latitude: 52.52, longitude: 13.405, latitudeDelta: 0.5, longitudeDelta: 0.5 };
 
   return (
-    <View style={z.c}>
+    <View style={appStyles.c}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0a15" />
       <View style={{ height: sbh, backgroundColor: '#0a0a15' }} />
-      <View style={z.h}><View style={{flex: 1}}><Text style={z.t}>🐦 BirdSound v{APP_VERSION}</Text>{updateInfo ? (<TouchableOpacity onPress={openUpdateUrl} style={z.upd}><Text style={z.updT}>🔄 Update {updateInfo.version} verfügbar — antippen</Text></TouchableOpacity>) : null}<Text style={z.st}>{rank.icon} {rank.name} • {points}P</Text></View><View style={z.hr}><View style={[z.bg, isConnected ? z.bgG : z.bgR]}><Text style={z.bgT}>{isConnected ? '🟢' : '🔴'}{offlineQueue.length > 0 ? ` (${offlineQueue.length})` : ''}</Text></View><TouchableOpacity onPress={() => setShowSettings(true)}><Text style={z.ic}>⚙️</Text></TouchableOpacity></View></View>
-      <View style={z.tb}>{[['live','🎙️'],['map','🗺️'],['list','📋'],['library','📚'],['sessions','📊'],['achieve','🏆']].map(([id,ic]) => (<TouchableOpacity key={id} style={[z.ta, activeTab===id && z.taA]} onPress={() => setActiveTab(id)}><Text style={z.taI}>{ic}</Text></TouchableOpacity>))}</View>
+      <View style={appStyles.h}><View style={{flex: 1}}><Text style={appStyles.t}>🐦 BirdSound v{APP_VERSION}</Text>{updateInfo ? (<TouchableOpacity onPress={openUpdateUrl} style={appStyles.upd}><Text style={appStyles.updT}>🔄 Update {updateInfo.version} verfügbar — antippen</Text></TouchableOpacity>) : null}<Text style={appStyles.st}>{rank.icon} {rank.name} • {points}P</Text></View><View style={appStyles.hr}><View style={[appStyles.bg, isConnected ? appStyles.bgG : appStyles.bgR]}><Text style={appStyles.bgT}>{isConnected ? '🟢' : '🔴'}{offlineQueue.length > 0 ? ` (${offlineQueue.length})` : ''}</Text></View><TouchableOpacity onPress={() => setShowSettings(true)}><Text style={appStyles.ic}>⚙️</Text></TouchableOpacity></View></View>
+      <View style={appStyles.tb}>{[['live','🎙️'],['map','🗺️'],['list','📋'],['library','📚'],['sessions','📊'],['achieve','🏆']].map(([id,ic]) => (<TouchableOpacity key={id} style={[appStyles.ta, activeTab===id && appStyles.taA]} onPress={() => setActiveTab(id)}><Text style={appStyles.taI}>{ic}</Text></TouchableOpacity>))}</View>
 
-      {activeTab === 'live' && (<ScrollView style={z.ct}>
-        <View style={z.mb}><Text style={z.ml}>🤖</Text><Text style={z.mn}>{settings.selectedModel || 'Alle Modelle'}</Text><Text style={z.mc}>{availableModels.length} verfügbar</Text></View>
-        <View style={z.cd}>
+      {activeTab === 'live' && (<ScrollView style={appStyles.ct}>
+        <View style={appStyles.mb}><Text style={appStyles.ml}>🤖</Text><Text style={appStyles.mn}>{settings.selectedModel || 'Alle Modelle'}</Text><Text style={appStyles.mc}>{availableModels.length} verfügbar</Text></View>
+        <View style={appStyles.cd}>
           <TouchableOpacity onPress={() => isStreaming ? stopStreaming() : startStreaming()} disabled={!isOnline && !settings.offlineMode}>
-            <View style={[z.bt, isStreaming && z.btA]}><Text style={z.btI}>{isStreaming ? '⏹️' : '▶️'}</Text><Text style={z.btL}>{isStreaming ? 'STOP' : 'START'}</Text></View>
+            <View style={[appStyles.bt, isStreaming && appStyles.btA]}><Text style={appStyles.btI}>{isStreaming ? '⏹️' : '▶️'}</Text><Text style={appStyles.btL}>{isStreaming ? 'STOP' : 'START'}</Text></View>
           </TouchableOpacity>
-          <Text style={z.tm}>{fmt(streamTime)}</Text>
-          {settings.autoStopMinutes > 0 && <Text style={z.as}>Auto-Stop: {settings.autoStopMinutes}min</Text>}
-          {location && <Text style={z.gp}>📍 {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</Text>}
+          <Text style={appStyles.tm}>{fmt(streamTime)}</Text>
+          {settings.autoStopMinutes > 0 && <Text style={appStyles.as}>Auto-Stop: {settings.autoStopMinutes}min</Text>}
+          {location && <Text style={appStyles.gp}>📍 {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</Text>}
         </View>
         
         {/* 3D Spektrogramm (Wasserfall-Diagramm) */}
-        <View style={z.spectrogram}>
-          <View style={z.spectrogramHeader}>
-            <Text style={z.cdT}>🌊 3D-Spektrogramm</Text>
-            <TouchableOpacity style={z.spectrogramReset} onPress={clearSpectrogram}><Text style={z.spectrogramResetT}>↺</Text></TouchableOpacity>
+        <View style={appStyles.spectrogram}>
+          <View style={appStyles.spectrogramHeader}>
+            <Text style={appStyles.cdT}>🌊 3D-Spektrogramm</Text>
+            <TouchableOpacity style={appStyles.spectrogramReset} onPress={clearSpectrogram}><Text style={appStyles.spectrogramResetT}>↺</Text></TouchableOpacity>
           </View>
-          <View style={z.spectrogramContainer}>
+          <View style={appStyles.spectrogramContainer}>
             <WebView
               ref={spectrogramRef}
               source={{ html: SPECTROGRAM_HTML }}
-              style={z.spectrogramView}
+              style={appStyles.spectrogramView}
               scrollEnabled={false}
               bounces={false}
               javaScriptEnabled={true}
@@ -806,31 +778,31 @@ function App() {
               mediaPlaybackRequiresUserAction={false}
             />
             {!isStreaming && (
-              <View style={z.spectrogramOverlay}>
-                <Text style={z.spectrogramHint}>▶️ Starte Aufnahme für Live-Visualisierung</Text>
-                <Text style={z.spectrogramSubHint}>Touch: Drehen • Pinch: Zoom</Text>
+              <View style={appStyles.spectrogramOverlay}>
+                <Text style={appStyles.spectrogramHint}>▶️ Starte Aufnahme für Live-Visualisierung</Text>
+                <Text style={appStyles.spectrogramSubHint}>Touch: Drehen • Pinch: Zoom</Text>
               </View>
             )}
           </View>
-          <View style={z.freqLabels}>
-            <Text style={[z.freqLabel, { color: '#4ecdc4' }]}>1kHz</Text>
-            <Text style={[z.freqLabel, { color: '#51cf66' }]}>2kHz</Text>
-            <Text style={[z.freqLabel, { color: '#ffd43b' }]}>4kHz</Text>
-            <Text style={[z.freqLabel, { color: '#ff6b6b' }]}>8kHz</Text>
+          <View style={appStyles.freqLabels}>
+            <Text style={[appStyles.freqLabel, { color: '#4ecdc4' }]}>1kHz</Text>
+            <Text style={[appStyles.freqLabel, { color: '#51cf66' }]}>2kHz</Text>
+            <Text style={[appStyles.freqLabel, { color: '#ffd43b' }]}>4kHz</Text>
+            <Text style={[appStyles.freqLabel, { color: '#ff6b6b' }]}>8kHz</Text>
           </View>
         </View>
 
-        <View style={z.cd}><Text style={z.cdT}>🎵 Erkennungen</Text>
-          {detections.slice(0, 5).map(d => (<TouchableOpacity key={d.id} style={z.dt} onPress={() => setShowBirdDetail(d)}><Text style={z.dtI}>{BIRD_LIBRARY[d.species]?.icon || '🐦'}</Text><View style={z.dtC}><Text style={z.dtS}>{d.species}</Text><Text style={z.dtSc}>{d.scientific}</Text></View><Text style={[z.dtP, { color: cc(d.confidence) }]}>{Math.round(d.confidence*100)}%</Text></TouchableOpacity>))}
-          {!detections.length && <Text style={z.em}>Starte Streaming...</Text>}
+        <View style={appStyles.cd}><Text style={appStyles.cdT}>🎵 Erkennungen</Text>
+          {detections.slice(0, 5).map(d => (<TouchableOpacity key={d.id} style={appStyles.dt} onPress={() => setShowBirdDetail(d)}><Text style={appStyles.dtI}>{BIRD_LIBRARY[d.species]?.icon || '🐦'}</Text><View style={appStyles.dtC}><Text style={appStyles.dtS}>{d.species}</Text><Text style={appStyles.dtSc}>{d.scientific}</Text></View><Text style={[appStyles.dtP, { color: cc(d.confidence) }]}>{Math.round(d.confidence*100)}%</Text></TouchableOpacity>))}
+          {!detections.length && <Text style={appStyles.em}>Starte Streaming...</Text>}
         </View>
-        <View style={z.ss}><View style={z.sst}><Text style={z.ssV}>{detections.length}</Text><Text style={z.ssL}>Erkennungen</Text></View><View style={z.sst}><Text style={z.ssV}>{uniqueSpecies.size}</Text><Text style={z.ssL}>Arten</Text></View><View style={z.sst}><Text style={z.ssV}>{sessionHistory.length}</Text><Text style={z.ssL}>Sessions</Text></View></View>
+        <View style={appStyles.ss}><View style={appStyles.sst}><Text style={appStyles.ssV}>{detections.length}</Text><Text style={appStyles.ssL}>Erkennungen</Text></View><View style={appStyles.sst}><Text style={appStyles.ssV}>{uniqueSpecies.size}</Text><Text style={appStyles.ssL}>Arten</Text></View><View style={appStyles.sst}><Text style={appStyles.ssV}>{sessionHistory.length}</Text><Text style={appStyles.ssL}>Sessions</Text></View></View>
       </ScrollView>)}
 
-      {activeTab === 'map' && (<View style={z.mapC}>
-        <View style={z.mapFilterBar}>
+      {activeTab === 'map' && (<View style={appStyles.mapC}>
+        <View style={appStyles.mapFilterBar}>
           <TextInput
-            style={z.mapFilterInput}
+            style={appStyles.mapFilterInput}
             placeholder="🔍 Art filtern..."
             placeholderTextColor="#888"
             value={mapFilter}
@@ -841,37 +813,37 @@ function App() {
               }
             }}
           />
-          {mapFilter ? (<TouchableOpacity onPress={() => { setMapFilter(''); if (mapWebViewRef.current) mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: '', baseLayer: mapBaseLayer, heatmap: mapHeatmap, timeRange: mapTimeRange, minConf: mapMinConf })); }}><Text style={z.mapFilterClear}>✕</Text></TouchableOpacity>) : null}
-          <TouchableOpacity onPress={() => setMapShowOptions(v => !v)} style={z.mapOptT}><Text style={z.mapOptTT}>{mapShowOptions ? '▲' : '⚙️'}</Text></TouchableOpacity>
+          {mapFilter ? (<TouchableOpacity onPress={() => { setMapFilter(''); if (mapWebViewRef.current) mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: '', baseLayer: mapBaseLayer, heatmap: mapHeatmap, timeRange: mapTimeRange, minConf: mapMinConf })); }}><Text style={appStyles.mapFilterClear}>✕</Text></TouchableOpacity>) : null}
+          <TouchableOpacity onPress={() => setMapShowOptions(v => !v)} style={appStyles.mapOptT}><Text style={appStyles.mapOptTT}>{mapShowOptions ? '▲' : '⚙️'}</Text></TouchableOpacity>
         </View>
-        {mapShowOptions && (<View style={z.mapOpts}>
-          <Text style={z.mapOptLbl}>Karte</Text>
-          <View style={z.mapOptRow}>
+        {mapShowOptions && (<View style={appStyles.mapOpts}>
+          <Text style={appStyles.mapOptLbl}>Karte</Text>
+          <View style={appStyles.mapOptRow}>
             {[['osm','Standard'],['topo','Topo'],['sat','Satellit'],['dark','Dunkel']].map(([k,l]) => (
-              <TouchableOpacity key={k} style={[z.mapChip, mapBaseLayer===k && z.mapChipA]} onPress={() => { setMapBaseLayer(k); mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: mapFilter, baseLayer: k, heatmap: mapHeatmap, timeRange: mapTimeRange, minConf: mapMinConf })); }}><Text style={[z.mapChipT, mapBaseLayer===k && z.mapChipTA]}>{l}</Text></TouchableOpacity>
+              <TouchableOpacity key={k} style={[appStyles.mapChip, mapBaseLayer===k && appStyles.mapChipA]} onPress={() => { setMapBaseLayer(k); mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: mapFilter, baseLayer: k, heatmap: mapHeatmap, timeRange: mapTimeRange, minConf: mapMinConf })); }}><Text style={[appStyles.mapChipT, mapBaseLayer===k && appStyles.mapChipTA]}>{l}</Text></TouchableOpacity>
             ))}
           </View>
-          <Text style={z.mapOptLbl}>Zeitraum</Text>
-          <View style={z.mapOptRow}>
+          <Text style={appStyles.mapOptLbl}>Zeitraum</Text>
+          <View style={appStyles.mapOptRow}>
             {[['all','Alle'],['today','Heute'],['7d','7 Tage'],['30d','30 Tage']].map(([k,l]) => (
-              <TouchableOpacity key={k} style={[z.mapChip, mapTimeRange===k && z.mapChipA]} onPress={() => { setMapTimeRange(k); mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: mapFilter, baseLayer: mapBaseLayer, heatmap: mapHeatmap, timeRange: k, minConf: mapMinConf })); }}><Text style={[z.mapChipT, mapTimeRange===k && z.mapChipTA]}>{l}</Text></TouchableOpacity>
+              <TouchableOpacity key={k} style={[appStyles.mapChip, mapTimeRange===k && appStyles.mapChipA]} onPress={() => { setMapTimeRange(k); mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: mapFilter, baseLayer: mapBaseLayer, heatmap: mapHeatmap, timeRange: k, minConf: mapMinConf })); }}><Text style={[appStyles.mapChipT, mapTimeRange===k && appStyles.mapChipTA]}>{l}</Text></TouchableOpacity>
             ))}
           </View>
-          <Text style={z.mapOptLbl}>Min. Konfidenz</Text>
-          <View style={z.mapOptRow}>
+          <Text style={appStyles.mapOptLbl}>Min. Konfidenz</Text>
+          <View style={appStyles.mapOptRow}>
             {[[0,'0%'],[0.5,'50%'],[0.7,'70%'],[0.9,'90%']].map(([k,l]) => (
-              <TouchableOpacity key={String(k)} style={[z.mapChip, mapMinConf===k && z.mapChipA]} onPress={() => { setMapMinConf(k); mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: mapFilter, baseLayer: mapBaseLayer, heatmap: mapHeatmap, timeRange: mapTimeRange, minConf: k })); }}><Text style={[z.mapChipT, mapMinConf===k && z.mapChipTA]}>{l}</Text></TouchableOpacity>
+              <TouchableOpacity key={String(k)} style={[appStyles.mapChip, mapMinConf===k && appStyles.mapChipA]} onPress={() => { setMapMinConf(k); mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: mapFilter, baseLayer: mapBaseLayer, heatmap: mapHeatmap, timeRange: mapTimeRange, minConf: k })); }}><Text style={[appStyles.mapChipT, mapMinConf===k && appStyles.mapChipTA]}>{l}</Text></TouchableOpacity>
             ))}
           </View>
-          <View style={z.mapOptRow}>
-            <TouchableOpacity style={[z.mapChip, mapHeatmap && z.mapChipA]} onPress={() => { const h = !mapHeatmap; setMapHeatmap(h); mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: mapFilter, baseLayer: mapBaseLayer, heatmap: h, timeRange: mapTimeRange, minConf: mapMinConf })); }}><Text style={[z.mapChipT, mapHeatmap && z.mapChipTA]}>🔥 Heatmap</Text></TouchableOpacity>
-            <TouchableOpacity style={z.mapChip} onPress={() => mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'locate' }))}><Text style={z.mapChipT}>📍 Standort</Text></TouchableOpacity>
-            <TouchableOpacity style={z.mapChip} onPress={() => mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'fit' }))}><Text style={z.mapChipT}>🔍 Alle zeigen</Text></TouchableOpacity>
+          <View style={appStyles.mapOptRow}>
+            <TouchableOpacity style={[appStyles.mapChip, mapHeatmap && appStyles.mapChipA]} onPress={() => { const h = !mapHeatmap; setMapHeatmap(h); mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'options', filter: mapFilter, baseLayer: mapBaseLayer, heatmap: h, timeRange: mapTimeRange, minConf: mapMinConf })); }}><Text style={[appStyles.mapChipT, mapHeatmap && appStyles.mapChipTA]}>🔥 Heatmap</Text></TouchableOpacity>
+            <TouchableOpacity style={appStyles.mapChip} onPress={() => mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'locate' }))}><Text style={appStyles.mapChipT}>📍 Standort</Text></TouchableOpacity>
+            <TouchableOpacity style={appStyles.mapChip} onPress={() => mapWebViewRef.current && mapWebViewRef.current.postMessage(JSON.stringify({ type: 'fit' }))}><Text style={appStyles.mapChipT}>🔍 Alle zeigen</Text></TouchableOpacity>
           </View>
         </View>)}
         <WebView
           ref={mapWebViewRef}
-          style={z.map}
+          style={appStyles.map}
           originWhitelist={['*']}
           javaScriptEnabled={true}
           domStorageEnabled={true}
@@ -1065,186 +1037,70 @@ function App() {
 </html>
           ` }}
         />
-        <View style={z.mapO}>
-          <Text style={z.mapSt}>📍 {detWithLocation.length} Fundorte{mapFilter ? ' • Filter aktiv' : ''}</Text>
-          <TouchableOpacity style={z.mapB} onPress={exportKML}><Text style={z.mapBT}>🌍 KML Export</Text></TouchableOpacity>
+        <View style={appStyles.mapO}>
+          <Text style={appStyles.mapSt}>📍 {detWithLocation.length} Fundorte{mapFilter ? ' • Filter aktiv' : ''}</Text>
+          <TouchableOpacity style={appStyles.mapB} onPress={exportKML}><Text style={appStyles.mapBT}>🌍 KML Export</Text></TouchableOpacity>
         </View>
       </View>)}
 
-      {activeTab === 'list' && (<View style={z.ct}>
-        <View style={z.fR}><TextInput style={z.se} placeholder="Suchen..." placeholderTextColor="#666" value={filter.species} onChangeText={t => setFilter({...filter, species: t})} /><TouchableOpacity style={z.fB} onPress={exportKML}><Text>📤</Text></TouchableOpacity></View>
+      {activeTab === 'list' && (<View style={appStyles.ct}>
+        <View style={appStyles.fR}><TextInput style={appStyles.se} placeholder="Suchen..." placeholderTextColor="#666" value={filter.species} onChangeText={t => setFilter({...filter, species: t})} /><TouchableOpacity style={appStyles.fB} onPress={exportKML}><Text>📤</Text></TouchableOpacity></View>
         <FlatList data={filtered} keyExtractor={i => i.id.toString()} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4ecdc4" colors={["#4ecdc4"]} />} renderItem={({ item: d }) => (
-          <View style={z.li}><TouchableOpacity style={z.lm} onPress={() => setShowBirdDetail(d)}><Text style={z.lIc}>{BIRD_LIBRARY[d.species]?.icon || '🐦'}</Text><View style={z.lIn}><Text style={z.lSp}>{d.species}</Text><Text style={z.lMt}>{new Date(d.time).toLocaleString()} {d.location ? `📍${d.location.accuracy ? ` ±${Math.round(d.location.accuracy)}m` : ''}` : ''} • {d.model}</Text></View><Text style={[z.lCf, { color: cc(d.confidence) }]}>{Math.round(d.confidence*100)}%</Text></TouchableOpacity>
-          <View style={z.fb}>{d.audioUri ? <TouchableOpacity style={z.fbB} onPress={() => playDetectionAudio(d)}><Text>▶️</Text></TouchableOpacity> : null}<TouchableOpacity style={[z.fbB, d.feedback === true && z.fbA]} onPress={() => submitFeedback(d.id, true)}><Text>👍</Text></TouchableOpacity><TouchableOpacity style={[z.fbB, d.feedback === false && z.fbA]} onPress={() => submitFeedback(d.id, false)}><Text>👎</Text></TouchableOpacity><TouchableOpacity style={z.fbB} onPress={() => shareDetection(d)}><Text>📤</Text></TouchableOpacity></View></View>
+          <View style={appStyles.li}><TouchableOpacity style={appStyles.lm} onPress={() => setShowBirdDetail(d)}><Text style={appStyles.lIc}>{BIRD_LIBRARY[d.species]?.icon || '🐦'}</Text><View style={appStyles.lIn}><Text style={appStyles.lSp}>{d.species}</Text><Text style={appStyles.lMt}>{new Date(d.time).toLocaleString()} {d.location ? `📍${d.location.accuracy ? ` ±${Math.round(d.location.accuracy)}m` : ''}` : ''} • {d.model}</Text></View><Text style={[appStyles.lCf, { color: cc(d.confidence) }]}>{Math.round(d.confidence*100)}%</Text></TouchableOpacity>
+          <View style={appStyles.fb}>{d.audioUri ? <TouchableOpacity style={appStyles.fbB} onPress={() => playDetectionAudio(d)}><Text>▶️</Text></TouchableOpacity> : null}<TouchableOpacity style={[appStyles.fbB, d.feedback === true && appStyles.fbA]} onPress={() => submitFeedback(d.id, true)}><Text>👍</Text></TouchableOpacity><TouchableOpacity style={[appStyles.fbB, d.feedback === false && appStyles.fbA]} onPress={() => submitFeedback(d.id, false)}><Text>👎</Text></TouchableOpacity><TouchableOpacity style={appStyles.fbB} onPress={() => shareDetection(d)}><Text>📤</Text></TouchableOpacity></View></View>
         )} />
       </View>)}
 
-      {activeTab === 'library' && (<View style={z.ct}>
-        <TextInput style={z.se} placeholder="Vogel suchen..." placeholderTextColor="#666" value={searchQuery} onChangeText={setSearchQuery} />
+      {activeTab === 'library' && (<View style={appStyles.ct}>
+        <TextInput style={appStyles.se} placeholder="Vogel suchen..." placeholderTextColor="#666" value={searchQuery} onChangeText={setSearchQuery} />
         <FlatList data={Object.entries(BIRD_LIBRARY).filter(([k, b]) => fuzzyHit(searchQuery, [k, b?.germanName, b?.scientificName, b?.englishName, b?.family]))} keyExtractor={([k]) => k} renderItem={({ item: [key, bird] }) => (
-          <TouchableOpacity style={z.lb} onPress={() => setShowBirdDetail(bird)}><Text style={z.lbI}>{bird.icon || '🐦'}</Text><View style={z.lbC}><Text style={z.lbN}>{bird.germanName || key}</Text><Text style={z.lbS}>{bird.scientificName}</Text><Text style={z.lbF}>{bird.family}</Text></View><Text style={z.lbR}>{'⭐'.repeat(bird.rarity || 1)}</Text></TouchableOpacity>
+          <TouchableOpacity style={appStyles.lb} onPress={() => setShowBirdDetail(bird)}><Text style={appStyles.lbI}>{bird.icon || '🐦'}</Text><View style={appStyles.lbC}><Text style={appStyles.lbN}>{bird.germanName || key}</Text><Text style={appStyles.lbS}>{bird.scientificName}</Text><Text style={appStyles.lbF}>{bird.family}</Text></View><Text style={appStyles.lbR}>{'⭐'.repeat(bird.rarity || 1)}</Text></TouchableOpacity>
         )} />
       </View>)}
 
-      {activeTab === 'sessions' && (<ScrollView style={z.ct} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4ecdc4" colors={["#4ecdc4"]} />}>
-        <Text style={z.sc}>📊 Sessions ({sessionHistory.length})</Text>
-        {sessionHistory.map(s => (<View key={s.id} style={z.sC}>
+      {activeTab === 'sessions' && (<ScrollView style={appStyles.ct} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4ecdc4" colors={["#4ecdc4"]} />}>
+        <Text style={appStyles.sc}>📊 Sessions ({sessionHistory.length})</Text>
+        {sessionHistory.map(s => (<View key={s.id} style={appStyles.sC}>
           <TouchableOpacity onPress={() => setShowSessionReport(s)}>
-            <View style={z.sH}><Text style={z.sD}>{new Date(s.startTime).toLocaleDateString('de-DE')}</Text><Text style={z.sT}>{fmt(s.duration || 0)}</Text></View>
-            <View style={z.sSt}><View style={z.sSi}><Text style={z.sSV}>{s.detections?.length || 0}</Text><Text style={z.sSL}>Erkennungen</Text></View><View style={z.sSi}><Text style={z.sSV}>{Object.keys(s.speciesCount || {}).length}</Text><Text style={z.sSL}>Arten</Text></View></View>
-            <Text style={z.sM}>🤖 {s.modelUsed === 'all' ? 'Alle' : s.modelUsed}</Text>
+            <View style={appStyles.sH}><Text style={appStyles.sD}>{new Date(s.startTime).toLocaleDateString('de-DE')}</Text><Text style={appStyles.sT}>{fmt(s.duration || 0)}</Text></View>
+            <View style={appStyles.sSt}><View style={appStyles.sSi}><Text style={appStyles.sSV}>{s.detections?.length || 0}</Text><Text style={appStyles.sSL}>Erkennungen</Text></View><View style={appStyles.sSi}><Text style={appStyles.sSV}>{Object.keys(s.speciesCount || {}).length}</Text><Text style={appStyles.sSL}>Arten</Text></View></View>
+            <Text style={appStyles.sM}>🤖 {s.modelUsed === 'all' ? 'Alle' : s.modelUsed}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={z.sDelBtn} onPress={() => deleteSession(s)}><Text style={z.sDelBtnT}>🗑️</Text></TouchableOpacity>
+          <TouchableOpacity style={appStyles.sDelBtn} onPress={() => deleteSession(s)}><Text style={appStyles.sDelBtnT}>🗑️</Text></TouchableOpacity>
         </View>))}
-        {!sessionHistory.length && <Text style={z.em}>Noch keine Sessions</Text>}
+        {!sessionHistory.length && <Text style={appStyles.em}>Noch keine Sessions</Text>}
       </ScrollView>)}
 
-      {activeTab === 'achieve' && (<ScrollView style={z.ct}>
-        <View style={z.rC}><Text style={z.rI}>{rank.icon}</Text><Text style={z.rN}>{rank.name}</Text><Text style={z.rP}>{points} Punkte</Text></View>
-        <Text style={z.sc}>🏆 Freigeschaltet ({unlocked.length})</Text>
-        {unlocked.map(a => (<View key={a.id} style={[z.ac, z.acU]}><Text style={z.acI}>{a.icon}</Text><View style={z.acC}><Text style={z.acN}>{a.name}</Text><Text style={z.acD}>{a.description}</Text></View><Text style={z.acP}>+{a.points}</Text></View>))}
-        <Text style={z.sc}>🔒 Gesperrt ({locked.length})</Text>
-        {locked.slice(0, 6).map(a => (<View key={a.id} style={z.ac}><Text style={z.acI}>{a.icon}</Text><View style={z.acC}><Text style={z.acN}>{a.name}</Text><Text style={z.acD}>{a.description}</Text></View><Text style={z.acP}>{a.points}</Text></View>))}
-        <View style={z.exC}><TouchableOpacity style={z.ex} onPress={exportKML}><Text style={z.exI}>🌍</Text><Text style={z.exT}>KML</Text></TouchableOpacity><TouchableOpacity style={z.ex} onPress={exportJSON}><Text style={z.exI}>📋</Text><Text style={z.exT}>JSON</Text></TouchableOpacity><TouchableOpacity style={z.ex} onPress={exportCSV}><Text style={z.exI}>📑</Text><Text style={z.exT}>CSV</Text></TouchableOpacity><TouchableOpacity style={z.ex} onPress={shareStats}><Text style={z.exI}>📤</Text><Text style={z.exT}>Statistik</Text></TouchableOpacity></View>
+      {activeTab === 'achieve' && (<ScrollView style={appStyles.ct}>
+        <View style={appStyles.rC}><Text style={appStyles.rI}>{rank.icon}</Text><Text style={appStyles.rN}>{rank.name}</Text><Text style={appStyles.rP}>{points} Punkte</Text></View>
+        <Text style={appStyles.sc}>🏆 Freigeschaltet ({unlocked.length})</Text>
+        {unlocked.map(a => (<View key={a.id} style={[appStyles.ac, appStyles.acU]}><Text style={appStyles.acI}>{a.icon}</Text><View style={appStyles.acC}><Text style={appStyles.acN}>{a.name}</Text><Text style={appStyles.acD}>{a.description}</Text></View><Text style={appStyles.acP}>+{a.points}</Text></View>))}
+        <Text style={appStyles.sc}>🔒 Gesperrt ({locked.length})</Text>
+        {locked.slice(0, 6).map(a => (<View key={a.id} style={appStyles.ac}><Text style={appStyles.acI}>{a.icon}</Text><View style={appStyles.acC}><Text style={appStyles.acN}>{a.name}</Text><Text style={appStyles.acD}>{a.description}</Text></View><Text style={appStyles.acP}>{a.points}</Text></View>))}
+        <View style={appStyles.exC}><TouchableOpacity style={appStyles.ex} onPress={exportKML}><Text style={appStyles.exI}>🌍</Text><Text style={appStyles.exT}>KML</Text></TouchableOpacity><TouchableOpacity style={appStyles.ex} onPress={exportJSON}><Text style={appStyles.exI}>📋</Text><Text style={appStyles.exT}>JSON</Text></TouchableOpacity><TouchableOpacity style={appStyles.ex} onPress={exportCSV}><Text style={appStyles.exI}>📑</Text><Text style={appStyles.exT}>CSV</Text></TouchableOpacity><TouchableOpacity style={appStyles.ex} onPress={shareStats}><Text style={appStyles.exI}>📤</Text><Text style={appStyles.exT}>Statistik</Text></TouchableOpacity></View>
       </ScrollView>)}
 
-      <Modal visible={!!showBirdDetail} transparent animationType="slide">
-        <View style={z.mo}><View style={z.moL}><ScrollView>{showBirdDetail && (<>
-          <Text style={z.dI}>{showBirdDetail.icon || '🐦'}</Text>
-          <Text style={z.dN}>{showBirdDetail.germanName || showBirdDetail.species}</Text>
-          <Text style={z.dS}>{showBirdDetail.scientificName || showBirdDetail.scientific}</Text>
-          {showBirdDetail.description && <><Text style={z.dSc}>📝 Beschreibung</Text><Text style={z.dT}>{showBirdDetail.description}</Text></>}
-          <View style={z.dG}><View style={z.dCe}><Text style={z.dCL}>Familie</Text><Text style={z.dCV}>{showBirdDetail.family || '-'}</Text></View><View style={z.dCe}><Text style={z.dCL}>Größe</Text><Text style={z.dCV}>{showBirdDetail.size || '-'}</Text></View><View style={z.dCe}><Text style={z.dCL}>Frequenz</Text><Text style={z.dCV}>{showBirdDetail.voice?.frequency || '-'}</Text></View></View>
-          {showBirdDetail.habitat && <><Text style={z.dSc}>🏠 Lebensraum</Text><Text style={z.dT}>{showBirdDetail.habitat?.join?.(', ') || showBirdDetail.habitat}</Text></>}
-          {showBirdDetail.voice?.song && <><Text style={z.dSc}>🎵 Gesang</Text><Text style={z.dT}>{showBirdDetail.voice.song}</Text></>}
-          {showBirdDetail.breedingSeason && <><Text style={z.dSc}>🥚 Brutzeit</Text><Text style={z.dT}>{showBirdDetail.breedingSeason}</Text></>}
-          {showBirdDetail.nestType && <><Text style={z.dSc}>🪺 Nest</Text><Text style={z.dT}>{showBirdDetail.nestType}</Text></>}
-          {showBirdDetail.eggs && <><Text style={z.dSc}>🐣 Eier / Gelege</Text><Text style={z.dT}>{showBirdDetail.eggs}</Text></>}
-          {showBirdDetail.incubation && <><Text style={z.dSc}>⏳ Brutdauer</Text><Text style={z.dT}>{showBirdDetail.incubation}</Text></>}
-          {showBirdDetail.funFacts && <><Text style={z.dSc}>💡 Fakten</Text>{showBirdDetail.funFacts.slice(0,3).map((f, i) => <Text key={i} style={z.dF}>• {f}</Text>)}</>}
-          {showBirdDetail.confidence && <TouchableOpacity style={z.aB} onPress={() => shareDetection(showBirdDetail)}><Text style={z.aBT}>📤 Teilen</Text></TouchableOpacity>}
-        </>)}</ScrollView><TouchableOpacity style={z.cl} onPress={() => setShowBirdDetail(null)}><Text style={z.clT}>Schließen</Text></TouchableOpacity></View></View>
-      </Modal>
+      <BirdDetailModal bird={showBirdDetail} onClose={() => setShowBirdDetail(null)} onShare={shareDetection} styles={appStyles} />
 
-      <Modal visible={!!showSessionReport} transparent animationType="slide" onRequestClose={() => setShowSessionReport(null)}>
-        <View style={z.mo}>
-          <View style={[z.moL, {height: '90%', maxHeight: '95%', paddingBottom: 0, overflow: 'hidden'}]}>
-            <ScrollView style={{flex: 1}} contentContainerStyle={{padding: 4, paddingBottom: 16}} showsVerticalScrollIndicator={true} bounces={true} nestedScrollEnabled={true}>{showSessionReport && (<>
-          <Text style={z.moT}>📊 Ornithologischer Feldbericht</Text>
-          <View style={z.rpH}><Text style={z.rpD}>{new Date(showSessionReport.startTime).toLocaleDateString('de-DE')}</Text><Text style={z.rpT}>{fmt(showSessionReport.duration || 0)}</Text></View>
-          <View style={[z.rpS, {flexWrap: 'wrap'}]}>
-            <View style={[z.rpSi, {minWidth: '22%'}]}><Text style={z.rpSV}>{showSessionReport.detections?.length || 0}</Text><Text style={z.rpSL}>Erkennungen</Text></View>
-            <View style={[z.rpSi, {minWidth: '22%'}]}><Text style={z.rpSV}>{Object.keys(showSessionReport.speciesCount || {}).length}</Text><Text style={z.rpSL}>Arten</Text></View>
-            <View style={[z.rpSi, {minWidth: '22%'}]}><Text style={z.rpSV}>{showSessionReport.totalAnalyzed || 0}</Text><Text style={z.rpSL}>Chunks</Text></View>
-            <View style={[z.rpSi, {minWidth: '22%'}]}><Text style={z.rpSV}>{showSessionReport.detections?.length ? Math.round(showSessionReport.detections.reduce((s,d)=>s+(d.confidence||0),0)/showSessionReport.detections.length*100) : 0}%</Text><Text style={z.rpSL}>Ø Konfidenz</Text></View>
-          </View>
-          <Text style={z.dSc}>🦅 Artenliste (Deutsch / Lateinisch)</Text>
-          {Object.entries(showSessionReport.speciesCount || {}).sort((a,b)=>b[1]-a[1]).slice(0,15).map(([sp,ct],i) => {
-            const dets = (showSessionReport.detections || []).filter(d => d.species === sp);
-            const maxConf = dets.length ? Math.max(...dets.map(d=>d.confidence||0)) : 0;
-            const sci = dets[0]?.scientific || dets[0]?.scientificName || BIRD_LIBRARY[sp]?.scientificName || '';
-            const bestDet = dets.slice().sort((a,b)=>(b.confidence||0)-(a.confidence||0))[0];
-            return (<View key={sp} style={z.spR}>
-              <Text style={z.spN}>{i+1}.</Text>
-              <Text style={z.spI}>{BIRD_LIBRARY[sp]?.icon || '🐦'}</Text>
-              <View style={{flex:1}}>
-                <Text style={z.spNm}>{sp}</Text>
-                {sci ? <Text style={{color:'#888',fontSize:9,fontStyle:'italic'}}>{sci}</Text> : null}
-              </View>
-              {bestDet?.audioUri ? <TouchableOpacity onPress={() => playDetectionAudio(bestDet)} style={{paddingHorizontal:6, paddingVertical:2}}><Text style={{fontSize:14}}>▶️</Text></TouchableOpacity> : null}
-              <View style={{alignItems:'flex-end'}}>
-                <Text style={z.spC}>{ct}x</Text>
-                <Text style={{color:'#4ecdc4',fontSize:8}}>{Math.round(maxConf*100)}%</Text>
-              </View>
-            </View>);
-          })}
-          <Text style={z.dSc}>📊 Statistische Auswertung</Text>
-          <View style={z.bio}>
-            <View style={z.bioI}><Text style={z.bioL}>Shannon H'</Text><Text style={z.bioV}>{calcShannon(showSessionReport.speciesCount).toFixed(2)}</Text></View>
-            <View style={z.bioI}><Text style={z.bioL}>Simpson 1-D</Text><Text style={z.bioV}>{calcSimpson(showSessionReport.speciesCount).toFixed(2)}</Text></View>
-          </View>
-          <View style={z.bio}>
-            <View style={z.bioI}><Text style={z.bioL}>Evenness</Text><Text style={z.bioV}>{(() => { const S = Object.keys(showSessionReport.speciesCount||{}).length; return S > 1 ? (calcShannon(showSessionReport.speciesCount)/Math.log(S)).toFixed(2) : '1.00'; })()}</Text></View>
-            <View style={z.bioI}><Text style={z.bioL}>Arten (S)</Text><Text style={z.bioV}>{Object.keys(showSessionReport.speciesCount || {}).length}</Text></View>
-          </View>
-          <Text style={z.dSc}>📤 Export & Teilen</Text>
-          <View style={z.sBtns}>
-            <TouchableOpacity style={[z.sv,{backgroundColor:'#2d6a4f'}]} onPress={() => exportSessionReport(showSessionReport, 'html')}><Text style={[z.svT,{color:'#fff'}]}>📄 Feldbericht</Text></TouchableOpacity>
-          </View>
-          <View style={[z.sBtns, {marginTop: 4}]}>
-            <TouchableOpacity style={[z.sv,{backgroundColor:'#1a472a'}]} onPress={() => exportSessionReport(showSessionReport, 'kml')}><Text style={[z.svT,{color:'#fff'}]}>🌍 KML</Text></TouchableOpacity>
-            <TouchableOpacity style={[z.sv,{backgroundColor:'#1a472a'}]} onPress={() => exportSessionReport(showSessionReport, 'json')}><Text style={[z.svT,{color:'#fff'}]}>📋 JSON</Text></TouchableOpacity>
-            <TouchableOpacity style={[z.sv,{backgroundColor:'#1a472a'}]} onPress={() => exportSessionReport(showSessionReport, 'csv')}><Text style={[z.svT,{color:'#fff'}]}>📑 CSV</Text></TouchableOpacity>
-          </View>
-          <View style={[z.sBtns, {marginTop: 4}]}>
-            <TouchableOpacity style={[z.sv,{backgroundColor:'#2196F3'}]} onPress={async () => {
-              try {
-                const s = showSessionReport;
-                const n = Object.keys(s.speciesCount||{}).length;
-                const d = s.detections?.length || 0;
-                const arten = Object.entries(s.speciesCount||{}).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([sp,ct]) => {
-                  const sci = BIRD_LIBRARY[sp]?.scientificName || '';
-                  return `  • ${sp}${sci ? ` (${sci})` : ''}: ${ct}x`;
-                }).join('\n');
-                const txt = `🐦 BirdSound Feldbericht\n📅 ${new Date(s.startTime).toLocaleDateString('de-DE')} | ⏱️ ${fmt(s.duration||0)}\n\n📊 ${d} Erkennungen, ${n} Arten\n📈 Shannon H': ${calcShannon(s.speciesCount).toFixed(2)} | Simpson: ${calcSimpson(s.speciesCount).toFixed(2)}\n\n🦅 Top-Arten:\n${arten}\n\n— BirdSound v${APP_VERSION} | Dano Schönwald`;
-                await Share.share({ message: txt, title: 'BirdSound Feldbericht' });
-              } catch(e) { Alert.alert('Fehler', 'Teilen fehlgeschlagen: ' + e.message); }
-            }}><Text style={[z.svT,{color:'#fff'}]}>📤 Teilen</Text></TouchableOpacity>
-          </View>
-          <View style={[z.sBtns, {marginTop: 8}]}>
-            <TouchableOpacity style={z.sDel} onPress={() => deleteSession(showSessionReport)}><Text style={z.sDelT}>{(showSessionReport.detections?.length || 0) === 0 ? '🗑️ Verwerfen' : '🗑️ Löschen'}</Text></TouchableOpacity>
-          </View>
-        </>)}</ScrollView>
-            <TouchableOpacity style={[z.cl, {marginTop: 0, borderRadius: 0, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, padding: 14, backgroundColor: '#4ecdc4'}]} onPress={() => setShowSessionReport(null)}><Text style={[z.clT, {color: '#000', fontSize: 14, fontWeight: '700'}]}>✕ Schließen</Text></TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <SessionReportModal
+        session={showSessionReport}
+        appVersion={APP_VERSION}
+        onClose={() => setShowSessionReport(null)}
+        onDelete={deleteSession}
+        onExport={exportSessionReport}
+        onPlayAudio={playDetectionAudio}
+        styles={appStyles}
+      />
 
-      <Modal visible={showSettings} transparent animationType="fade">
-        <View style={z.mo}><View style={z.moS}><ScrollView>
-          <Text style={z.moT}>⚙️ Einstellungen</Text>
-          <Text style={z.lbl}>Backend-URL</Text><TextInput style={z.inp} value={settings.backendUrl} onChangeText={v => setSettings({...settings, backendUrl: v})} />
-          <Text style={z.lbl}>🤖 Modell ({availableModels.length})</Text>
-          <View style={z.mS}><TouchableOpacity style={[z.mO, !settings.selectedModel && z.mOA]} onPress={() => setSettings({...settings, selectedModel: null})}><Text style={z.mOT}>Alle</Text></TouchableOpacity>{availableModels.map(m => (<TouchableOpacity key={m.name} style={[z.mO, settings.selectedModel === m.name && z.mOA]} onPress={() => setSettings({...settings, selectedModel: m.name})}><Text style={z.mOT}>{m.name}</Text></TouchableOpacity>))}</View>
-          <Text style={z.lbl}>Konsensus</Text>
-          <View style={z.cfR}>{[['weighted_average','Gewichtet'],['majority_vote','Mehrheit'],['max_confidence','Max']].map(([v,l]) => (<TouchableOpacity key={v} style={[z.cfB, settings.consensusMethod === v && z.cfA]} onPress={() => setSettings({...settings, consensusMethod: v})}><Text style={z.cfT}>{l}</Text></TouchableOpacity>))}</View>
-          <Text style={z.lbl}>Auto-Stop (Min)</Text>
-          <View style={z.cfR}>{[0,5,10,15,30].map(v => (<TouchableOpacity key={v} style={[z.cfB, settings.autoStopMinutes === v && z.cfA]} onPress={() => setSettings({...settings, autoStopMinutes: v})}><Text style={z.cfT}>{v || 'Aus'}</Text></TouchableOpacity>))}</View>
-          <Text style={z.lbl}>Chunk (Sek)</Text>
-          <View style={z.cfR}>{[2,3,5,10].map(v => (<TouchableOpacity key={v} style={[z.cfB, settings.chunkDuration === v && z.cfA]} onPress={() => setSettings({...settings, chunkDuration: v})}><Text style={z.cfT}>{v}s</Text></TouchableOpacity>))}</View>
-          <Text style={z.lbl}>Min. Konfidenz: {Math.round(settings.minConfidence*100)}%</Text>
-          <View style={z.cfR}>{[0.05,0.1,0.2,0.3,0.5].map(c => (<TouchableOpacity key={c} style={[z.cfB, settings.minConfidence === c && z.cfA]} onPress={() => setSettings({...settings, minConfidence: c})}><Text style={z.cfT}>{Math.round(c*100)}%</Text></TouchableOpacity>))}</View>
-          <View style={z.sw}><Text style={z.swL}>📴 Offline</Text><Switch value={settings.offlineMode} onValueChange={v => setSettings({...settings, offlineMode: v})} /></View>
-          <View style={z.sw}><Text style={z.swL}>📍 GPS</Text><Switch value={settings.enableGPS} onValueChange={v => setSettings({...settings, enableGPS: v})} /></View>
-          <View style={z.sw}><Text style={z.swL}>🔒 Hintergrund-Aufnahme</Text><Switch value={settings.backgroundRecording} onValueChange={v => setSettings({...settings, backgroundRecording: v})} /></View>
-          {settings.backgroundRecording && <Text style={z.hint}>Aufnahme läuft weiter bei Tastensperre oder wenn App minimiert ist. Erhöht Akkuverbrauch.</Text>}
-          
-          <Text style={[z.lbl, {marginTop: 20, fontSize: 16, color: '#4ecdc4'}]}>🎧 Audio-Verbesserung</Text>
-          <Text style={z.hint}>Filtert Hintergrundgeräusche und verbessert die Vogelstimmen-Erkennung</Text>
-          
-          <Text style={z.lbl}>Preset</Text>
-          <View style={z.cfR}>
-            {[['none','Aus'],['light','Leicht'],['moderate','Mittel'],['aggressive','Stark'],['noisy_environment','Lärm'],['wind_reduction','Wind']].map(([v,l]) => (
-              <TouchableOpacity key={v} style={[z.cfB, settings.audioEnhancement?.preset === v && z.cfA]} 
-                onPress={() => setSettings({...settings, audioEnhancement: {...(settings.audioEnhancement || {}), preset: v === 'none' ? null : v}})}>
-                <Text style={z.cfT}>{l}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          
-          {!settings.audioEnhancement?.preset && (<>
-            <Text style={[z.lbl, {marginTop: 10}]}>Individuelle Filter</Text>
-            <View style={z.sw}><Text style={z.swL}>🎚️ Bandpass (1-8kHz)</Text><Switch value={settings.audioEnhancement?.bandpassEnabled || false} onValueChange={v => setSettings({...settings, audioEnhancement: {...(settings.audioEnhancement || {}), bandpassEnabled: v}})} /></View>
-            <View style={z.sw}><Text style={z.swL}>🔇 Rauschunterdrückung</Text><Switch value={settings.audioEnhancement?.noiseReductionEnabled || false} onValueChange={v => setSettings({...settings, audioEnhancement: {...(settings.audioEnhancement || {}), noiseReductionEnabled: v}})} /></View>
-            <View style={z.sw}><Text style={z.swL}>🔊 Auto-Verstärkung</Text><Switch value={settings.audioEnhancement?.autoGainEnabled || false} onValueChange={v => setSettings({...settings, audioEnhancement: {...(settings.audioEnhancement || {}), autoGainEnabled: v}})} /></View>
-            <View style={z.sw}><Text style={z.swL}>🚪 Spectral Gate</Text><Switch value={settings.audioEnhancement?.spectralGateEnabled || false} onValueChange={v => setSettings({...settings, audioEnhancement: {...(settings.audioEnhancement || {}), spectralGateEnabled: v}})} /></View>
-            <View style={z.sw}><Text style={z.swL}>📢 Hochpass (200Hz)</Text><Switch value={settings.audioEnhancement?.highpassEnabled || false} onValueChange={v => setSettings({...settings, audioEnhancement: {...(settings.audioEnhancement || {}), highpassEnabled: v}})} /></View>
-          </>)}
-          
-          <TouchableOpacity style={z.sv} onPress={() => { saveData('settings', settings); fetchModels(); setShowSettings(false); }}><Text style={z.svT}>Speichern</Text></TouchableOpacity>
-          <Text style={{color: '#666', fontSize: 10, textAlign: 'center', marginTop: 16, marginBottom: 8}}>Entwickelt von Dano Schönwald</Text>
-        </ScrollView><TouchableOpacity style={z.cl} onPress={() => setShowSettings(false)}><Text style={z.clT}>Abbrechen</Text></TouchableOpacity></View></View>
-      </Modal>
+      <SettingsModal
+        visible={showSettings}
+        settings={settings}
+        models={availableModels}
+        onChange={setSettings}
+        onSave={saveSettings}
+        onClose={() => setShowSettings(false)}
+        styles={appStyles}
+      />
     </View>
   );
 }
@@ -1343,6 +1199,5 @@ function makeStyles(p) { return StyleSheet.create({
   mapChipTA: { color: '#000', fontWeight: '700' },
 }); }
 
-// v5.13.0: Sentry-Wrap fuer automatische Touch-/Performance-Instrumentierung
-export default SENTRY_DSN ? Sentry.wrap(App) : App;
+export default App;
 

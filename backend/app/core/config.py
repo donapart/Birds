@@ -77,6 +77,9 @@ class Settings(BaseSettings):
     MIN_CONFIDENCE_THRESHOLD: float = 0.1
     TOP_N_PREDICTIONS: int = 5
 
+    # Upload / payload limits
+    MAX_AUDIO_UPLOAD_MB: int = 25  # Max size for audio uploads and base64 payloads
+
     # Geographic Filtering (optional - for BirdNET)
     DEFAULT_LAT: Optional[float] = 52.52  # Berlin
     DEFAULT_LON: Optional[float] = 13.405

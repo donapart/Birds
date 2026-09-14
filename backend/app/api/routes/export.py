@@ -216,7 +216,7 @@ async def export_json(
                 }
                 for pred in sorted(rec.predictions, key=lambda p: (p.model_name, p.rank))
             ],
-            "metadata": rec.metadata,
+            "metadata": rec.extra_metadata,
         }
         data["recordings"].append(recording_data)
 

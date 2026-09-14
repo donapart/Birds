@@ -1,0 +1,31 @@
+# Secrets & local config
+.env
+.env.*
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+venv/
+.venv/
+
+# Local data & logs
+logs/
+audio_storage/
+*.db
+*.sqlite3
+*.log
+
+# Tests & tooling
+tests/
+htmlcov/
+.coverage
+
+# VCS / editor
+.git/
+.gitignore
+.vscode/
+.idea/

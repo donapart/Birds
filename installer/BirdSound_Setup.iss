@@ -5,10 +5,11 @@
 ; Or run: iscc BirdSound_Setup.iss
 
 #define MyAppName "BirdSound"
-#define MyAppVersion "5.9.2"
+#define MyAppVersion "5.13.1"
 #define MyAppPublisher "Dano Schönwald"
 #define MyAppURL "https://github.com/donapart/Birds"
 #define MyAppExeName "start_birdsound.bat"
+#define SourceDir "d:\Projekte\Birds"
 
 [Setup]
 ; App identity
@@ -25,9 +26,9 @@ AppUpdatesURL={#MyAppURL}/releases
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
-OutputDir=installer\output
+OutputDir={#SourceDir}\installer\output
 OutputBaseFilename=BirdSound_{#MyAppVersion}_Setup_win
-SetupIconFile=installer\assets\birdsound.ico
+SetupIconFile={#SourceDir}\installer\assets\birdsound.ico
 UninstallDisplayIcon={app}\birdsound.ico
 
 ; Compression
@@ -41,8 +42,8 @@ PrivilegesRequiredOverridesAllowed=dialog
 
 ; UI
 WizardStyle=modern
-WizardImageFile=installer\assets\wizard.bmp
-WizardSmallImageFile=installer\assets\wizard_small.bmp
+WizardImageFile={#SourceDir}\installer\assets\wizard.bmp
+WizardSmallImageFile={#SourceDir}\installer\assets\wizard_small.bmp
 
 ; Misc
 ArchitecturesAllowed=x64compatible
@@ -59,22 +60,22 @@ Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescrip
 
 [Files]
 ; Backend files
-Source: "backend\*"; DestDir: "{app}\backend"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pyc,__pycache__,*.egg-info,.env,*.db,venv,*.log"
+Source: "{#SourceDir}\backend\*"; DestDir: "{app}\backend"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pyc,__pycache__,*.egg-info,.env,*.db,venv,*.log"
 
 ; Scripts
-Source: "scripts\*"; DestDir: "{app}\scripts"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\scripts\*"; DestDir: "{app}\scripts"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Documentation
-Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#SourceDir}\README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
 ; Launcher scripts
-Source: "installer\scripts\start_birdsound.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "installer\scripts\stop_birdsound.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "installer\scripts\install_python.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#SourceDir}\installer\scripts\start_birdsound.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\installer\scripts\stop_birdsound.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\installer\scripts\install_python.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 
 ; Icon
-Source: "installer\assets\birdsound.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\installer\assets\birdsound.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\birdsound.ico"

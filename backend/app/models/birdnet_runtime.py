@@ -3,6 +3,7 @@ BirdNET runtime model implementation using ONNX Runtime.
 
 This implementation loads and runs the BirdNET ONNX model for inference.
 """
+import asyncio
 import logging
 import time
 from pathlib import Path
@@ -102,20 +103,25 @@ class BirdNETRuntimeModel(BaseBirdModel):
     ) -> ModelOutput:
         """
         Run inference on audio data.
-        
-        Args:
-            audio_data: Audio samples as numpy array
-            sample_rate: Sample rate of the audio
-            latitude: Optional latitude for location filtering
-            longitude: Optional longitude for location filtering
-            week: Optional week number (1-48) for seasonal filtering
-            
-        Returns:
-            ModelOutput with predictions
+
+        The blocking ONNX inference runs in a worker thread so the event
+        loop stays responsive.
         """
         if not self._loaded:
             raise RuntimeError(f"{self.name} model not loaded")
-        
+
+        return await asyncio.to_thread(
+            self._predict_sync, audio_data, sample_rate, latitude, longitude
+        )
+
+    def _predict_sync(
+        self,
+        audio_data: np.ndarray,
+        sample_rate: int,
+        latitude: Optional[float] = None,
+        longitude: Optional[float] = None,
+    ) -> ModelOutput:
+        """Blocking inference implementation (runs in a worker thread)."""
         start_time = time.time()
         
         # Resample if necessary

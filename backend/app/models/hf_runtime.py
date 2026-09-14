@@ -4,6 +4,7 @@ HuggingFace runtime model implementations.
 These implementations use the actual HuggingFace transformers library
 for real ML inference.
 """
+import asyncio
 import logging
 import time
 from typing import Optional, List
@@ -107,17 +108,17 @@ class DimaBirdRuntimeModel(BaseBirdModel):
     ) -> ModelOutput:
         """
         Run inference on audio data.
-        
-        Args:
-            audio_data: Audio samples as numpy array
-            sample_rate: Sample rate of the audio
-            
-        Returns:
-            ModelOutput with predictions
+
+        The blocking inference runs in a worker thread so the event loop
+        stays responsive.
         """
         if not self._loaded:
             raise RuntimeError(f"{self.name} model not loaded")
-        
+
+        return await asyncio.to_thread(self._predict_sync, audio_data, sample_rate)
+
+    def _predict_sync(self, audio_data: np.ndarray, sample_rate: int) -> ModelOutput:
+        """Blocking inference implementation (runs in a worker thread)."""
         import torch
         
         start_time = time.time()

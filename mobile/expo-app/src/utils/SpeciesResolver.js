@@ -323,6 +323,10 @@ const EXOTIC_KEYWORDS = [
   'flicker-tropical', 'pewee', 'phoebe', 'empidonax',
   'south american', 'north american', 'central american', 'neotropical',
   'white-bellied', 'rufous-bellied', 'buff-bellied', 'yellow-bellied',
+  // Megapoden / Großfußhühner (Australasien) und weitere Tropen
+  'scrubfowl', 'megapode', 'brush-turkey', 'brushturkey', 'maleo',
+  'mound-builder', 'malleefowl', 'jungle-fowl', 'junglefowl',
+  'orange-footed', 'orange footed',
 ];
 
 /**

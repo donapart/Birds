@@ -23,7 +23,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-birdsound}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-birdsound_secret}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required - copy .env.example to .env and set a strong password}
       POSTGRES_DB: ${POSTGRES_DB:-birdsound}
       # Performance tuning for Raspberry Pi / Low-memory systems
       POSTGRES_SHARED_BUFFERS: 128MB
@@ -32,7 +32,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
-      - "${DB_PORT:-5434}:5432"
+      - "127.0.0.1:${DB_PORT:-5434}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-birdsound}"]
       interval: 10s
@@ -50,7 +50,7 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -76,18 +76,19 @@ services:
       redis:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-birdsound}:${POSTGRES_PASSWORD:-birdsound_secret}@db:5432/${POSTGRES_DB:-birdsound}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-birdsound}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-birdsound}
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
       - DEBUG=${DEBUG:-false}
-      - SECRET_KEY=${SECRET_KEY:-change_me_in_production}
+      - API_KEYS=${API_KEYS:?API_KEYS is required - JSON list, e.g. ["my-secret-key"]}
+      - CORS_ORIGINS=${CORS_ORIGINS:-[]}
       - USE_MODEL_STUBS=false
       - AUDIO_STORAGE_PATH=/app/audio_storage
     volumes:
       - ./audio_storage:/app/audio_storage
-      - model_cache:/root/.cache  # Cache for downloaded models (HuggingFace, BirdNET)
-      - birdnet_cache:/root/.birdnet  # BirdNET models persistent cache
+      - model_cache:/home/app/.cache  # Cache for downloaded models (HuggingFace, BirdNET)
+      - birdnet_cache:/home/app/.birdnet  # BirdNET models persistent cache
     ports:
       - "${API_PORT:-8003}:8000"
     healthcheck:
@@ -113,13 +114,13 @@ services:
       redis:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-birdsound}:${POSTGRES_PASSWORD:-birdsound_secret}@db:5432/${POSTGRES_DB:-birdsound}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-birdsound}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-birdsound}
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
     volumes:
       - ./audio_storage:/app/audio_storage
-      - model_cache:/root/.cache
+      - model_cache:/home/app/.cache
     command: celery -A app.worker.celery_app worker --loglevel=info --concurrency=2
     healthcheck:
       test: ["CMD-SHELL", "celery -A app.worker.celery_app inspect ping -d celery@$$HOSTNAME || exit 1"]
@@ -136,13 +137,13 @@ services:
   # Adminer (Database UI) - Development only
   # ============================================================
   adminer:
-    image: adminer:latest
+    image: adminer:5
     container_name: birdsound-adminer
     restart: unless-stopped
     depends_on:
       - db
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       ADMINER_DEFAULT_SERVER: db
     profiles:

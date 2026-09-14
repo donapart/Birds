@@ -29,8 +29,8 @@
 
 | Platform | Download | Size | Notes |
 |----------|----------|------|-------|
-| **📱 Android APK** | [BirdSound-v5.9.2.apk](https://github.com/donapart/Birds/releases/download/v5.9.2-release/BirdSound-v5.9.2.apk) | ~85MB | Android 6+ |
-| **🖥️ Windows Installer** | [BirdSound_v5.9.2_Setup_win.exe](https://github.com/donapart/Birds/releases/download/v5.9.2-release/BirdSound_v5.9.2_Setup_win.exe) | ~2MB | Python 3.11+ (auto-install) |
+| **📱 Android APK** | [BirdSound-v5.13.1.apk](https://github.com/donapart/Birds/releases/latest) | ~85MB | Android 6+ |
+| **🖥️ Windows Installer** | [Windows Installer](https://github.com/donapart/Birds/releases/latest) | ~2MB | Python 3.11+ (auto-install) |
 | **🖥️ Windows Scripts** | [scripts/start_backend.bat](scripts/start_backend.bat) | - | Manual start |
 | **🍓 Raspberry Pi** | [scripts/raspberry_setup.sh](scripts/raspberry_setup.sh) | - | Debian/Ubuntu |
 | **🐳 Docker** | [docker-compose.yml](docker-compose.yml) | - | Docker Desktop, Port 8003 |
@@ -50,9 +50,9 @@
 
 Scan the QR code or use the direct link to download the APK:
 
-[![QR Code APK Download](docs/qr-code-apk.png)](https://github.com/donapart/Birds/releases/download/v5.9.2-release/BirdSound-v5.9.2.apk)
+[![QR Code APK Download](docs/qr-code-apk.png)](https://github.com/donapart/Birds/releases/latest)
 
-**Direct Link:** [BirdSound-v5.9.2.apk](https://github.com/donapart/Birds/releases/download/v5.9.2-release/BirdSound-v5.9.2.apk) (~85MB)
+**Direct Link:** [Latest Release](https://github.com/donapart/Birds/releases/latest) (~85MB)
 
 ---
 
@@ -62,7 +62,7 @@ Scan the QR code or use the direct link to download the APK:
 
 BirdSound is a production-ready bird sound recognition system that uses multiple ML models to identify bird species from audio recordings. It features automatic database fallback, cross-platform support, and a comprehensive REST API.
 
-### ✅ Current Status (v5.9.2)
+### ✅ Current Status (v5.13.1)
 
 - ✅ **DimaBird Model** (HuggingFace dima806/bird_sounds_classification)
 - ✅ **BirdNET V2.4** integrated (6,522 species worldwide)
@@ -78,7 +78,7 @@ BirdSound is a production-ready bird sound recognition system that uses multiple
 - ✅ **KML/JSON/HTML Export** for Google Earth and printing
 - ✅ **Share Function** for session reports
 - ✅ **Automatic Database Fallback** (PostgreSQL → SQLite)
-- ✅ **Mobile App** Android v5.9.2 with Offline-Demo mode
+- ✅ **Mobile App** Android v5.13.1 with Offline-Demo mode
 - ✅ **Windows Installer** (Inno Setup)
 - ✅ **Raspberry Pi Scripts** for field deployment
 
@@ -168,7 +168,7 @@ cd android
 ┌─────────────────┐     ┌─────────────────────────────────────────┐
 │  Mobile App     │     │           Backend (FastAPI)             │
 │  (Expo/RN)      │     │                                         │
-│  v5.9.2         │────▶│  ┌─────────┐ ┌─────────┐ ┌─────────┐   │
+│  v5.13.1        │────▶│  ┌─────────┐ ┌─────────┐ ┌─────────┐   │
 │                 │     │  │ BirdNET │ │DimaBird │ │  Perch  │   │
 │  - Audio Capture│     │  │ (ONNX)  │ │(Hugging)│ │(TFHub)  │   │
 │  - GPS Location │     │  └────┬────┘ └────┬────┘ └────┬────┘   │
@@ -1048,6 +1048,36 @@ Keine Aktion erforderlich! Das System funktioniert mit SQLite.
 MIT-Lizenz - siehe LICENSE-Datei
 
 ## Changelog
+
+### v5.13.1 (2026-08)
+- 🔊 **Wiedergabe von Aufnahmen repariert** — Audio wird nach der Analyse in einen persistenten Ordner kopiert statt im flüchtigen Cache zu bleiben; freundliche Fehlermeldung statt Absturz bei fehlenden Altdateien
+- 🐦 **Filter für nicht-europäische Großfußhühner** erweitert (Scrubfowl, Megapode, Brush-Turkey, Maleo, Malleefowl u.a.)
+- 🔐 **API-Absicherung granular korrigiert** — Modell-/Presets-Listing bleibt öffentlich abrufbar, alle Inferenz-Endpunkte (`/predict/*`) verlangen konsistent einen API-Key
+- 📱 **Expo SDK 57** — React 19.2, React Native 0.86, `expo-av` durch `expo-audio` ersetzt
+- 🧹 **App.js modularisiert** — Einstellungen, Vogeldetails und Session-Bericht als eigene Komponenten
+- 🔒 **Backend-Härtung** — Constant-Time-API-Key-Vergleich, verschlüsselter API-Key-Speicher (SecureStore), Alembic-Migrationen statt stillem SQLite-Fallback, Upload-Größenlimit
+
+### v5.13.0 (2026-04-29)
+- 📬 **Push-Benachrichtigungen end-to-end** — Expo Push API Sender im Backend (`/api/v1/push/register`, `/tokens/count`, `/send`, `/test`), Trigger bei Erkennung (opt-in via `PUSH_NOTIFY_ON_DETECTION`)
+- 🛡️ **Sentry vollständig aktiviert** — `Sentry.wrap(App)`, Config-Plugin für native Symbolisierung
+- 🧪 **Backend-Tests für /push** — 7 neue Pytest-Tests
+- 📖 **In-App Changelog-Modal** beim ersten Start nach Update
+- 🍏 **iOS/EAS Submit vorbereitet** — Simulator-Builds, Play-Store-ready App-Bundle
+- 🔒 **npm audit Cleanup** — 20 → 15 moderate Vulnerabilities (Rest: transitive Expo-SDK-Abhängigkeiten)
+
+### v5.12.0 (Build 67)
+- 🌓 Theme-Umschalter Auto/Dark/Light, persistiert
+- 💾 ZIP-Datensicherung (Erkennungen + Sessions + Settings) via JSZip
+- 🛡️ Sentry Crash-Reporting Opt-in via `app.json extra.sentryDsn`
+- 🔔 Push-Benachrichtigungen Scaffold (Expo Push Token Registrierung)
+
+### v5.11.0 (Build 66)
+- 💾 Filter-Persistenz — Karten-Einstellungen bleiben über App-Neustarts erhalten
+- 🔄 Pull-to-Refresh in Liste & Sessions
+- ▶️ Audio-Replay direkt aus Liste und Session-Detail
+- 📑 CSV-Export (UTF-8 BOM + Semikolon, Excel/DE-kompatibel)
+- 📍 GPS High-Accuracy + Genauigkeit (±Xm) und Höhe
+- 🔍 Fuzzy-Suche (Levenshtein) in der Vogelbibliothek
 
 ### v5.9.2 (2026-03-04)
 - 🐦 **160+ Vogelarten** in der Bibliothek (vorher 32)

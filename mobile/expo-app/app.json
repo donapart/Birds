@@ -3,16 +3,10 @@
     "name": "BirdSound",
     "slug": "birdsound",
     "owner": "dano-schoenwald",
-    "version": "5.11.0",
+    "version": "5.13.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": false,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#1a1a2e"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.birdsound.app",
@@ -20,7 +14,6 @@
         "NSMicrophoneUsageDescription": "BirdSound benötigt Mikrofonzugriff für die Vogelstimmen-Aufnahme.",
         "NSLocationWhenInUseUsageDescription": "BirdSound nutzt den Standort für die Geo-Filterung der Vogelarten.",
         "UIBackgroundModes": [
-          "audio",
           "location",
           "fetch",
           "processing"
@@ -29,8 +22,7 @@
     },
     "android": {
       "package": "com.birdsound.app",
-      "versionCode": 66,
-      "usesCleartextTraffic": true,
+      "versionCode": 69,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1a1a2e"
@@ -55,9 +47,20 @@
     },
     "plugins": [
       [
-        "expo-av",
+        "expo-audio",
         {
-          "microphonePermission": "BirdSound benötigt Mikrofonzugriff für die Vogelstimmen-Aufnahme."
+          "microphonePermission": "BirdSound benötigt Mikrofonzugriff für die Vogelstimmen-Aufnahme.",
+          "enableBackgroundPlayback": false,
+          "enableBackgroundRecording": true
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#1a1a2e"
         }
       ],
       [
@@ -69,7 +72,7 @@
           "isIosBackgroundLocationEnabled": true
         }
       ],
-      "@sentry/react-native"
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

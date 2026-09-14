@@ -90,7 +90,7 @@
     <div class="container content">
         <header>
             <div class="logo">🐦</div>
-            <h1>BirdSound <span class="version-badge">v5.13.0</span></h1>
+            <h1>BirdSound <span class="version-badge">v5.13.1</span></h1>
             <p class="subtitle">Multi-Modell ML-System zur Echtzeit-Vogelstimmen-Erkennung</p>
             <div class="downloads">
                 <a href="https://github.com/donapart/Birds/releases/latest" class="download-btn">📱 Android APK</a>
@@ -102,7 +102,7 @@
             <div style="margin-top: 1.5rem; text-align: center;">
                 <p style="color: #888; margin-bottom: 0.5rem;">📲 Scan für APK-Download:</p>
                 <img src="qr-code-apk.png" alt="QR Code APK Download" width="200" height="200" style="border-radius: 12px; background: white; padding: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-                <p style="color: #666; font-size: 0.75rem; margin-top: 0.5rem;">BirdSound v5.13.0 (~89MB)</p>
+                <p style="color: #666; font-size: 0.75rem; margin-top: 0.5rem;">BirdSound v5.13.1 (~89MB)</p>
             </div>
         </header>
         
@@ -290,7 +290,7 @@ cd android
             <div class="architecture">┌─────────────────┐     ┌─────────────────────────────────────┐
 │   Mobile App    │     │         Backend (FastAPI)            │
 │   (Expo/RN)     │────▶│                                      │
-│   v5.13.0       │     │  ┌─────────┐ ┌──────────┐ ┌───────┐ │
+│   v5.13.1       │     │  ┌─────────┐ ┌──────────┐ ┌───────┐ │
 │                 │     │  │ BirdNET │ │ DimaBird │ │ Perch │ │
 │  - Audio Capture│     │  │ (ONNX)  │ │(Hugging) │ │(TFHub)│ │
 │  - GPS Location │     │  └────┬────┘ └────┬─────┘ └───┬───┘ │
@@ -320,6 +320,15 @@ cd android
 
         <section id="changelog">
             <h2>📋 Changelog</h2>
+            <h3>v5.13.1 (2026-08)</h3>
+            <ul>
+                <li>🔊 <strong>Wiedergabe von Aufnahmen repariert</strong> — Audio wird nach der Analyse in einen persistenten Ordner kopiert statt im flüchtigen Cache zu bleiben; freundliche Fehlermeldung statt Absturz bei fehlenden Altdateien</li>
+                <li>🐦 <strong>Filter für nicht-europäische Großfußhühner</strong> erweitert (Scrubfowl, Megapode, Brush-Turkey, Maleo, Malleefowl u.a.)</li>
+                <li>🔐 <strong>API-Absicherung granular korrigiert</strong> — Modell-/Presets-Listing bleibt öffentlich abrufbar, alle Inferenz-Endpunkte (<code>/predict/*</code>) verlangen konsistent einen API-Key</li>
+                <li>📱 <strong>Expo SDK 57</strong> — React 19.2, React Native 0.86, <code>expo-av</code> durch <code>expo-audio</code> ersetzt</li>
+                <li>🧹 <strong>App.js modularisiert</strong> — Einstellungen, Vogeldetails und Session-Bericht als eigene Komponenten</li>
+                <li>🔒 <strong>Backend-Härtung</strong> — Constant-Time-API-Key-Vergleich, verschlüsselter API-Key-Speicher (SecureStore), Alembic-Migrationen statt stillem SQLite-Fallback, Upload-Größenlimit</li>
+            </ul>
             <h3>v5.13.0 (2025-12)</h3>
             <ul>
                 <li>📬 <strong>Push-Benachrichtigungen end-to-end</strong> — Expo Push API Sender im Backend (<code>POST /api/v1/push/send</code>) + opt-in Trigger bei jeder hochkonfidenten Erkennung (mit Cooldown)</li>

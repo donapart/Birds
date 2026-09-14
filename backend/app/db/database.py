@@ -1,8 +1,10 @@
 """
 Database connection and session management.
-Uses SQLAlchemy async with PostgreSQL/PostGIS or SQLite fallback.
+Uses SQLAlchemy async with PostgreSQL/PostGIS or SQLite (explicit opt-in).
 """
+import asyncio
 import logging
+from pathlib import Path
 from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
@@ -43,51 +45,45 @@ async_session_maker = async_sessionmaker(
 Base = declarative_base()
 
 
-async def init_db() -> None:
-    """Initialize database tables."""
-    global engine, async_session_maker
-    
-    try:
-        async with engine.begin() as conn:
-            # Enable PostGIS extension (if PostgreSQL)
-            if not settings.USE_SQLITE:
-                try:
-                    await conn.execute("CREATE EXTENSION IF NOT EXISTS postgis;")
-                except Exception:
-                    pass  # PostGIS might not be available
+def _run_migrations() -> None:
+    """Apply Alembic migrations up to head (blocking, run in a thread)."""
+    from alembic import command
+    from alembic.config import Config
 
-            # Create all tables
+    backend_dir = Path(__file__).resolve().parents[2]
+    cfg = Config(str(backend_dir / "alembic.ini"))
+    cfg.set_main_option("script_location", str(backend_dir / "alembic"))
+    command.upgrade(cfg, "head")
+
+
+async def init_db() -> None:
+    """Initialize the database schema.
+
+    - PostgreSQL: apply Alembic migrations (single source of truth).
+      Existing databases created via create_all must be stamped once:
+      ``alembic stamp head``.
+    - SQLite (explicit opt-in via USE_SQLITE): create tables directly,
+      intended for tests and lightweight local development.
+
+    A failing database is a fatal startup error - there is deliberately
+    no silent fallback to SQLite anymore.
+    """
+    if settings.USE_SQLITE:
+        async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        
-        logger.info("Database initialized successfully")
-        
-    except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
-        
-        # Fallback to SQLite if PostgreSQL fails
-        if not settings.USE_SQLITE and "postgresql" in DATABASE_URL:
-            logger.warning("PostgreSQL unavailable, switching to SQLite fallback")
-            
-            engine = create_async_engine(
-                f"sqlite+aiosqlite:///{settings.SQLITE_PATH}",
-                echo=settings.DEBUG,
-                future=True,
-            )
-            
-            async_session_maker = async_sessionmaker(
-                engine,
-                class_=AsyncSession,
-                expire_on_commit=False,
-                autocommit=False,
-                autoflush=False,
-            )
-            
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-            
-            logger.info(f"Switched to SQLite: {settings.SQLITE_PATH}")
-        else:
-            raise
+        logger.info("SQLite database initialized")
+        return
+
+    try:
+        await asyncio.to_thread(_run_migrations)
+        logger.info("Database migrations applied (alembic upgrade head)")
+    except Exception:
+        logger.error(
+            "Database initialization failed. Check DATABASE_URL and that "
+            "PostgreSQL is reachable; for pre-Alembic databases run "
+            "'alembic stamp head' once."
+        )
+        raise
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

@@ -83,4 +83,6 @@ mobile/react-native/ios/Pods/
 mobile/react-native/android/.gradle/
 BirdSound_v1.0.0_Setup.apk
 installer_output/*.exe
+installer/output/*.exe
 *.apk
+build_output.txt

@@ -12,11 +12,12 @@ from contextlib import asynccontextmanager
 
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
+from app.api.dependencies import get_api_key
 from app.api.routes import predict, health, recordings, websocket, export, analysis, species, i18n, metrics
 from app.api.routes import xeno_canto, export_geo, mobile, push
 from app.core.config import get_settings
@@ -97,20 +98,28 @@ app.add_middleware(MetricsMiddleware)
 # Rate limiting middleware
 app.add_middleware(RateLimitMiddleware)
 
-# Include routers
+# Include routers.
+# All data-bearing routes require an API key; health, species lists,
+# i18n catalogs and metrics remain public (probes / non-sensitive data).
+# The predict router protects its inference endpoints individually
+# (see predict.py) so read-only /models listings stay public for the
+# mobile app's capabilities check before an API key is configured.
+# WebSocket auth is enforced per-endpoint via get_ws_api_key.
+AUTH_REQUIRED = [Depends(get_api_key)]
+
 app.include_router(health.router, tags=["Health"])
 app.include_router(predict.router, prefix="/api/v1", tags=["Prediction"])
-app.include_router(recordings.router, prefix="/api/v1", tags=["Recordings"])
-app.include_router(export.router, prefix="/api/v1", tags=["Export"])
-app.include_router(export_geo.router, prefix="/api/v1", tags=["Export GEO"])
-app.include_router(analysis.router, prefix="/api/v1", tags=["Analysis"])
+app.include_router(recordings.router, prefix="/api/v1", tags=["Recordings"], dependencies=AUTH_REQUIRED)
+app.include_router(export.router, prefix="/api/v1", tags=["Export"], dependencies=AUTH_REQUIRED)
+app.include_router(export_geo.router, prefix="/api/v1", tags=["Export GEO"], dependencies=AUTH_REQUIRED)
+app.include_router(analysis.router, prefix="/api/v1", tags=["Analysis"], dependencies=AUTH_REQUIRED)
 app.include_router(species.router, prefix="/api/v1", tags=["Species"])
 app.include_router(i18n.router, prefix="/api/v1", tags=["i18n"])
 app.include_router(metrics.router, tags=["Metrics"])
 app.include_router(websocket.router, tags=["WebSocket"])
-app.include_router(xeno_canto.router, prefix="/api/v1", tags=["Xeno-canto"])
-app.include_router(mobile.router, prefix="/api/v1", tags=["Mobile"])
-app.include_router(push.router, prefix="/api/v1", tags=["Push"])
+app.include_router(xeno_canto.router, prefix="/api/v1", tags=["Xeno-canto"], dependencies=AUTH_REQUIRED)
+app.include_router(mobile.router, prefix="/api/v1", tags=["Mobile"], dependencies=AUTH_REQUIRED)
+app.include_router(push.router, prefix="/api/v1", tags=["Push"], dependencies=AUTH_REQUIRED)
 
 
 # Static files for frontend

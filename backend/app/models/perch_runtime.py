@@ -4,6 +4,7 @@ Google Perch Runtime Model for bird sound classification.
 Perch is a global bird sound classifier trained on 15,000+ species.
 https://github.com/google-research/perch
 """
+import asyncio
 import logging
 from pathlib import Path
 from typing import Optional, List
@@ -145,15 +146,9 @@ class PerchRuntimeModel(BaseBirdModel):
     ) -> ModelOutput:
         """
         Run prediction on audio segment.
-        
-        Args:
-            audio: Audio waveform as numpy array
-            sample_rate: Sample rate of audio
-            latitude: Latitude for geographic filtering (optional)
-            longitude: Longitude for geographic filtering (optional)
-            
-        Returns:
-            ModelOutput with predictions
+
+        The blocking TensorFlow inference runs in a worker thread so the
+        event loop stays responsive.
         """
         if not self._is_loaded or self._model is None:
             return ModelOutput(
@@ -161,7 +156,11 @@ class PerchRuntimeModel(BaseBirdModel):
                 model_version=self.version,
                 predictions=[],
             )
-        
+
+        return await asyncio.to_thread(self._predict_sync, audio, sample_rate)
+
+    def _predict_sync(self, audio: np.ndarray, sample_rate: int) -> ModelOutput:
+        """Blocking inference implementation (runs in a worker thread)."""
         try:
             import tensorflow as tf
             from scipy import signal

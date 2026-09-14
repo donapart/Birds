@@ -8,6 +8,8 @@ from enum import Enum
 from pydantic import BaseModel, Field, validator
 import base64
 
+from app.core.config import get_settings
+
 
 class AudioFormat(str, Enum):
     """Supported audio formats."""
@@ -98,7 +100,11 @@ class AudioChunkRequest(BaseModel):
 
     @validator("audio_base64")
     def validate_base64(cls, v):
-        """Validate that audio_base64 is valid base64."""
+        """Validate size limit and base64 encoding."""
+        max_mb = get_settings().MAX_AUDIO_UPLOAD_MB
+        # base64 inflates by 4/3; check before decoding to avoid memory abuse
+        if len(v) > max_mb * 1024 * 1024 * 4 // 3:
+            raise ValueError(f"audio_base64 exceeds maximum size of {max_mb} MB")
         try:
             base64.b64decode(v)
         except Exception:

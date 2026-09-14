@@ -38,28 +38,26 @@ class TestConsensusComputation:
                 model_version="1.0",
                 predictions=[
                     PredictionResult(
-                        species_code="blackbird",
-                        species_scientific="Turdus merula",
-                        species_common="Eurasian Blackbird",
+                        species="Eurasian Blackbird",
+                        scientific_name="Turdus merula",
                         confidence=0.9,
                         rank=1
                     ),
                 ],
-                inference_time_ms=50
+                processing_time_ms=50
             ),
             ModelOutput(
                 model_name="model_b",
                 model_version="1.0",
                 predictions=[
                     PredictionResult(
-                        species_code="blackbird",
-                        species_scientific="Turdus merula",
-                        species_common="Eurasian Blackbird",
+                        species="Eurasian Blackbird",
+                        scientific_name="Turdus merula",
                         confidence=0.85,
                         rank=1
                     ),
                 ],
-                inference_time_ms=60
+                processing_time_ms=60
             ),
         ]
 
@@ -72,28 +70,26 @@ class TestConsensusComputation:
                 model_version="1.0",
                 predictions=[
                     PredictionResult(
-                        species_code="blackbird",
-                        species_scientific="Turdus merula",
-                        species_common="Eurasian Blackbird",
+                        species="Eurasian Blackbird",
+                        scientific_name="Turdus merula",
                         confidence=0.9,
                         rank=1
                     ),
                 ],
-                inference_time_ms=50
+                processing_time_ms=50
             ),
             ModelOutput(
                 model_name="model_b",
                 model_version="1.0",
                 predictions=[
                     PredictionResult(
-                        species_code="robin",
-                        species_scientific="Erithacus rubecula",
-                        species_common="European Robin",
+                        species="European Robin",
+                        scientific_name="Erithacus rubecula",
                         confidence=0.7,
                         rank=1
                     ),
                 ],
-                inference_time_ms=60
+                processing_time_ms=60
             ),
         ]
 
@@ -173,42 +169,39 @@ class TestConsensusComputation:
                 model_version="1.0",
                 predictions=[
                     PredictionResult(
-                        species_code="blackbird",
-                        species_scientific="Turdus merula",
-                        species_common="Eurasian Blackbird",
+                        species="Eurasian Blackbird",
+                        scientific_name="Turdus merula",
                         confidence=0.8,
                         rank=1
                     ),
                 ],
-                inference_time_ms=50
+                processing_time_ms=50
             ),
             ModelOutput(
                 model_name="model_b",
                 model_version="1.0",
                 predictions=[
                     PredictionResult(
-                        species_code="blackbird",
-                        species_scientific="Turdus merula",
-                        species_common="Eurasian Blackbird",
+                        species="Eurasian Blackbird",
+                        scientific_name="Turdus merula",
                         confidence=0.75,
                         rank=1
                     ),
                 ],
-                inference_time_ms=60
+                processing_time_ms=60
             ),
             ModelOutput(
                 model_name="model_c",
                 model_version="1.0",
                 predictions=[
                     PredictionResult(
-                        species_code="robin",
-                        species_scientific="Erithacus rubecula",
-                        species_common="European Robin",
+                        species="European Robin",
+                        scientific_name="Erithacus rubecula",
                         confidence=0.9,
                         rank=1
                     ),
                 ],
-                inference_time_ms=55
+                processing_time_ms=55
             ),
         ]
 
@@ -226,20 +219,19 @@ class TestConsensusComputation:
                 model_version="1.0",
                 predictions=[
                     PredictionResult(
-                        species_code="blackbird",
-                        species_scientific="Turdus merula",
-                        species_common="Eurasian Blackbird",
+                        species="Eurasian Blackbird",
+                        scientific_name="Turdus merula",
                         confidence=0.8,
                         rank=1
                     ),
                 ],
-                inference_time_ms=50
+                processing_time_ms=50
             ),
             ModelOutput(
                 model_name="model_b",
                 model_version="1.0",
                 predictions=[],  # No predictions
-                inference_time_ms=60
+                processing_time_ms=60
             ),
         ]
 
